@@ -229,19 +229,19 @@ function visit(sim: Simulation, me: Entity, s: SiteLayout): void {
     const area = fp.reduce((t, r) => t + (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1), 0);
     const fill = area / ((bx1 - bx0 + 1) * (by1 - by0 + 1));
     check('its outline is irregular, not a box', fill < 0.8, `fills ${(fill * 100).toFixed(0)}% of its bounding box`);
-    let wardOverlap = 0;
-    for (let i = 0; i < fp.length; i++) for (let j = i + 1; j < fp.length; j++) {
-      const a = fp[i]!;
-      const b = fp[j]!;
-      if (a.x0 <= b.x1 && a.x1 >= b.x0 && a.y0 <= b.y1 && a.y1 >= b.y0) wardOverlap++;
-    }
-    check('no two wards overlap', wardOverlap === 0);
+    // Wards may touch across their gaps, but no wall stands inside one: a single wall rings the lot.
+    const innerWall = c.plan.filter((q) => /wall|gate/i.test(q.id) && fp.some((r) => q.x > r.x0 + 1 && q.x + q.fx < r.x1 && q.y > r.y0 + 1 && q.y + q.fy < r.y1 && c.layout.shape === 'city' && !(Math.abs(q.x - c.cx) < 14 && Math.abs(q.y - c.cy) < 14))).length;
+    check('no walls inside the districts', innerWall === 0, `${innerWall} inner wall pieces`);
+    check('gates open on the outer wall', c.gates.length >= 4, `${c.gates.length} gates`);
     let overlaps = 0;
     for (let i = 0; i < c.plan.length; i++) {
       const a = c.plan[i]!;
       for (let j = i + 1; j < c.plan.length; j++) {
         const b = c.plan[j]!;
-        if (a.x < b.x + b.fx && a.x + a.fx > b.x && a.y < b.y + b.fy && a.y + a.fy > b.y) overlaps++;
+        if (a.x < b.x + b.fx && a.x + a.fx > b.x && a.y < b.y + b.fy && a.y + a.fy > b.y) {
+          overlaps++;
+          if (DEBUG) console.log('mega overlap', a.id, a.x, a.y, a.fx, a.fy, b.id, b.x, b.y, b.fx, b.fy);
+        }
       }
     }
     check('no two buildings overlap', overlaps === 0, `${overlaps} overlaps`);
@@ -298,6 +298,30 @@ function visit(sim: Simulation, me: Entity, s: SiteLayout): void {
   }
   const share = forest > 0 ? trees / forest : 0;
   check('forests are thin enough to walk through', forest > 100 && share < 0.12, `${(share * 100).toFixed(1)}% of ${forest} forest tiles blocked`);
+}
+
+{
+  // Villages roll a layout style by weight: some are long streets, some round, and none stack houses on each other.
+  const vs: SiteLayout[] = [];
+  for (let rx = -40; rx < 40 && vs.length < 40; rx++) for (let ry = -3; ry < 3 && vs.length < 40; ry++) {
+    const v = siteInRegion(777, rx, ry, () => 10);
+    if (v && v.kind === 'village') vs.push(v);
+  }
+  // How stretched is the spread of buildings along its main direction (1 = round, high = a street)?
+  const aspects = vs.map((v) => {
+    const n = v.plan.length || 1;
+    const mx = v.plan.reduce((t, q) => t + q.x, 0) / n;
+    const my = v.plan.reduce((t, q) => t + q.y, 0) / n;
+    const sxx = v.plan.reduce((t, q) => t + (q.x - mx) ** 2, 0) / n;
+    const syy = v.plan.reduce((t, q) => t + (q.y - my) ** 2, 0) / n;
+    const sxy = v.plan.reduce((t, q) => t + (q.x - mx) * (q.y - my), 0) / n;
+    const tr = sxx + syy;
+    const disc = Math.sqrt(Math.max(0, (sxx - syy) ** 2 / 4 + sxy * sxy));
+    return Math.sqrt((tr / 2 + disc) / Math.max(1e-6, tr / 2 - disc));
+  });
+  if (DEBUG) console.log(aspects.map((a) => a.toFixed(1)).join(' '));
+  check('villages come in different layouts', vs.length >= 10 && aspects.some((a) => a > 2) && aspects.some((a) => a < 1.4), `${vs.length} villages`);
+  check('hearths smoke (data)', (CONTENT.things['hearth']?.smoke?.rate ?? 0) > 0);
 }
 
 if (failed > 0) throw new Error(`${failed} settlement check(s) failed`);

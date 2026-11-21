@@ -15,7 +15,7 @@ export type SiteLayoutDef =
    * the middle they stand (default [14, 22]; [0, 0] puts a lone building in the middle). `centre`
    * is a tile id set in the middle of the square (a well).
    */
-  | { shape: 'village'; houses: [number, number]; square: number; buildings: Readonly<Record<string, number>>; path: TileKind; ground: TileKind; ring?: [number, number]; centre?: string }
+  | { shape: 'village'; houses: [number, number]; square: number; buildings: Readonly<Record<string, number>>; path: TileKind; ground: TileKind; ring?: [number, number]; centre?: string; styles?: VillageStyle[] }
   /** Concentric crumbling walls (radii in metres) with gaps you can slip through. */
   | { shape: 'rings'; rings: number[]; wall: TileKind; gap: number; floor: TileKind; scatter: { tile: TileKind; chance: number } }
   /** A circle of standing pieces on cleared ground. */
@@ -24,6 +24,20 @@ export type SiteLayoutDef =
   | { shape: 'clearing'; inner: number; innerTile: TileKind; clear: number; floor: TileKind }
   /** A walled city of 3D structures; see CityLayout. */
   | CityLayout;
+
+/**
+ * One way a village can be laid out; each village rolls one of its `styles` by weight. `pattern` places the
+ * buildings: 'ring' round the square, 'scatter' anywhere within the outer ring radius, 'street' along one lane
+ * with houses facing it from both sides, 'cross' along two lanes. Whatever a style leaves out (`houses`,
+ * `ring`: inner and outer reach, `buildings`: the mix) comes from the layout itself.
+ */
+export interface VillageStyle {
+  weight: number;
+  pattern: 'ring' | 'scatter' | 'street' | 'cross';
+  houses?: [number, number];
+  ring?: [number, number];
+  buildings?: Readonly<Record<string, number>>;
+}
 
 /** Which side of a city: where a district lies, or which way a gate faces. */
 export type CompassSide = 'n' | 'e' | 's' | 'w';
@@ -53,37 +67,46 @@ export interface Landmark {
   rot?: number;
 }
 
+/** Streets: every `every` metres, `width` wide (odd); main streets from the gates are `main` wide. */
+export interface StreetStyle {
+  every: number;
+  width: number;
+  main: number;
+}
+
 export interface CityLayout {
   shape: 'city';
   /** Half-width and half-depth of the walled area, [low, high] metres. */
   half: [number, number];
   /** Wall pieces by structure id: a straight run, a tower (corners and along the wall), a gate (middle of each side). */
-  walls: { run: string; tower: string; gate: string; towerEvery: number };
+  walls: { run: string; tower: string; gate: string; towerEvery: number; margin?: number };
   /** The heart: a paved plaza, the keep inside a curtain wall (half-size `court`, 0 = no wall), landmarks around it. */
   centre: { plaza: number; keep: string; court: number; courtTower?: string; courtGate?: string; landmarks: Landmark[] };
-  /** Streets: every `every` metres, `width` wide (odd); main streets from the gates are `main` wide. */
-  streets: { every: number; width: number; main: number };
+  /** The default street pattern. */
+  streets: StreetStyle;
+  /** Street patterns to pick from by weight for each ward (the grid spacing and widths); left out = `streets` for all. */
+  streetStyles?: (StreetStyle & { weight: number })[];
   districts: DistrictDef[];
   /** Tiles: main streets and plaza, side streets, ground between buildings. */
   tiles: { main: TileKind; street: TileKind; ground: TileKind };
   /** Most people who live in it. */
   residents: number;
   /**
-   * A megacity: more wards (each a walled or open district with its own grid, plaza and landmarks)
-   * grown outwards from the first one (the `centre` and `districts` above), joined by avenues
-   * through facing gates. Wards are placed one beside another, `gap` metres apart, anywhere within
+   * A megacity: more wards (each a district with its own grid, plaza and landmarks) grown outwards from
+   * the first one (the `centre` and `districts` above), joined by avenues. One wall rings them all
+   * (`walls.margin` metres out), with a gate in line with each ward's main street; no ward has a wall of its own. Wards are placed one beside another, `gap` metres apart, anywhere within
    * `reach` metres of the middle, so every city comes out a different organic shape. A ward never
    * stands on water (see sim/world/city.ts).
    */
   sprawl?: { wards: [number, number]; half: [number, number]; gap: number; reach: number; kinds: WardDef[] };
 }
 
-/** A kind of ward in a megacity: how likely, whether a wall rings it, its plaza and landmarks (offsets from its middle), and its districts. */
+/** A kind of ward in a megacity: how likely, whether its edges are rounded off, its plaza and landmarks (offsets from its middle), and its districts. */
 export interface WardDef {
   name: string;
   weight: number;
-  /** Ringed by a wall with gates (default). Open wards are rounded off instead. */
-  walled?: boolean;
+  /** Rounded off to an oval instead of a square block. */
+  round?: boolean;
   plaza: number;
   landmarks: Landmark[];
   districts: DistrictDef[];

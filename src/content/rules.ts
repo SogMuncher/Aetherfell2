@@ -80,6 +80,7 @@ export const RULES: RulesDef = {
   },
   pickReach: 4.5,
   sites: { fill: 180, keep: 280 },
+  awake: 200,
   coop: { timeout: 20 },
   day: { minutes: 16, sunrise: 0.25, nightFrom: 0.8, nightUntil: 0.23, morningUntil: 0.45, afternoonUntil: 0.7 },
   factions: { player: 'party', folk: 'village', default: 'wild' },

@@ -1,7 +1,8 @@
 import { CONTENT } from '../../content';
 import { type CityLayout, type CompassSide, type DistrictDef, type PlannedStructure, type StructureDef, type TileKind, turnToward } from '../../types';
 import type { House, Rect } from './sites';
-import { type Line, RING_AT, ROT_OUT_FACE, houseFor, planned, ring, weighted } from './cityParts';
+import { type Line, RING_AT, ROT_OUT_FACE, houseFor, planned, weighted } from './cityParts';
+import { cityWall } from './cityWall';
 import type { Ward } from './city';
 import { structureSize } from '../../content/structures';
 
@@ -26,9 +27,7 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
       push(planned(l.centre.keep, cx - Math.floor(kw / 2), cy - Math.floor(kd / 2) - (C > 0 ? 1 : 0), 2, kw, kd, Math.floor(r(5) * 2147483647)));
     }
     if (C > 0 && l.centre.courtTower && l.centre.courtGate) {
-      const court: PlannedStructure[] = [];
-      ring({ cx, cy, hx: C, hy: C, run: l.walls.run, tower: l.centre.courtTower, gate: l.centre.courtGate, gates: ['s'], towerEvery: 0 }, court, Math.floor(r(6) * 2147483647));
-      court.forEach(push);
+      cityWall([{ cx, cy, hx: C, hy: C, gates: ['s'] }], 0, { run: l.walls.run, tower: l.centre.courtTower, gate: l.centre.courtGate, towerEvery: 0 }, Math.floor(r(6) * 2147483647)).pieces.forEach(push);
     }
   }
   w.landmarks.forEach((m, i) => {
@@ -45,17 +44,10 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
     reserved.push({ x0: s.x - 3, y0: s.y - 3, x1: s.x + s.fx + 2, y1: s.y + s.fy + 2 });
   });
 
-  // The wall.
-  if (w.walled) {
-    const wall: PlannedStructure[] = [];
-    ring({ cx, cy, hx, hy, run: l.walls.run, tower: l.walls.tower, gate: l.walls.gate, gates: ['n', 'e', 's', 'w'], towerEvery: l.walls.towerEvery }, wall, Math.floor(r(7) * 2147483647));
-    wall.forEach(push);
-  }
-
   // Streets: ring street, main streets from the gates, side streets on a grid.
   const lineSet = (half: number): Line[] => {
-    const out: Line[] = [{ c: -(half - RING_AT), w: 3 }, { c: 0, w: l.streets.main }, { c: half - RING_AT, w: 3 }];
-    for (let k = 1; k * l.streets.every <= half - RING_AT - 12; k++) out.push({ c: k * l.streets.every, w: l.streets.width }, { c: -k * l.streets.every, w: l.streets.width });
+    const out: Line[] = [{ c: -(half - RING_AT), w: 3 }, { c: 0, w: w.streets.main }, { c: half - RING_AT, w: 3 }];
+    for (let k = 1; k * w.streets.every <= half - RING_AT - 12; k++) out.push({ c: k * w.streets.every, w: w.streets.width }, { c: -k * w.streets.every, w: w.streets.width });
     return out.sort((a, b) => a.c - b.c);
   };
   const vx = lineSet(hx).map((s) => ({ c: s.c + cx, w: s.w }));
@@ -70,8 +62,8 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
     const side: CompassSide = Math.abs(nx) > Math.abs(ny) ? (nx > 0 ? 'e' : 'w') : ny > 0 ? 's' : 'n';
     return w.districts.find((d) => u >= d.from && u < d.to && (!d.sides || d.sides.includes(side)));
   };
-  // An open ward is rounded off: blocks beyond its ellipse are left to the land.
-  const roundOk = (bx: number, by: number): boolean => w.walled || ((bx - cx) / hx) ** 2 + ((by - cy) / hy) ** 2 <= 1.05;
+  // A round ward is rounded off: blocks beyond its ellipse are left to the land.
+  const roundOk = (bx: number, by: number): boolean => !w.round || ((bx - cx) / hx) ** 2 + ((by - cy) / hy) ** 2 <= 1.05;
   for (let i = 0; i + 1 < vx.length; i++) {
     for (let j = 0; j + 1 < hy2.length; j++) {
       const a = vx[i];
@@ -133,12 +125,12 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
   return (x: number, y: number): TileKind | null => {
     const ax = Math.abs(x - cx);
     const ay = Math.abs(y - cy);
-    if (!w.walled && (ax / hx) ** 2 + (ay / hy) ** 2 > 1) return null;
+    if (w.round && (ax / hx) ** 2 + (ay / hy) ** 2 > 1) return null;
     if (ax <= P && ay <= P) return l.tiles.main;
     const lx = onLine(vx, x);
     const ly = onLine(hy2, y);
     // Main streets run right out through the gates; ring and side streets are plain and stay inside the ring.
-    if ((lx && lx.w === l.streets.main) || (ly && ly.w === l.streets.main)) return l.tiles.main;
+    if ((lx && lx.w === w.streets.main) || (ly && ly.w === w.streets.main)) return l.tiles.main;
     if ((lx && ay <= hy - RING_AT + 1) || (ly && ax <= hx - RING_AT + 1)) return l.tiles.street;
     return l.tiles.ground;
   };

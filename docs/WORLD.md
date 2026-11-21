@@ -7,7 +7,7 @@
   Beyond loaded chunks the same seed is sampled (`WorldSampler`), so far land always shows. Only changed chunks save.
 - Biomes/materials/colours are data: `content/biomes.ts`, `tiles.ts`, `surfaces.ts`, `world.ts`.
 - Matter: `matter.ts` is `ctx.matter`, the one answer to "what is at (x,y,z)" for tiles and 3D cells alike.
-- Places: `sites.ts` (villages = ring of buildings), `city.ts` + `cityParts.ts` + `cityWard.ts` (walled cities),
+- Places: `sites.ts` (villages roll a layout style by weight: ring/scatter/street/cross, own house count and building mix, `styles` rows in `content/sites.ts`), `city.ts` + `cityParts.ts` + `cityWard.ts` + `cityWall.ts` (cities: wards, each with a street pattern from `streetStyles`; ONE wall round the merged outline of all wards, `walls.margin` out, gates in line with ward main streets, no inner walls),
   all pure and seeded. `worldSystem.ts` runs them; `worldPopulate.ts` raises buildings through `ctx.build` a few per
   tick (`Location.built` lets saves resume), then spawns furnishings and people. Layout data: `content/sites.ts`.
 - Ways (roads/paths): `roads.ts` (queries `waysTouching`, `wayHit`), `wayParts.ts` (types, site neighbours),
@@ -16,6 +16,9 @@
   `Chunk.level`, never saved). `decks.ts` + `crossings.ts` build bridges/piers/harbours as 3D cells.
   Tunables are in `content/world.ts` `water`.
 - Realms and the 3D layer: see `REALMS.md`.
+
+- Bodies sleep (no physics) beyond `rules.awake` metres from every player, so far chunks are never dragged back in.
+- Things with `smoke` (hearth, campfire) puff smoke from `rise` m above them (particles.ts, near only).
 
 ## Add / change
 - New biome, tile, place, road grade: a data entry (see CONTENT.md). Only a new *layout shape* needs code

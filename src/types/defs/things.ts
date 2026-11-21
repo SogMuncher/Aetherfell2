@@ -139,6 +139,8 @@ export interface ThingDef {
   /** Holds loot. With a lock, the key item is needed (or brute force). */
   container?: { loot: LootId; lock?: ItemId };
   light?: LightDef;
+  /** A fire that smokes: grey puffs rise from `rise` metres above it (a hearth's smoke leaves by the chimney, above the roof), about `rate` a second, only seen when near. */
+  smoke?: { rise: number; rate: number };
   /** Can be used when you press interact in front of it (a bed to rest on): the effects land on the user, then it rests for `cooldown` ticks. */
   use?: { effects: Effect[]; text: string; cooldown: number };
   /** Effects when it hits something hard; shattering destroys it. */

@@ -120,6 +120,8 @@ export interface RulesDef {
    * away (it must be more than `fill`, or the place empties before you arrive).
    */
   sites: { fill: number; keep: number };
+  /** Metres from every player beyond which bodies sleep (no physics, so far chunks are not dragged back in). */
+  awake: number;
   /** Co-op. A friend whose game sends nothing for `timeout` seconds is let go. */
   coop: { timeout: number };
   /** The day and its hours (content/day.ts asks these). */

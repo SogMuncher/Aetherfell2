@@ -1,8 +1,10 @@
-import type { CityLayout, CompassSide, DistrictDef, Landmark, PlannedStructure, TileKind } from '../../types';
+import type { CityLayout, CompassSide, DistrictDef, Landmark, PlannedStructure, StreetStyle, TileKind } from '../../types';
 import type { CityPlan } from './cityParts';
 import type { House, Pt, Rect } from './sites';
 import { hash2 } from './noise';
 import { raiseWard } from './cityWard';
+import { cityWall } from './cityWall';
+import { weighted } from './cityParts';
 
 
 /** Is there water at this spot? (Supplied by the world: rivers and lakes are not built on.) */
@@ -14,7 +16,10 @@ export interface Ward {
   cy: number;
   hx: number;
   hy: number;
-  walled: boolean;
+  /** Rounded off to an oval. */
+  round: boolean;
+  /** Its street pattern (spacing and widths). */
+  streets: StreetStyle;
   plaza: number;
   landmarks: readonly Landmark[];
   districts: readonly DistrictDef[];
@@ -39,7 +44,13 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
   const r = rr(0);
   const hx = l.half[0] + Math.floor(r(1) * (l.half[1] - l.half[0] + 1));
   const hy = Math.round(hx * (0.78 + r(2) * 0.2));
-  const wards: Ward[] = [{ cx, cy, hx, hy, walled: true, plaza: l.centre.plaza, landmarks: l.centre.landmarks, districts: l.districts, main: true, linked: new Set() }];
+  // Each ward picks its street pattern from the weighted styles (a style is a row of data).
+  const streetFor = (roll: number): StreetStyle => {
+    const styles = l.streetStyles ?? [];
+    const id = weighted(Object.fromEntries(styles.map((st, i) => [String(i), st.weight])), roll);
+    return (id !== null ? styles[Number(id)] : undefined) ?? l.streets;
+  };
+  const wards: Ward[] = [{ cx, cy, hx, hy, round: false, streets: streetFor(r(3)), plaza: l.centre.plaza, landmarks: l.centre.landmarks, districts: l.districts, main: true, linked: new Set() }];
   const links: Link[] = [];
 
   // A megacity grows more wards beside the first, each touching its parent across a gap, none on water.
@@ -78,7 +89,7 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
         }
       }
       if (!kind) continue;
-      const w: Ward = { cx: ncx, cy: ncy, hx: nhx, hy: nhy, walled: kind.walled !== false, plaza: kind.plaza, landmarks: kind.landmarks, districts: kind.districts, main: false, linked: new Set() };
+      const w: Ward = { cx: ncx, cy: ncy, hx: nhx, hy: nhy, round: kind.round === true, streets: streetFor(q(7)), plaza: kind.plaza, landmarks: kind.landmarks, districts: kind.districts, main: false, linked: new Set() };
       wards.push(w);
       parent.linked.add(side);
       w.linked.add(OPPOSITE[side]);
@@ -96,6 +107,10 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
     plan.push(s);
     return true;
   };
+  // One wall round all of it.
+  const M = l.walls.margin ?? 0;
+  const wall = cityWall(wards.map((w) => ({ cx: w.cx, cy: w.cy, hx: w.hx, hy: w.hy, gates: SIDES })), M, l.walls, Math.floor(r(7) * 2147483647));
+  wall.pieces.forEach(push);
   const painters: ((x: number, y: number) => TileKind | null)[] = [];
   wards.forEach((w, wi) => painters.push(raiseWard(w, rr(wi), l, push, dwellings)));
 
@@ -110,30 +125,26 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
   const mw = (l.streets.main - 1) / 2;
   const OUT = 40;
   const inside = (w: Ward, x: number, y: number, m = 0): boolean => Math.abs(x - w.cx) <= w.hx + m && Math.abs(y - w.cy) <= w.hy + m;
-  // Roads running out from the gates of walled wards, where nothing else is in the way.
+  // Roads running out from the gates, where the ground is dry.
   const mouths: Pt[] = [];
-  const stubs: { w: Ward; side: CompassSide }[] = [];
-  for (const w of wards) {
-    if (!w.walled) continue;
-    for (const side of SIDES) {
-      if (w.linked.has(side)) continue;
-      const ex = side === 'e' ? w.cx + w.hx : side === 'w' ? w.cx - w.hx : w.cx;
-      const ey = side === 's' ? w.cy + w.hy : side === 'n' ? w.cy - w.hy : w.cy;
-      const dx = side === 'e' ? 1 : side === 'w' ? -1 : 0;
-      const dy = side === 's' ? 1 : side === 'n' ? -1 : 0;
-      let free = true;
-      for (let d = 1; d <= OUT && free; d += 2) if (wards.some((o) => o !== w && inside(o, ex + dx * d, ey + dy * d, 2)) || wet(ex + dx * d, ey + dy * d)) free = false;
-      if (!free) continue;
-      stubs.push({ w, side });
-      mouths.push({ x: ex + dx * OUT, y: ey + dy * OUT });
-    }
+  const stubs: { g: (typeof wall.gates)[number]; w: number }[] = [];
+  for (const g of wall.gates) {
+    const dx = g.side === 'e' ? 1 : g.side === 'w' ? -1 : 0;
+    const dy = g.side === 's' ? 1 : g.side === 'n' ? -1 : 0;
+    let free = true;
+    for (let d = 1; d <= OUT && free; d += 2) if (wet(g.x + dx * d, g.y + dy * d)) free = false;
+    if (!free) continue;
+    // The ward whose middle this gate lines up with sets the width of the main street.
+    const owner = wards.find((w) => (g.side === 'n' || g.side === 's' ? w.cx === g.x : w.cy === g.y));
+    stubs.push({ g, w: ((owner?.streets.main ?? l.streets.main) - 1) / 2 });
+    mouths.push({ x: g.x + dx * OUT, y: g.y + dy * OUT });
   }
   const onStub = (x: number, y: number): boolean => {
-    for (const { w, side } of stubs) {
-      const horizontal = side === 'e' || side === 'w';
-      const along = horizontal ? (x - w.cx) * (side === 'e' ? 1 : -1) - w.hx : (y - w.cy) * (side === 's' ? 1 : -1) - w.hy;
-      const across = horizontal ? Math.abs(y - w.cy) : Math.abs(x - w.cx);
-      if (along > 0 && along <= OUT && across <= mw + 0.01) return true;
+    for (const { g, w } of stubs) {
+      const horizontal = g.side === 'e' || g.side === 'w';
+      const along = horizontal ? (x - g.x) * (g.side === 'e' ? 1 : -1) : (y - g.y) * (g.side === 's' ? 1 : -1);
+      const across = horizontal ? Math.abs(y - g.y) : Math.abs(x - g.x);
+      if (along > -(M + 1) && along <= OUT && across <= w + 0.01) return true;
     }
     return false;
   };
@@ -164,16 +175,16 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
       if (w && inside(w, x, y)) return painters[i]?.(x, y) ?? null;
     }
     if (onLink(x, y) || onStub(x, y)) return l.tiles.street;
-    return wards.some((w) => w.walled && inside(w, x, y, 14)) ? l.tiles.ground : null;
+    return wards.some((w) => inside(w, x, y, M + 14)) ? l.tiles.ground : null;
   };
 
   let radius = 0;
   const footprint: Rect[] = [];
   const gates: Pt[] = [];
   for (const w of wards) {
-    radius = Math.max(radius, Math.hypot(Math.abs(w.cx - cx) + w.hx, Math.abs(w.cy - cy) + w.hy) + 14);
+    radius = Math.max(radius, Math.hypot(Math.abs(w.cx - cx) + w.hx + M, Math.abs(w.cy - cy) + w.hy + M) + 14);
     footprint.push({ x0: w.cx - w.hx, y0: w.cy - w.hy, x1: w.cx + w.hx, y1: w.cy + w.hy });
-    if (w.walled) gates.push({ x: w.cx, y: w.cy - w.hy }, { x: w.cx, y: w.cy + w.hy }, { x: w.cx - w.hx, y: w.cy }, { x: w.cx + w.hx, y: w.cy });
   }
+  for (const g of wall.gates) gates.push({ x: g.x, y: g.y });
   return { plan, houses, paint, radius, square: { x: cx, y: cy + Math.floor(l.centre.plaza * 0.6) }, mouths, footprint, gates };
 }

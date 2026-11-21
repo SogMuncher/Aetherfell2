@@ -189,6 +189,7 @@ export const THINGS: Record<ThingId, ThingDef> = {
     body: { radius: 0.5, height: 0.8, mass: 400, solid: true, anchored: true },
     material: 'stone',
     light: { r: 1, g: 0.55, b: 0.2, radius: 8, flicker: 0.3 },
+    smoke: { rise: 3.6, rate: 2.5 },
     sprite: 'hearth',
   },
   ruinChest: {
@@ -259,6 +260,7 @@ export const THINGS: Record<ThingId, ThingDef> = {
     body: { radius: 0.5, height: 0.5, mass: 300, solid: false, anchored: true },
     material: 'stone',
     light: { r: 1, g: 0.55, b: 0.2, radius: 11, flicker: 0.35 },
+    smoke: { rise: 1.2, rate: 3 },
     contact: { minMass: 1, cooldown: 12, reach: 0.55, radius: 0.5, effects: [{ type: 'heat', amount: 1 }, { type: 'damage', amount: 3, kind: 'fire' }] },
     sprite: 'campfire',
   },
