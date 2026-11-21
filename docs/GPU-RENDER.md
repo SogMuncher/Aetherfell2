@@ -2,7 +2,7 @@
 
 **Why:** terrain, sky/clouds and 3D structures are ~90% of CPU frame time (`scripts/frameProfile.ts`). Goal: ALL drawing on the GPU,
 one pass list, one shared depth buffer, same retro look. Render stays read-only on sim state; sim never sees GPU types.
-**Status:** stages 1-2 done, stage 3a (tile walls, billboards, light grid) in progress. Switch: Video > 'Graphics engine' (Classic / Graphics card). F3 shows `gpu` ms.
+**Status:** stages 1-2 done, stage 3 (tile walls, billboards, light grid, particles, rain, held item) done. Switch: Video > 'Graphics engine' (Classic / Graphics card). F3 shows `gpu` ms.
 Gaps: no sprites/creatures/trees, particles, held item, rain, water look, aurora; grit is a shader speckle, not the
 material atlas yet; clouds use a shader noise, not the CPU pattern; structures are lit by sun + cover only (no torch/fire/wet/soot yet, stage 3 adds lights); tile-built villages and the underworld halls still draw only as coloured land/sky.
 
@@ -66,8 +66,8 @@ Done = works on the GPU path. Sock's rule: procedural textures, lighting and eff
 - [ ] Structure cell state: wet, fire glow, oil sheen, soot, wear; door and open tiles
 - [x] Point lights: the CPU light grid is a texture used by land, tile walls, structures and sprites (torches, fire, spells, lamps)
 - [x] Sprites: creatures, props, items, hit flash, palette fill, dither fade, depth-tested (art still built on the CPU)
-- [ ] Particles and spell looks from rune `look` data; rain streaks, splashes; stops under roofs
-- [ ] Held item sprite (always on top, lit), swing/bob/shake
+- [x] Particles and spell looks from rune `look` data (CPU simulates, GPU draws); rain streaks, stops under roofs; [ ] rain splashes
+- [x] Held item (painted by `ViewModel` into a buffer, composited on top), swing/bob/shake
 - [ ] Underworld halls and the realm dark/fog look (3D cells + lattice ground)
 - [ ] Guest/net view, saves unaffected (render stays read-only)
 - [ ] Headless smokes (`artSmoke`, `skySmoke`, `frameProfile`) still run
