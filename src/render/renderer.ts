@@ -189,7 +189,7 @@ export class Renderer {
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;

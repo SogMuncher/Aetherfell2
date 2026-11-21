@@ -7,11 +7,12 @@ import { CONTENT } from '../../content';
 import type { AirDef, WorldSampler } from '../../types';
 import type { Env } from '../lighting';
 import type { TerrainLod } from '../raycaster/terrainLod';
-import type { WeatherState } from '../../types';
+import type { ReadonlyVolume, WeatherState } from '../../types';
 import { GpuAir } from './gpuAir';
 import { GpuPost } from './gpuPost';
 import type { PostParams } from './gpuPost';
 import { GpuSky } from './gpuSky';
+import { GpuStructures } from './gpuStructures';
 import { GpuTerrain } from './gpuTerrain';
 import { camBasis, viewProj } from './glUtil';
 
@@ -25,6 +26,7 @@ export interface GpuFrame {
   fovDegrees: number;
   env: Env;
   weather: WeatherState;
+  volume: ReadonlyVolume;
   realm: string;
   time: number;
   post: PostParams;
@@ -39,6 +41,7 @@ export class GpuRenderer {
   private readonly canvas = document.createElement('canvas');
   private readonly gl: WebGL2RenderingContext;
   private readonly terrain: GpuTerrain;
+  private readonly structures: GpuStructures;
   private readonly sky: GpuSky;
   private readonly air: GpuAir;
   private readonly post: GpuPost;
@@ -55,6 +58,7 @@ export class GpuRenderer {
     if (!gl) throw new Error('WebGL2 not available');
     this.gl = gl;
     this.terrain = new GpuTerrain(gl, lod);
+    this.structures = new GpuStructures(gl);
     this.sky = new GpuSky(gl);
     this.air = new GpuAir(gl);
     this.post = new GpuPost(gl);
@@ -65,6 +69,7 @@ export class GpuRenderer {
 
   forget(): void {
     this.terrain.forget();
+    this.structures.forget();
   }
 
   dispose(): void {
@@ -102,6 +107,7 @@ export class GpuRenderer {
     this.post.begin(w, h);
     this.sky.draw(cam, f.eye, f.env, f.weather, f.time);
     this.terrain.draw(vp, f.eye, f.env);
+    this.structures.draw(vp, f.eye, f.env, f.volume);
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;
     this.air.draw(vp, f.eye, air, f.time, 0.35 + 0.65 * f.env.day);
