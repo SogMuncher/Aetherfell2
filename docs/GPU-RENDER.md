@@ -2,7 +2,7 @@
 
 **Why:** terrain, sky/clouds and 3D structures are ~90% of CPU frame time (`scripts/frameProfile.ts`). Goal: ALL drawing on the GPU,
 one pass list, one shared depth buffer, same retro look. Render stays read-only on sim state; sim never sees GPU types.
-**Status:** stages 1-2 done (terrain, sky, air motes, post, 3D structures). Switch: Video > 'Graphics engine' (Classic / Graphics card). F3 shows `gpu` ms.
+**Status:** stages 1-2 done, stage 3a (tile walls, billboards, light grid) in progress. Switch: Video > 'Graphics engine' (Classic / Graphics card). F3 shows `gpu` ms.
 Gaps: no sprites/creatures/trees, particles, held item, rain, water look, aurora; grit is a shader speckle, not the
 material atlas yet; clouds use a shader noise, not the CPU pattern; structures are lit by sun + cover only (no torch/fire/wet/soot yet, stage 3 adds lights); tile-built villages and the underworld halls still draw only as coloured land/sky.
 
@@ -59,11 +59,13 @@ Done = works on the GPU path. Sock's rule: procedural textures, lighting and eff
 - [x] 3D structures with shapes, material textures, sun/cover light; air motes
 - [ ] Terrain wet / soot / wear / fire glow shading; puddles and rain wetness
 - [ ] Cloud shadows on land (`cloudShadow.ts`); aurora
-- [ ] Tile billboards (trees, bushes, rocks) and canopy from far LOD
+- [x] Tile walls, posts, windows, doors as boxes from tile data (village/ruin buildings, `gpuTileBlocks.ts`)
+- [x] Tile billboards (trees, bushes, rocks) near the eye; [ ] canopy shown from far LOD
 - [ ] Water look (level, depth fade, shine, rivers/lakes at own height)
+- [x] Structures show correctly from inside (changed bricks re-uploaded, new ones first)
 - [ ] Structure cell state: wet, fire glow, oil sheen, soot, wear; door and open tiles
-- [ ] Point lights: torches, fire, spell glow, lamps in the underworld (lightmap) on land, structures and sprites
-- [ ] Sprites: creatures, props, items, hit flash, palette fill, dithered billboards, depth-tested
+- [x] Point lights: the CPU light grid is a texture used by land, tile walls, structures and sprites (torches, fire, spells, lamps)
+- [x] Sprites: creatures, props, items, hit flash, palette fill, dither fade, depth-tested (art still built on the CPU)
 - [ ] Particles and spell looks from rune `look` data; rain streaks, splashes; stops under roofs
 - [ ] Held item sprite (always on top, lit), swing/bob/shake
 - [ ] Underworld halls and the realm dark/fog look (3D cells + lattice ground)

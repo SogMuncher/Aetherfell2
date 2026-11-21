@@ -10,6 +10,8 @@ import { BLOCK, LEVEL_CELL, TerrainLod } from '../raycaster/terrainLod';
 import { CHUNK_SIZE } from '../../types';
 import type { ReadonlyTiles } from '../../types';
 import { SURFACE_SHADER } from './gpuSurfaces';
+import { LIGHT_SHADER } from './gpuLight';
+import type { GpuLight } from './gpuLight';
 
 /** All numbers live here. */
 export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, texLevels: 2, texFade: [30, 90], sink: 0.03, grit: 0.09 } as const;
@@ -29,6 +31,7 @@ void main(){
 const FS = `#version 300 es
 precision highp float; precision highp usampler2D;
 ${SURFACE_SHADER}
+${LIGHT_SHADER}
 uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist; uniform vec3 uSun; uniform vec3 uSunDir; uniform vec3 uAmb;
 uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade;
 in vec3 vPos; in vec4 vCol; out vec4 o;
@@ -45,7 +48,7 @@ void main(){
   // Grit: per-metre speckle that fades with distance (the near ground never looks flat).
   base *= 1.0 + (hash(floor(vPos.xy)) - 0.5) * uGrit * 2.0 * (1.0 - smoothstep(20.0, 120.0, d));
   float lit = max(0.0, dot(n, uSunDir));
-  vec3 c = base * (uAmb + uSun * lit);
+  vec3 c = base * (uAmb + uSun * lit + lightAt(vPos.xy));
   float f = 1.0 - exp(-d / uFogDist);
   o = vec4(mix(c, uFog, f), 1.0);
 }`;
@@ -72,7 +75,7 @@ export class GpuTerrain {
   private readonly levels: Level[] = [];
   private frame = 0;
 
-  constructor(private readonly gl: WebGL2RenderingContext, private readonly lod: TerrainLod, private readonly tiles: ReadonlyTiles, private readonly surf: WebGLTexture) {
+  constructor(private readonly gl: WebGL2RenderingContext, private readonly lod: TerrainLod, private readonly tiles: ReadonlyTiles, private readonly surf: WebGLTexture, private readonly light: GpuLight) {
     this.prog = compile(gl, VS, FS);
     const idx = new Uint32Array(N * N * 6);
     let k = 0;
@@ -187,6 +190,7 @@ export class GpuTerrain {
     gl.uniform2f(loc(gl, p, 'uTexFade'), GPU_TERRAIN.texFade[0], GPU_TERRAIN.texFade[1]);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this.surf);
+    this.light.bind(p, 4);
     for (let L = 0; L < this.levels.length; L++) {
       const l = this.levels[L];
       if (!l || !l.valid) continue;
