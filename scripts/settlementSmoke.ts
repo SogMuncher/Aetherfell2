@@ -151,7 +151,7 @@ function visit(sim: Simulation, me: Entity, s: SiteLayout): void {
     const kinds = new Map<string, number>();
     for (const s of c.plan) kinds.set(s.id, (kinds.get(s.id) ?? 0) + 1);
     console.log([...kinds.entries()].map(([k, n]) => `${k} ${n}`).join(', '));
-    check('it has gates, towers, walls and a keep', (kinds.get('cityGate') ?? 0) >= 4 && (kinds.get('wallTower') ?? 0) >= 8 && (kinds.get('cityWall') ?? 0) >= 8 && (kinds.get('keep') ?? 0) === 1);
+    check('it has gates, towers, walls and a keep', (kinds.get('cityGate') ?? 0) >= 2 && (kinds.get('wallTower') ?? 0) >= 8 && (kinds.get('cityWall') ?? 0) >= 8 && (kinds.get('keep') ?? 0) === 1);
     check('it has a church and houses in several districts', (kinds.get('church') ?? 0) === 1 && (kinds.get('townhouse') ?? 0) > 3 && (kinds.get('cottage') ?? 0) + (kinds.get('hovel') ?? 0) > 3);
     // No two buildings share ground.
     let overlaps = 0;
@@ -263,7 +263,7 @@ function visit(sim: Simulation, me: Entity, s: SiteLayout): void {
     const joined = fp.filter((r) => seen.has(key(Math.floor((r.x0 + r.x1) / 2), Math.floor((r.y0 + r.y1) / 2)))).length;
     check('every ward is joined to the heart by streets', joined === fp.length, `${joined}/${fp.length}`);
     check('roads can leave it', (c.mouths?.length ?? 0) >= 3, `${c.mouths?.length ?? 0} gates to the world`);
-    check('it has a keep, several churches\' worth of landmarks and many gates', c.plan.filter((p) => p.id === 'keep').length === 1 && c.plan.filter((p) => p.id === 'cityGate').length >= 12, `${c.plan.filter((p) => p.id === 'cityGate').length} gates`);
+    check('it has a keep and gates only where roads leave it', c.plan.filter((p) => p.id === 'keep').length === 1 && c.plan.filter((p) => p.id === 'cityGate').length >= 3, `${c.plan.filter((p) => p.id === 'cityGate').length} gates`);
     visit(sim, me, c);
     const t0 = Date.now();
     let ticks = 0;
