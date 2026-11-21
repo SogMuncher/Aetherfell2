@@ -15,6 +15,7 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
   palettes at draw time (`palette.ts`). Missing sprite = magenta checks, never a crash.
 - `vfx/particles.ts` + `particleKinds.ts`: spell/effect looks come from rune `look` data.
 - Held item: `entities/viewModel.ts` and `mesh.ts` (being replaced by sprites in another thread; do not extend).
+- Blow effects (sparks, dust, blood, embers) are world motes from `vfx/particles.ts`, chosen by material and weapon data; the held item only kicks.
 
 - GPU port is planned: `docs/GPU-RENDER.md` (stage 1 in `gpu/`, setting 'Graphics engine').
 

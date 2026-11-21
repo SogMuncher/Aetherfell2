@@ -258,6 +258,9 @@ export class Particles implements FireSink {
           const more = 1 + (pw * 14 + Math.min(10, e.damage * 0.4)) / 8;
           if (bloody) this.play(fx('blood'), e.x, e.y, e.z, more, 1 + pw * 0.8);
           else this.play(fx('hitDust'), e.x, e.y, e.z, more, 1 + pw * 0.75);
+          // A brand scatters embers whatever it hits.
+          const src = state.entities.get(e.source);
+          if (src && heldLight(CONTENT, src)?.flame) { const em = fx('ember').colour; this.burst('spark', e.x, e.y, e.z, Math.round(6 + pw * 8), 2.5, (em >> 16) & 255, (em >> 8) & 255, em & 255, true, 0.7, 0.05); }
         }
         break;
       }
