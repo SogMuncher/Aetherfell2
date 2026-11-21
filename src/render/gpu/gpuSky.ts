@@ -1,7 +1,7 @@
 /**
  * GPU sky: a full-screen pass drawn first. Gradient from horizon to zenith, sun glow and disc, moon, fixed stars,
  * and the cloud layers of content/sky.ts as lit slabs (drifting, soft-edged). All numbers come from the sky data and Env.
- * Cloud shapes are a shader noise, not the CPU renderer's exact pattern; aurora arrives with the later polish stage.
+ * Cloud shapes are a shader noise, not the CPU renderer's exact pattern, with aurora curtains on clear nights.
  */
 import { CONTENT, layerCover } from '../../content';
 import type { WeatherState } from '../../types';
@@ -18,6 +18,7 @@ void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)
 const FS = `#version 300 es
 precision highp float;
 in vec2 vNdc; out vec4 o;
+uniform vec3 uAuroraC, uAuroraE; uniform float uAurora;
 uniform vec3 uFwd, uRight, uUp, uEye, uZenith, uHorizon, uSunDir, uMoonDir, uSunGlow, uSunDisc, uMoonCol, uCloudLit;
 uniform vec2 uTan; uniform float uOpen, uSunSize, uMoonSize, uDusk, uNight, uStarCut, uFlash, uTime, uRange;
 uniform vec4 uA[${MAX_LAYERS}]; uniform vec4 uB[${MAX_LAYERS}]; uniform vec4 uC[${MAX_LAYERS}]; uniform vec4 uD[${MAX_LAYERS}];
@@ -39,6 +40,13 @@ void main(){
   float ma = acos(clamp(dot(d, uMoonDir), -1.0, 1.0));
   if (ma < uMoonSize && uMoonDir.z > -0.05) c = uMoonCol * (0.9 + 0.1 * vn(d.xy * 300.0));
   if (uNight > 0.01 && e > 0.0){ vec3 q = floor(d * 190.0); float s = h3(q); if (s > uStarCut) c += vec3(1.0) * uNight * (0.5 + 0.5 * h3(q + 3.1)); }
+  if (uAurora > 0.0 && e > 0.08 && e < 1.1){
+    float az = atan(d.y, d.x), el = atan(e);
+    float band = sin(az * 3.0 + sin(az * 7.0 + uTime * 0.3) * 1.5 + uTime * 0.1) * 0.5 + 0.5;
+    float curtain = vn(vec2(az * 18.0 + uTime * 0.4, el * 2.0));
+    float a = uAurora * pow(band, 3.0) * curtain * sin((e - 0.08) / 1.02 * 3.14159);
+    c += a * uAuroraC + a * (1.0 - e) * uAuroraE;
+  }
   for (int li = 0; li < ${MAX_LAYERS}; li++){
     vec4 A = uA[li], B = uB[li], C = uC[li], D = uD[li];
     if (D.z < 0.5 || d.z <= 0.002 || uEye.z >= A.x) continue;
@@ -94,6 +102,8 @@ export class GpuSky {
     gl.uniform1f(loc(gl, p, 'uStarCut'), 1 - SKY.stars.density * 2);
     gl.uniform1f(loc(gl, p, 'uFlash'), env.flash * 0.45);
     gl.uniform1f(loc(gl, p, 'uTime'), time);
+    gl.uniform1f(loc(gl, p, 'uAurora'), env.aurora);
+    u3('uAuroraC', SKY.aurora.colour); u3('uAuroraE', SKY.aurora.edge);
     gl.uniform1f(loc(gl, p, 'uRange'), SKY.cloudRange);
     for (let i = 0; i < MAX_LAYERS; i++) {
       const l = LAYERS[i];
