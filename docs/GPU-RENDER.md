@@ -2,9 +2,9 @@
 
 **Why:** terrain, sky/clouds and 3D structures are ~90% of CPU frame time (`scripts/frameProfile.ts`). Goal: ALL drawing on the GPU,
 one pass list, one shared depth buffer, same retro look. Render stays read-only on sim state; sim never sees GPU types.
-**Status:** stage 1 done (terrain, sky, air motes, post). Switch: Video > 'Graphics engine' (Classic / Graphics card). F3 shows `gpu` ms.
-Stage 1 gaps: no sprites/creatures/trees, 3D structures, particles, held item, rain, water look, aurora; grit is a shader speckle, not the
-material atlas yet; clouds use a shader noise, not the CPU pattern; the underworld shows only sky colour (halls are stage 2).
+**Status:** stages 1-2 done (terrain, sky, air motes, post, 3D structures). Switch: Video > 'Graphics engine' (Classic / Graphics card). F3 shows `gpu` ms.
+Gaps: no sprites/creatures/trees, particles, held item, rain, water look, aurora; grit is a shader speckle, not the
+material atlas yet; clouds use a shader noise, not the CPU pattern; structures are lit by sun + cover only (no torch/fire/wet/soot yet, stage 3 adds lights); tile-built villages and the underworld halls still draw only as coloured land/sky.
 
 ## Look is kept
 - Render target = today's low-res size (`Viewport`, `AdaptiveRes` still pick the line count; the target is just resized). Shown with nearest scaling.

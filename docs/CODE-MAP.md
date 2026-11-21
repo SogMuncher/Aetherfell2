@@ -131,6 +131,8 @@ Search this first, then open only the file you need. Update the entry (and line 
 ## src/render/gpu/
 - `gpuRenderer.ts` (123) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
 - `gpuTerrain.ts` (179) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, depth fog
+- `gpuStructures.ts` (~165) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
+- `gpuStructShader.ts` (~110) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuSky.ts` (113) full-screen sky: gradient, sun, moon, stars, cloud slabs from sky data
 - `gpuPost.ts` (98) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)
