@@ -111,6 +111,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `color.ts` (50) packed pixel colour helpers
 - `lighting.ts` (281) sun path, sky/fog colours, ambient and point lights
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
+- `adaptiveRes.ts` (60) adaptive pixel size from frame time
 - `renderer.ts` (149) frame orchestration: terrain, volume, sky, sprites, vfx, post
 - `viewport.ts` (47) The low-resolution retro frame. Everything is drawn into `pixels` (one Uint32 per pixel) with a
 

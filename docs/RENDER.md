@@ -4,6 +4,7 @@
 **Never:** polygon models or external art; hand-drawn pictures or fixed colour lists in render code; write sim state;
 allocate in hot loops. Look is **sprites + procedural textures**; perspective on held items is a sprite transform.
 
+- `adaptiveRes.ts` lowers/raises the line count to hold the wished fps (setting 'Keep it smooth'; numbers in `ADAPTIVE`). `scripts/frameProfile.ts` prints ms per pass headless.
 - `viewport.ts` low-res buffer scaled cleanly. `post/` palette quantise, dither, vignette. `lighting.ts` ambient + point lights.
 - `raycaster/`: `terrainRenderer.ts` column marcher (near live tiles, far cached LOD blocks: `terrainLod.ts`,
   `lodLooks.ts`, ~7 km), `volumeRenderer.ts` ray casts 3D-layer bricks, `tileBillboards.ts`, `sky.ts` (ray-marched clouds,
