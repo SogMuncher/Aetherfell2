@@ -89,6 +89,11 @@ export function layerDensity(layer: CloudLayerDef, w: WeatherState, cover: numbe
   return k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
 }
 
+/** The pattern value a layer's cloud edge sits at for this cover: what a GPU drawer needs to match `layerDensity`. */
+export function layerThreshold(layer: CloudLayerDef, cover: number): number {
+  return levelFor(layer, 1 - cover);
+}
+
 function mixed(p: Float32Array, u: number, v: number): number {
   return sample(p, u, v) * 0.62 + sample(p, u * 0.577 + 17.3, v * 0.577 + 5.1) * 0.38;
 }

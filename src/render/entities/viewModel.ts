@@ -1,8 +1,6 @@
 import type { Entity, HandPose, SimEvent, SimState, SwingDir } from '../../types';
-import { CONTENT, heldLight, thingDef } from '../../content';
+import { CONTENT, heldLight } from '../../content';
 import type { Env, LightMap } from '../lighting';
-import { toScreen } from '../raycaster/camera';
-import type { Projection } from '../raycaster/camera';
 import { addPixel, blendPixel, glowDisc, glowLine, glowTriangle } from '../vfx/glow';
 import type { Surface } from '../vfx/glow';
 import { blitWarped, heldSprite, warpPoints } from './spriteWarp';
@@ -48,19 +46,6 @@ interface Mote {
   kind: 'flame' | 'spark' | 'drop' | 'puff' | 'ember';
 }
 
-interface Flash {
-  x: number;
-  y: number;
-  age: number;
-  life: number;
-  size: number;
-  r: number;
-  g: number;
-  b: number;
-  spikes: number;
-  seed: number;
-}
-
 export interface ViewFrame {
   yaw: number;
   pitch: number;
@@ -74,7 +59,6 @@ export interface ViewFrame {
 export class ViewModel {
   private readonly pts: WarpPoints = { tip: { x: 0, y: 0 }, mid: { x: 0, y: 0 } };
   private readonly motes: Mote[] = [];
-  private readonly flashes: Flash[] = [];
   /** Remembered tip and ribbon-start positions on screen, newest last. */
   private readonly trail: { tx: number; ty: number; mx: number; my: number; t: number }[] = [];
   private kick = { z: 0, vz: 0, r: 0, vr: 0 };
@@ -86,78 +70,31 @@ export class ViewModel {
   private lastTip: { x: number; y: number } | null = null;
   private lastWeapon: string | null | undefined = undefined;
   private spawnFlame = 0;
-  private tipAt: { x: number; y: number } | null = null;
-  private seed = 1;
 
   /** Remembers blows you land so the next frames can flash, throw sparks and kick the weapon. */
   /** Remembers blows you land so the next frames can flash, throw sparks and kick the weapon. */
-  onEvent(e: SimEvent, state: SimState, localId: number | null, proj: Projection | null): void {
+  onEvent(e: SimEvent, state: SimState, localId: number | null): void {
     if (localId === null) return;
     const me = state.entities.get(localId);
     if (!me?.actor) return;
     if (e.type === 'hit' && e.source === localId) {
-      const target = state.entities.get(e.target);
-      const bleeds = target ? !!thingDef(CONTENT, target.def).bleeds : false;
-      const key = e.parried ? 'parry' : e.blocked ? 'block' : bleeds ? 'blood' : 'hitDust';
       const power = clamp((e.power ?? 0) + Math.min(0.6, e.damage / 40), 0, 1.2);
-      this.blow(key, e.x, e.y, e.z, power, proj, e.killed === true, me);
+      this.blow(power);
     } else if (e.type === 'strike' && Math.hypot(me.pos.x - e.x, me.pos.y - e.y) < 3.5) {
-      const hard = CONTENT.materials[e.material]?.hardness ?? 0.2;
-      const spark = hard >= CONTENT.rules.combat.surface.spark && e.weapon !== 'blunt';
-      this.blow(e.recoil ? 'recoil' : spark ? 'strikeSpark' : 'strikeDust', e.x, e.y, e.z, clamp(e.power, 0, 1.2), proj, false, me);
+      this.blow(clamp(e.power, 0, 1.2));
     } else if (e.type === 'equip' && e.entity === localId) {
       this.trail.length = 0;
       this.lastTip = null;
     }
   }
 
-  private blow(key: string, wx: number, wy: number, wz: number, power: number, proj: Projection | null, killed: boolean, me: Entity): void {
-    const fx = CONTENT.effects[key];
+  /** A blow you land rings through the weapon. What flies off is drawn in the world (vfx/particles.ts), from material and weapon data. */
+  private blow(power: number): void {
     const vm = CONTENT.viewmodel;
-    // Where on the screen it happened: the spot struck if it is in view, else the weapon's tip.
-    const out = { sx: 0, sy: 0, depth: 0 };
-    let x = this.tipAt?.x ?? 0;
-    let y = this.tipAt?.y ?? 0;
-    let H = 200;
-    if (proj) {
-      H = proj.H;
-      if (toScreen(proj, wx, wy, wz, out) && out.sx > 0 && out.sx < proj.W && out.sy > 0 && out.sy < proj.H) {
-        x = out.sx;
-        y = out.sy;
-      }
-    }
-    const hot = fx?.glow === true;
-    const base = fx?.colour ?? 0xffe0a0;
-    const c = (v: number): [number, number, number] => [(v >> 16) & 255, (v >> 8) & 255, v & 255];
-    const [r, g, b] = c(base);
-    // The flash: white-hot for steel on steel, a red flicker for flesh, a pale puff for dull things.
-    const size = (key === 'blood' ? 5 : hot ? 9 : 6) * (0.7 + power * 1.3) * (H / 200) * (killed ? 1.5 : 1);
-    this.flashes.push({ x, y, age: 0, life: vm.impact.flash * (key === 'blood' ? 0.7 : 1) * (1 + power * 0.5), size, r: hot ? 255 : lerp(r, 255, 0.4), g: hot ? lerp(g, 255, 0.5) : g * 0.8, b: hot ? lerp(b, 255, 0.35) : b * 0.7, spikes: hot ? 7 : key === 'blood' ? 3 : 0, seed: this.seed++ });
-    // Sparks, drops or dust: from the same table the world's motes use.
-    const n = Math.round(vm.impact.sparks * (0.6 + power * 1.4) * (fx ? fx.count / 8 : 1) * (killed ? 1.6 : 1));
-    const speed = (fx?.speed ?? 3) * vm.impact.fly * H;
-    const kind: Mote['kind'] = key === 'blood' ? 'drop' : hot ? 'spark' : 'puff';
-    const col2 = fx?.colourTo ?? base;
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const sp = speed * (0.35 + Math.random() * 0.9);
-      const k = Math.random();
-      this.motes.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - speed * 0.25, life: (fx?.life ?? 0.4) * (0.7 + Math.random() * 0.8), age: 0, size: kind === 'puff' ? 1.5 + Math.random() * 2 : 1, r: lerp((base >> 16) & 255, (col2 >> 16) & 255, k), g: lerp((base >> 8) & 255, (col2 >> 8) & 255, k), b: lerp(base & 255, col2 & 255, k), kind });
-    }
-    // A brand scatters embers whatever it hits.
-    if (heldLight(CONTENT, me)?.flame) {
-      const em = CONTENT.effects['ember'];
-      for (let i = 0; i < 6 + power * 8; i++) {
-        const a = Math.random() * Math.PI * 2;
-        const sp = H * 0.18 * (0.3 + Math.random());
-        this.motes.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - H * 0.1, life: 0.5 + Math.random() * 0.5, age: 0, size: 1, r: rgbR(em?.colour ?? 0xffbe5a), g: rgbG(em?.colour ?? 0xffbe5a), b: rgbB(em?.colour ?? 0xffbe5a), kind: 'ember' });
-      }
-    }
     // The blow rings through the weapon: back along its axis and twisting.
     const kk = vm.kick;
     this.kick.vz -= kk.push * (0.5 + power) * 14;
     this.kick.vr += (Math.random() < 0.5 ? -1 : 1) * kk.twist * (0.5 + power) * 8;
-    if (this.motes.length > 260) this.motes.splice(0, this.motes.length - 260);
   }
 
   draw(vp: Surface, e: Entity, env: Env, lm: LightMap, f: ViewFrame): void {
@@ -278,7 +215,6 @@ export class ViewModel {
     const ty = (): number => pts.tip.y;
     // Measure first (the trail is painted under the item), then paint the item.
     if (sprite) warpPoints(sprite, warp, pts);
-    this.tipAt = { x: tx(), y: ty() };
     // How fast the tip moves, in screen heights per second.
     if (sprite && this.lastTip) this.tipSpeed += (Math.hypot(tx() - this.lastTip.x, ty() - this.lastTip.y) / H / dt - this.tipSpeed) * Math.min(1, dt * 22);
     else this.tipSpeed = 0;
@@ -397,32 +333,6 @@ export class ViewModel {
             if (j * j + k * k > rr) continue;
             blendPixel(vp, m.x + k, m.y + j, m.r, m.g, m.b, 0.38 * (1 - t));
           }
-        }
-      }
-    }
-    for (let i = this.flashes.length - 1; i >= 0; i--) {
-      const fl = this.flashes[i] as Flash;
-      fl.age += dt;
-      if (fl.age >= fl.life) {
-        this.flashes.splice(i, 1);
-        continue;
-      }
-      const t = fl.age / fl.life;
-      // A bright core that blooms fast and fades, a ring of shock, and spikes of light.
-      const bloom = Math.sin(Math.min(1, t * 2.2) * Math.PI * 0.5) * (1 - t);
-      glowDisc(vp, fl.x, fl.y, fl.size * (0.7 + t * 1.2), fl.r, fl.g, fl.b, 0.85 * bloom, 0.35);
-      glowDisc(vp, fl.x, fl.y, fl.size * 0.35 * (1 - t), 255, 255, 255, 0.9 * bloom, 0.6);
-      if (fl.spikes > 0) {
-        for (let s = 0; s < fl.spikes; s++) {
-          const a = (s / fl.spikes) * Math.PI * 2 + fl.seed * 1.3;
-          const len = fl.size * (1.4 + ((s * 7 + fl.seed) % 3) * 0.5) * (0.4 + t);
-          glowLine(vp, fl.x, fl.y, fl.x + Math.cos(a) * len, fl.y + Math.sin(a) * len, fl.r, fl.g, fl.b, 0.9 * (1 - t), 0);
-        }
-        const ring = fl.size * (0.6 + t * 2.2);
-        const steps = Math.max(12, Math.round(ring * 3));
-        for (let s = 0; s < steps; s++) {
-          const a = (s / steps) * Math.PI * 2;
-          addPixel(vp, fl.x + Math.cos(a) * ring, fl.y + Math.sin(a) * ring, fl.r, fl.g, fl.b, 0.5 * (1 - t));
         }
       }
     }

@@ -29,7 +29,7 @@ import { validateContent } from './validate';
 export { fillText, pluralName, siteBaseName, thingDef, weaponStats, heldLight, isCreature, looksDangerous, moveFactor, isDisabled, isPanicking, rollLoot, skillXp, stackWeight } from './helpers';
 export { validateContent } from './validate';
 
-export { cloudDensity3, cloudPattern, layerCover, layerDensity, rainAt, sunThrough } from './skyField';
+export { cloudDensity3, cloudPattern, layerCover, layerDensity, layerThreshold, rainAt, sunThrough } from './skyField';
 export { dayPart, isNight, nightFalls, sunAngle, sunHeight } from './day';
 export type { DayPart } from './day';
 

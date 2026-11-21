@@ -62,7 +62,7 @@ export class Renderer {
 
   onEvent(e: SimEvent, state: SimState, localId: number | null): void {
     this.particles.onEvent(e, state);
-    this.viewModel.onEvent(e, state, localId, this.lastProjection);
+    this.viewModel.onEvent(e, state, localId);
     if (e.type === 'thunder') this.flash = 1;
     if (e.type === 'hit') {
       this.hitFlash.set(e.target, 0.6);
