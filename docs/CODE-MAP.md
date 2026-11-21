@@ -141,7 +141,8 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `gpuSurfaces.ts` (~30) shared tile surface atlas
 - `gpuParticles.ts` (~140) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (~55) held item buffer composited on top
-- `gpuSky.ts` (113) full-screen sky: gradient, sun, moon, stars, cloud slabs from sky data
+- `gpuSky.ts` (~70) full-screen sky: gradient, sun, moon, stars, aurora
+- `gpuClouds.ts` (~190) clouds as thick layers marched per pixel from the scene depth (same pattern and density rules as Classic); fly above, around, through
 - `gpuPost.ts` (98) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (71) shader/texture helpers, camera basis and view-projection
