@@ -130,7 +130,8 @@ Search this first, then open only the file you need. Update the entry (and line 
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (123) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
-- `gpuTerrain.ts` (179) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, depth fog
+- `gpuTerrain.ts` (290) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, far lift + canopy, depth fog
+- `gpuTerrainState.ts` (50) soot/wet/oil/fire of live ground cells as a texture for the finest levels
 - `gpuStructures.ts` (~165) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
 - `gpuStructShader.ts` (~110) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (~125) tile walls/doors/windows as boxes from tile data

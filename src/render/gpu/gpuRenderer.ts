@@ -142,7 +142,7 @@ export class GpuRenderer {
     if (this.frames % 4 === 0) this.terrain.setShadow(f.shadow, f.shadowOn);
     this.terrain.draw(vp, f.eye, f.env, f.time);
     this.blocks.draw(vp, f.eye, f.env, f.tiles);
-    this.structures.draw(vp, cam, w, h, f.eye, f.env, f.volume);
+    this.structures.draw(vp, cam, w, h, f.time, f.eye, f.env, f.volume);
     this.sprites.draw(vp, cam, f.eye, f.env, f.billboards);
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;

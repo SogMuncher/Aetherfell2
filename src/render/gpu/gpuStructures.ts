@@ -24,6 +24,8 @@ interface Resident {
   version: number;
   /** What the atlas holds for it (to upload only real changes). */
   copy: Uint8Array;
+  /** What the state atlas holds for it (soot, wet, oil, fire per cell), or null while it is all zero there. */
+  copyState: Uint8Array | null;
 }
 
 export class GpuStructures {
@@ -31,6 +33,8 @@ export class GpuStructures {
   private readonly vao: WebGLVertexArrayObject;
   private readonly inst: WebGLBuffer;
   private readonly atlas: WebGLTexture;
+  private readonly stateAtlas: WebGLTexture;
+  private readonly stateData = new Uint8Array(4096 * 4);
   private readonly page: WebGLTexture;
   private readonly pieces: WebGLTexture;
   private readonly shapeIdx: WebGLTexture;
@@ -67,6 +71,7 @@ export class GpuStructures {
       gl.vertexAttribDivisor(a, 1);
     }
     this.atlas = makeTexture(gl, gl.RG8UI, ATLAS, ATLAS, gl.RG_INTEGER, gl.UNSIGNED_BYTE);
+    this.stateAtlas = makeTexture(gl, gl.RGBA8, ATLAS, ATLAS, gl.RGBA, gl.UNSIGNED_BYTE);
     this.page = makeTexture(gl, gl.R16UI, GW * GW, GRID.zCount, gl.RED_INTEGER, gl.UNSIGNED_SHORT);
     const n = SHAPE_PIECES.length / PIECE_FLOATS;
     this.pieces = makeTexture(gl, gl.R32F, PIECE_FLOATS, n, gl.RED, gl.FLOAT);
@@ -99,15 +104,34 @@ export class GpuStructures {
       t[o] = b.shape[i] ?? 0;
       t[o + 1] = b.mat[i] ?? 0;
     }
-    if (r.version >= 0 && t.every((v, i) => v === r.copy[i])) return false;
+    const m = b.matter;
+    const ts = this.stateData;
+    if (m) {
+      for (let i = 0; i < 4096; i++) {
+        const o = (((i >> 8 >> 2) * 16 + ((i >> 4) & 15)) * 64 + ((i >> 8) & 3) * 16 + (i & 15)) * 4;
+        ts[o] = m.soot[i] ?? 0;
+        ts[o + 1] = m.wet[i] ?? 0;
+        ts[o + 2] = m.oil[i] ?? 0;
+        ts[o + 3] = m.fire[i] ?? 0;
+      }
+    }
+    const stateSame = m ? r.copyState !== null && ts.every((v, i) => v === (r.copyState?.[i] ?? 0)) : r.copyState === null;
+    if (r.version >= 0 && stateSame && t.every((v, i) => v === r.copy[i])) return false;
     r.copy.set(t);
-    gl.bindTexture(gl.TEXTURE_2D, this.atlas);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.bindTexture(gl.TEXTURE_2D, this.atlas);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, (slot % 32) * 64, Math.floor(slot / 32) * 64, 64, 64, gl.RG_INTEGER, gl.UNSIGNED_BYTE, t);
+    if (m || r.copyState) {
+      if (m) r.copyState = (r.copyState ?? new Uint8Array(4096 * 4)).fill(0);
+      if (m && r.copyState) r.copyState.set(ts);
+      else r.copyState = null;
+      gl.bindTexture(gl.TEXTURE_2D, this.stateAtlas);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, (slot % 32) * 64, Math.floor(slot / 32) * 64, 64, 64, gl.RGBA, gl.UNSIGNED_BYTE, m ? ts : new Uint8Array(4096 * 4));
+    }
     return true;
   }
 
-  draw(vp: Float32Array, cam: CamBasis, w: number, h: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume): void {
+  draw(vp: Float32Array, cam: CamBasis, w: number, h: number, time: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume): void {
     this.bricks = 0;
     if (vol.bricks.size === 0) return;
     const gl = this.gl;
@@ -134,7 +158,7 @@ export class GpuStructures {
       if (!r) {
         const slot = this.free.pop();
         if (slot === undefined) continue;
-        r = { slot, version: -1, copy: new Uint8Array(4096 * 2) };
+        r = { slot, version: -1, copy: new Uint8Array(4096 * 2), copyState: null };
         this.resident.set(key, r);
       }
       // New bricks come first (their own budget); changed ones are re-checked a few a frame, so a busy world never starves new walls.
@@ -177,6 +201,8 @@ export class GpuStructures {
     };
     bind(0, this.atlas, 'uAtlas'); bind(1, this.page, 'uPage'); bind(2, this.pieces, 'uPieces'); bind(3, this.shapeIdx, 'uShapeIdx'); bind(4, this.surf, 'uSurf');
     this.light.bind(p, 5);
+    bind(6, this.stateAtlas, 'uState');
+    gl.uniform1f(loc(gl, p, 'uTime'), time);
     gl.uniformMatrix4fv(loc(gl, p, 'uVP'), false, vp);
     gl.uniform3f(loc(gl, p, 'uFwd'), cam.fwd[0], cam.fwd[1], cam.fwd[2]);
     gl.uniform3f(loc(gl, p, 'uRight'), cam.right[0], cam.right[1], cam.right[2]);

@@ -57,17 +57,17 @@ Done = works on the GPU path. Sock's rule: procedural textures, lighting and eff
 - [x] Terrain from LOD pyramid out to 7 km, changes (burns, frozen lakes) via LOD overlays
 - [x] Procedural tile textures on near ground (stage 2 fix); far ground colour from LOD
 - [x] 3D structures with shapes, material textures, sun/cover light; air motes
-- [ ] Terrain wet / soot / wear / fire glow shading; puddles and rain wetness
-- [x] Cloud shadows on land (`cloudShadow.ts` grid as a texture); [ ] aurora
+- [x] Terrain wet / soot / oil / fire glow shading and rain wetness (live cell state texture; Classic shows no wear on ground)
+- [x] Cloud shadows on land (`cloudShadow.ts` grid as a texture); [x] aurora
 - [x] Tile walls, posts, windows, doors as boxes from tile data (village/ruin buildings, `gpuTileBlocks.ts`)
-- [x] Tile billboards (trees, bushes, rocks) near the eye; [ ] canopy shown from far LOD
-- [x] Water look (sky-tinted, glints, flat light) and distant fire glow; [ ] depth fade, rivers/lakes at their own height check
+- [x] Tile billboards (trees, bushes, rocks) near the eye; [x] canopy and far buildings raised from LOD (`lift`, `canopy`; treetops rise in with distance)
+- [x] Water look (sky-tinted, glints, flat light) and distant fire glow; [x] depth fade and river/lake heights come from the LOD block (same data as Classic), water colour matched
 - [x] Structures show correctly from inside (changed bricks re-uploaded, new ones first; a brick whose box holds the eye is drawn as a full-screen cover with rays built from the pixel, because box walls next to the eye got clipped and walls vanished)
-- [ ] Structure cell state: wet, fire glow, oil sheen, soot, wear; door and open tiles
+- [x] Structure cell state: wet, fire glow, oil sheen, soot (a state atlas beside the brick atlas); doors are shape cells so they re-upload like any change
 - [x] Point lights: the CPU light grid is a texture used by land, tile walls, structures and sprites (torches, fire, spells, lamps)
 - [x] Sprites: creatures, props, items, hit flash, palette fill, dither fade, depth-tested (art still built on the CPU)
-- [x] Particles and spell looks from rune `look` data (CPU simulates, GPU draws); rain streaks, stops under roofs; [ ] rain splashes
+- [x] Particles and spell looks from rune `look` data (CPU simulates, GPU draws); rain streaks, stops under roofs; [x] rain splashes (they are particles, drawn with the rest)
 - [x] Held item (painted by `ViewModel` into a buffer, composited on top), swing/bob/shake
 - [x] Underworld halls and the realm dark/fog look (checked: flagstones, torch-lit crates)
-- [ ] Guest/net view, saves unaffected (render stays read-only)
-- [ ] Headless smokes (`artSmoke`, `skySmoke`, `frameProfile`) still run
+- [x] Guest/net view, saves unaffected (render stays read-only; `coopSmoke` passes)
+- [x] Headless smokes (`artSmoke`, `skySmoke`, `coopSmoke`, `frameProfile`) still run

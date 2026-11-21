@@ -20,7 +20,7 @@ void main(){
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 uniform mat4 uVP; uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uFogDist;
-uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
+uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform sampler2D uState; uniform float uTime; uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; out vec4 o;
 ${SURFACE_SHADER}
 ${LIGHT_SHADER}
@@ -106,7 +106,11 @@ void main(){
   bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // same spot as Classic: from the middle of the cell, not the exact pixel, so a wall face is lit evenly
   float lit = open ? max(0.0, dot(n, uSunDir)) : 0.0;
   float tint = 0.93 + 0.14 * h3(vec3(cell));
-  vec3 c = col * tint * (uAmb * (open ? 1.0 : 0.9) + (open ? 0.0 : 0.09) + uSun * lit + lightAt((w + n * 0.6).xy));
+  // What has happened to this cell (same state the sim's rules use): soot darkens, wet darkens, oil sheens, fire glows.
+  vec4 cs = texelFetch(uState, ivec2((slot % 32) * 64 + (cell.z - origin.z & 3) * 16 + (cell.x - origin.x), (slot / 32) * 64 + ((cell.z - origin.z) >> 2) * 16 + (cell.y - origin.y)), 0);
+  float dirt = (1.0 - 0.65 * cs.r) * (1.0 - 0.25 * cs.g) * (1.0 - 0.18 * cs.b);
+  float flick = cs.a > 0.0 ? min(1.0, cs.a * 1.4) * (0.75 + 0.25 * sin(uTime * 40.0 + float(cell.x) * 1.7 + float(cell.y) * 2.3 + float(cell.z))) : 0.0;
+  vec3 c = col * tint * dirt * (uAmb * (open ? 1.0 : 0.9) + (open ? 0.0 : 0.09) + uSun * lit + lightAt((w + n * 0.6).xy)) + vec3(1.1, 0.55, 0.15) * flick;
   float f = 1.0 - exp(-length(w - uEye) / uFogDist);
   o = vec4(mix(c, uFog, f), 1.0);
   vec4 cp = uVP * vec4(w, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;

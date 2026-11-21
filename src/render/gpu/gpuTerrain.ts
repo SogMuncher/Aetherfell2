@@ -9,6 +9,8 @@ import type { Env } from '../lighting';
 import { BLOCK, LEVEL_CELL, TerrainLod } from '../raycaster/terrainLod';
 import { CHUNK_SIZE } from '../../types';
 import type { ReadonlyTiles } from '../../types';
+import { refreshGroundState } from './gpuTerrainState';
+import { CANOPY_FULL, FLORA_FADE } from '../raycaster/tileBillboards';
 import type { CloudShadow } from '../raycaster/cloudShadow';
 import { SURFACE_SHADER } from './gpuSurfaces';
 import { LIGHT_SHADER } from './gpuLight';
@@ -20,12 +22,15 @@ const N = GPU_TERRAIN.cells;
 const V = N + 1;
 
 const VS = `#version 300 es
-uniform mat4 uVP; uniform sampler2D uH; uniform sampler2D uC; uniform vec2 uOrigin; uniform float uCell; uniform float uSink;
+uniform mat4 uVP; uniform sampler2D uH; uniform sampler2D uC; uniform vec3 uEye; uniform vec2 uCanopy; uniform vec2 uOrigin; uniform float uCell; uniform float uSink;
 out vec3 vPos; out vec4 vCol;
 void main(){
   int i = gl_VertexID % ${V}; int j = gl_VertexID / ${V};
-  float h = texelFetch(uH, ivec2(i, j), 0).r - uSink;
-  vec3 p = vec3(uOrigin + vec2(i, j) * uCell, h);
+  vec2 hc = texelFetch(uH, ivec2(i, j), 0).rg;
+  vec2 xy = uOrigin + vec2(i, j) * uCell;
+  // Treetops rise in with distance while the tree pictures fade out, so forests never pop.
+  float h = hc.r + hc.g * smoothstep(uCanopy.x, uCanopy.y, length(xy - uEye.xy)) - uSink;
+  vec3 p = vec3(xy, h);
   vCol = texelFetch(uC, ivec2(i, j), 0);
   vPos = p; gl_Position = uVP * vec4(p, 1.0);
 }`;
@@ -35,7 +40,7 @@ ${SURFACE_SHADER}
 ${LIGHT_SHADER}
 uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist; uniform vec3 uSun; uniform vec3 uSunDir; uniform vec3 uAmb;
 uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade;
-uniform sampler2D uShade; uniform vec4 uShadeO; uniform vec3 uHorizon; uniform float uDay, uTime, uShadeOn;
+uniform sampler2D uState; uniform float uRainWet; uniform sampler2D uShade; uniform vec4 uShadeO; uniform vec3 uHorizon; uniform float uDay, uTime, uShadeOn;
 in vec3 vPos; in vec4 vCol; out vec4 o;
 float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -60,10 +65,20 @@ void main(){
     }
     lit *= sh;
   }
-  vec3 c = base * (uAmb + uSun * lit + lightAt(vPos.xy));
+  vec3 lv = uAmb + uSun * lit + lightAt(vPos.xy);
+  if (uTexOn > 0.5) {
+    // What has happened to the ground (the same cell state the sim's rules use): soot darkens, wet darkens and cools, oil sheens, fire glows.
+    vec4 st = texelFetch(uState, ivec2(floor((vPos.xy - uOrigin) / uCell)), 0);
+    float soot = st.r, wet = min(1.0, st.g + (vCol.a > 0.99 ? 0.0 : uRainWet)), oil = st.b, fire = st.a;
+    lv *= 1.0 - soot * 0.75;
+    lv *= vec3(1.0, 1.0, 1.04) * (1.0 - wet * 0.28);
+    base = base * (1.0 - oil * 0.6) + vec3(40.0, 30.0, 18.0) / 255.0 * oil + (hash(floor(vPos.xy * 8.0)) > 0.9 ? oil * 0.24 : 0.0);
+    lv += fire * (0.7 + 0.3 * sin(uTime * 20.0 + vPos.x * 3.0)) * vec3(1.4, 0.6, 0.15);
+  }
+  vec3 c = base * lv;
   if (vCol.a > 0.99) {
-    float glint = d < 900.0 && h2(floor(vPos.xy * 0.5 + vec2(floor(uTime * 2.0), 0.0))) > 0.992 ? 0.8 * uDay : 0.0;
-    c = (base * 0.6 + uHorizon * 0.4 + glint * 0.47) * (0.5 + uDay * 0.5);
+    float glint = d < 900.0 && h2(floor(vPos.xy * 0.5 + vec2(floor(uTime * 2.0), 0.0))) > 0.992 ? (1.4 * uDay + 0.3) * 0.31 : 0.0;
+    c = (base * 0.75 + uHorizon * 0.25 + glint) * lv; // as Classic: a quarter sky, lit like the ground
   } else if (vCol.a > 0.0) {
     float fl = vCol.a * 2.0 * (0.75 + 0.25 * sin(uTime * 9.0 + vPos.x * 0.7 + vPos.y * 0.3));
     c += vec3(0.9, 0.38, 0.09) * fl;
@@ -82,6 +97,9 @@ interface Level {
   c: Uint8Array;
   code: Uint8Array;
   codeTex: WebGLTexture;
+  st: Uint8Array;
+  stDirty: boolean;
+  stTex: WebGLTexture;
   frame: number;
   coarse: boolean;
   valid: boolean;
@@ -117,9 +135,10 @@ export class GpuTerrain {
     for (let L = 0; L < GPU_TERRAIN.levels; L++) {
       this.levels.push({
         cs: LEVEL_CELL[L] ?? 1, ox: NaN, oy: NaN, frame: 0, coarse: true, valid: false,
-        hTex: makeTexture(gl, gl.R32F, V, V, gl.RED, gl.FLOAT),
+        hTex: makeTexture(gl, gl.RG32F, V, V, gl.RG, gl.FLOAT),
         cTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
-        h: new Float32Array(V * V), c: new Uint8Array(V * V * 4), code: new Uint8Array(V * V).fill(255),
+        h: new Float32Array(V * V * 2), c: new Uint8Array(V * V * 4), code: new Uint8Array(V * V).fill(255), st: new Uint8Array(V * V * 4), stDirty: true,
+        stTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
         codeTex: makeTexture(gl, gl.R8UI, V, V, gl.RED_INTEGER, gl.UNSIGNED_BYTE),
       });
     }
@@ -152,6 +171,7 @@ export class GpuTerrain {
   /** Refills at most two levels a frame, finest first (a level moves when the eye passes its snap step, or retries while it used coarse stand-ins). */
   update(ex: number, ey: number): void {
     this.frame++;
+    if (this.frame % 4 === 0) for (let L = 0; L < GPU_TERRAIN.texLevels; L++) { const l = this.levels[L]; if (l && l.valid) refreshGroundState(this.gl, this.tiles, l, V); }
     let budget = 2;
     for (const l of this.levels) {
       const snap = GPU_TERRAIN.snapCells * l.cs;
@@ -180,8 +200,10 @@ export class GpuTerrain {
         const ix = Math.max(0, Math.min(BLOCK, Math.round(fx)));
         const iy = Math.max(0, Math.min(BLOCK, Math.round(fy)));
         const k = j * V + i;
-        l.h[k] = b.h[iy * (BLOCK + 1) + ix] ?? 0;
         const q = Math.min(BLOCK - 1, iy) * BLOCK + Math.min(BLOCK - 1, ix);
+        // Far away, buildings and walls (lift) and treetops (canopy) stand up from the ground; near the eye real tiles and billboards do that.
+        l.h[k * 2] = (b.h[iy * (BLOCK + 1) + ix] ?? 0) + (L >= GPU_TERRAIN.texLevels ? (b.lift[q] ?? 0) * 0.1 : 0);
+        l.h[k * 2 + 1] = (b.canopy[q] ?? 0) * 0.1;
         const col = b.col[q] ?? 0;
         l.c[k * 4] = col & 255;
         l.c[k * 4 + 1] = (col >>> 8) & 255;
@@ -191,7 +213,7 @@ export class GpuTerrain {
       }
     }
     gl.bindTexture(gl.TEXTURE_2D, l.hTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RED, gl.FLOAT, l.h);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RG, gl.FLOAT, l.h);
     gl.bindTexture(gl.TEXTURE_2D, l.cTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RGBA, gl.UNSIGNED_BYTE, l.c);
     if (textured) {
@@ -233,7 +255,10 @@ export class GpuTerrain {
     gl.uniform4f(loc(gl, p, 'uShadeO'), this.shadeO[0] ?? 0, this.shadeO[1] ?? 0, this.shadeO[2] ?? 48, this.shadeMean);
     gl.uniform1f(loc(gl, p, 'uShadeOn'), this.shadeOn);
     gl.uniform3f(loc(gl, p, 'uHorizon'), env.horizon[0] / 255, env.horizon[1] / 255, env.horizon[2] / 255);
+    gl.uniform2f(loc(gl, p, 'uCanopy'), FLORA_FADE, CANOPY_FULL);
     gl.uniform1f(loc(gl, p, 'uDay'), env.day);
+    gl.uniform1i(loc(gl, p, 'uState'), 6);
+    gl.uniform1f(loc(gl, p, 'uRainWet'), env.rain > 0 ? 0.5 : 0);
     gl.uniform1f(loc(gl, p, 'uTime'), time);
     for (let L = 0; L < this.levels.length; L++) {
       const l = this.levels[L];
@@ -253,6 +278,8 @@ export class GpuTerrain {
       gl.bindTexture(gl.TEXTURE_2D, l.cTex);
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, l.codeTex);
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, l.stTex);
       gl.uniform1f(loc(gl, p, 'uTexOn'), L < GPU_TERRAIN.texLevels ? 1 : 0);
       gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_INT, 0);
     }
