@@ -1,3 +1,4 @@
+import { LIGHT_SHADER } from './gpuLight';
 import { SURFACE_SHADER } from './gpuSurfaces';
 
 /** Shader text for GPU structures (docs/GPU-RENDER.md stage 2): each brick's box is rasterised, the pixel walks the cells inside it. */
@@ -20,6 +21,7 @@ uniform mat4 uVP; uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uF
 uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; out vec4 o;
 ${SURFACE_SHADER}
+${LIGHT_SHADER}
 float P(int pc, int k){ return texelFetch(uPieces, ivec2(k, pc), 0).r; }
 float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
 vec4 rayShape(int byte, vec3 o, vec3 d){
@@ -97,7 +99,7 @@ void main(){
   bool open = !covered(ivec3(floor(w + n * 0.7)));
   float lit = open ? max(0.0, dot(n, uSunDir)) : 0.0;
   float tint = 0.93 + 0.14 * h3(vec3(cell));
-  vec3 c = col * tint * (uAmb * (open ? 1.0 : 0.9) + (open ? 0.0 : 0.09) + uSun * lit);
+  vec3 c = col * tint * (uAmb * (open ? 1.0 : 0.9) + (open ? 0.0 : 0.09) + uSun * lit + lightAt((w + n * 0.6).xy));
   float f = 1.0 - exp(-length(w - uEye) / uFogDist);
   o = vec4(mix(c, uFog, f), 1.0);
   vec4 cp = uVP * vec4(w, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;

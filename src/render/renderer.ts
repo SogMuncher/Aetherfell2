@@ -128,7 +128,7 @@ export class Renderer {
     // Under a roof no rain falls on you (the streaks and splashes stop).
     if (env.rain > 0 && !state.volume.openSky(cx, cy, cz + 0.3)) env.rain = 0;
     this.lastEnv = env;
-    if (this.options.gpu && this.renderGpu(f, cam, env, cx, cy, cz, me)) {
+    if (this.options.gpu && this.renderGpu(f, p, cam, env, cx, cy, cz, me)) {
       this.stats.totalMs = this.stats.totalMs * 0.9 + (performance.now() - t0) * 0.1;
       this.stats.gpuMs = this.gpu?.gpuMs ?? 0;
       return;
@@ -175,7 +175,7 @@ export class Renderer {
   }
 
   /** GPU pipeline frame (docs/GPU-RENDER.md). Returns false when WebGL2 is unavailable, so the CPU path draws instead. */
-  private renderGpu(f: FrameInput, cam: Camera, env: Env, cx: number, cy: number, cz: number, me: Entity | undefined): boolean {
+  private renderGpu(f: FrameInput, p: Projection, cam: Camera, env: Env, cx: number, cy: number, cz: number, me: Entity | undefined): boolean {
     const { state, tiles } = f;
     try {
       this.gpu ??= new GpuRenderer(this.viewport.canvas, this.terrain.lod, this.sampler, tiles);
@@ -185,11 +185,13 @@ export class Renderer {
       return false;
     }
     this.terrain.lod.beginFrame(7);
+    this.lightmap.build(state, tiles, cx, cy, this.time, f.alpha);
+    const billboards = this.sprites.collect(p, state, tiles, f.localId, f.alpha, this.time, this.hitFlash);
     const wl = tiles.waterLevel(cx, cy);
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, lightmap: this.lightmap, tiles, billboards, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;

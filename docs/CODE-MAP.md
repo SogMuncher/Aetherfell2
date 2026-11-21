@@ -133,6 +133,10 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `gpuTerrain.ts` (179) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, depth fog
 - `gpuStructures.ts` (~165) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
 - `gpuStructShader.ts` (~110) shader text for structures: shapes, DDA, surface textures, sun/cover light
+- `gpuTileBlocks.ts` (~125) tile walls/doors/windows as boxes from tile data
+- `gpuSprites.ts` (~165) billboards: sprite atlas + instanced quads
+- `gpuLight.ts` (~40) light grid as a texture
+- `gpuSurfaces.ts` (~30) shared tile surface atlas
 - `gpuSky.ts` (113) full-screen sky: gradient, sun, moon, stars, cloud slabs from sky data
 - `gpuPost.ts` (98) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)

@@ -7,10 +7,11 @@ import type { ReadonlyVolume, VolumeBrick } from '../../types';
 import { SHAPE_COUNT, SHAPE_PIECES, SHAPE_START } from '../../content/shapes';
 import type { Env } from '../lighting';
 import { compile, loc, makeTexture } from './glUtil';
+import type { GpuLight } from './gpuLight';
 import { GRID, PIECE_FLOATS, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
 
 /** All numbers live here. */
-export const GPU_STRUCT = { range: 170, slots: 1024, uploadsPerFrame: 24, tile: 64 } as const;
+export const GPU_STRUCT = { range: 170, slots: 1024, uploadsPerFrame: 24, freshPerFrame: 64, tile: 64 } as const;
 const GW = GRID.win * 2 + 1;
 const ATLAS = 32 * GPU_STRUCT.tile;
 const CORNERS = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1]);
@@ -18,7 +19,10 @@ const INDICES = new Uint8Array([0, 2, 1, 1, 2, 3, 4, 5, 6, 5, 7, 6, 0, 1, 4, 1, 
 
 interface Resident {
   slot: number;
+  /** Volume version this brick was last checked at. */
   version: number;
+  /** What the atlas holds for it (to upload only real changes). */
+  copy: Uint8Array;
 }
 
 export class GpuStructures {
@@ -38,7 +42,7 @@ export class GpuStructures {
   /** Bricks drawn in the last frame. */
   bricks = 0;
 
-  constructor(private readonly gl: WebGL2RenderingContext, private readonly surf: WebGLTexture) {
+  constructor(private readonly gl: WebGL2RenderingContext, private readonly surf: WebGLTexture, private readonly light: GpuLight) {
     this.prog = compile(gl, STRUCT_VS, STRUCT_FS);
     for (let i = GPU_STRUCT.slots - 1; i >= 0; i--) this.free.push(i);
     this.vao = gl.createVertexArray() as WebGLVertexArrayObject;
@@ -81,8 +85,10 @@ export class GpuStructures {
     for (let i = GPU_STRUCT.slots - 1; i >= 0; i--) this.free.push(i);
   }
 
-  private upload(b: VolumeBrick, slot: number): void {
+  /** Copies a brick's cells into its atlas tile if they differ from what is there. Returns false when nothing changed. */
+  private upload(b: VolumeBrick, r: Resident): boolean {
     const gl = this.gl;
+    const slot = r.slot;
     const t = this.tileData;
     for (let i = 0; i < 4096; i++) {
       const x = i & 15;
@@ -92,9 +98,12 @@ export class GpuStructures {
       t[o] = b.shape[i] ?? 0;
       t[o + 1] = b.mat[i] ?? 0;
     }
+    if (r.version >= 0 && t.every((v, i) => v === r.copy[i])) return false;
+    r.copy.set(t);
     gl.bindTexture(gl.TEXTURE_2D, this.atlas);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, (slot % 32) * 64, Math.floor(slot / 32) * 64, 64, 64, gl.RG_INTEGER, gl.UNSIGNED_BYTE, t);
+    return true;
   }
 
   draw(vp: Float32Array, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume): void {
@@ -105,6 +114,7 @@ export class GpuStructures {
     const gx0 = (Math.floor(eye.x) >> 4) - GRID.win;
     const gy0 = (Math.floor(eye.y) >> 4) - GRID.win;
     let budget = GPU_STRUCT.uploadsPerFrame;
+    let fresh = GPU_STRUCT.freshPerFrame;
     this.pageData.fill(0);
     this.count = 0;
     const seen = new Set<number>();
@@ -123,12 +133,14 @@ export class GpuStructures {
       if (!r) {
         const slot = this.free.pop();
         if (slot === undefined) continue;
-        r = { slot, version: -1 };
+        r = { slot, version: -1, copy: new Uint8Array(4096 * 2) };
         this.resident.set(key, r);
       }
-      if (r.version !== vol.version && budget > 0) {
-        budget--;
-        this.upload(b, r.slot);
+      // New bricks come first (their own budget); changed ones are re-checked a few a frame, so a busy world never starves new walls.
+      if (r.version < 0 ? fresh > 0 : r.version !== vol.version && budget > 0) {
+        if (r.version < 0) fresh--;
+        else budget--;
+        this.upload(b, r);
         r.version = vol.version;
       }
       if (r.version < 0) continue;
@@ -163,6 +175,7 @@ export class GpuStructures {
       gl.uniform1i(loc(gl, p, name), unit);
     };
     bind(0, this.atlas, 'uAtlas'); bind(1, this.page, 'uPage'); bind(2, this.pieces, 'uPieces'); bind(3, this.shapeIdx, 'uShapeIdx'); bind(4, this.surf, 'uSurf');
+    this.light.bind(p, 5);
     gl.uniformMatrix4fv(loc(gl, p, 'uVP'), false, vp);
     gl.uniform3f(loc(gl, p, 'uEye'), eye.x, eye.y, eye.z);
     gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);

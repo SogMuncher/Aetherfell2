@@ -11,7 +11,7 @@ import { CreatureSprites } from './creatures';
 import { PropSprites } from './props';
 import { SHADE_ONE } from '../palette';
 
-interface Billboard {
+export interface Billboard {
   x: number;
   y: number;
   z: number;
@@ -74,6 +74,13 @@ export class SpriteRenderer {
   }
 
   draw(vp: Viewport, p: Projection, env: Env, lm: LightMap, state: SimState, tiles: ReadonlyTiles, localId: number | null, alpha: number, time: number, hitFlash: Map<number, number>): void {
+    this.collect(p, state, tiles, localId, alpha, time, hitFlash);
+    this.list.sort((a, c) => c.depth - a.depth);
+    for (const bb of this.list) this.blit(vp, p, env, lm, bb);
+  }
+
+  /** Everything to draw this frame (trees, props, creatures, items) as billboards; the GPU path draws them itself. */
+  collect(p: Projection, state: SimState, tiles: ReadonlyTiles, localId: number | null, alpha: number, time: number, hitFlash: Map<number, number>): readonly Billboard[] {
     for (const b of this.list) this.pool.push(b);
     this.list.length = 0;
     this.flora.each(tiles, p.cam.x, p.cam.y, p.FX, p.FY, p.RX, p.RY, (t, fade, burning) => {
@@ -127,8 +134,7 @@ export class SpriteRenderer {
       }
       this.add(x, y, z - sink, s, p, facing, glow, flash, scale, tint, 1, colours);
     }
-    this.list.sort((a, c) => c.depth - a.depth);
-    for (const bb of this.list) this.blit(vp, p, env, lm, bb);
+    return this.list;
   }
 
   /** Loose items (painted from their definitions), or the missing-picture checks for an unknown sprite name. */
