@@ -22,6 +22,10 @@ export type { ParticleKind };
  */
 export class Particles implements FireSink {
   private list: Particle[] = [];
+  /** The live motes, for a drawer that is not the CPU one. */
+  get motes(): readonly Particle[] {
+    return this.list;
+  }
   /** Dead motes wait here to be reused, so a long fire makes no garbage. */
   private pool: Particle[] = [];
   private rainSeed = 0;

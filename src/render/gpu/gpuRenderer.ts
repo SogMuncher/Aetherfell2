@@ -10,7 +10,11 @@ import type { TerrainLod } from '../raycaster/terrainLod';
 import type { ReadonlyTiles, ReadonlyVolume, WeatherState } from '../../types';
 import type { Billboard } from '../entities/spriteRenderer';
 import type { LightMap } from '../lighting';
+import type { Particle } from '../vfx/particleKinds';
+import type { Surface } from '../vfx/glow';
 import { GpuAir } from './gpuAir';
+import { GpuOverlay } from './gpuOverlay';
+import { GpuParticles } from './gpuParticles';
 import { GpuLight } from './gpuLight';
 import { GpuSprites } from './gpuSprites';
 import { GpuPost } from './gpuPost';
@@ -36,6 +40,11 @@ export interface GpuFrame {
   lightmap: LightMap;
   tiles: ReadonlyTiles;
   billboards: readonly Billboard[];
+  motes: readonly Particle[];
+  /** Wind across your view (for the rain slant). */
+  windSide: number;
+  /** Paints the held item into the overlay buffer. */
+  paintHand: ((s: Surface) => void) | null;
   realm: string;
   time: number;
   post: PostParams;
@@ -54,6 +63,8 @@ export class GpuRenderer {
   private readonly blocks: GpuTileBlocks;
   private readonly light: GpuLight;
   private readonly sprites: GpuSprites;
+  private readonly fx: GpuParticles;
+  private readonly overlay: GpuOverlay;
   private readonly sky: GpuSky;
   private readonly air: GpuAir;
   private readonly post: GpuPost;
@@ -75,6 +86,8 @@ export class GpuRenderer {
     this.structures = new GpuStructures(gl, surf, this.light);
     this.blocks = new GpuTileBlocks(gl, surf, this.light);
     this.sprites = new GpuSprites(gl, this.light);
+    this.fx = new GpuParticles(gl);
+    this.overlay = new GpuOverlay(gl);
     this.sky = new GpuSky(gl);
     this.air = new GpuAir(gl);
     this.post = new GpuPost(gl);
@@ -130,6 +143,13 @@ export class GpuRenderer {
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;
     this.air.draw(vp, f.eye, air, f.time, 0.35 + 0.65 * f.env.day);
+    this.fx.drawMotes(vp, cam, f.eye, f.env, f.motes, f.time, h);
+    this.fx.drawRain(f.env, w, h, f.windSide, f.time);
+    const hand = this.overlay.begin(w, h);
+    if (f.paintHand) {
+      f.paintHand(hand);
+      this.overlay.draw();
+    }
     this.post.finish(f.post);
     if (timing && this.timer && this.query) gl.endQuery(this.timer.TIME_ELAPSED_EXT);
   }
