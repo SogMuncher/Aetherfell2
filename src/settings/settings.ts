@@ -72,6 +72,20 @@ export const SETTINGS: readonly SettingDef[] = [
       { value: '360', label: 'Very fine (slow)' },
     ],
   },
+  {
+    id: 'adaptive',
+    group: 'Video',
+    label: 'Keep it smooth',
+    help: 'Pixels grow chunkier by themselves when the game runs slower than this, and sharpen again when there is room.',
+    kind: 'choice',
+    value: '60',
+    options: [
+      { value: '0', label: 'Off' },
+      { value: '30', label: 'Aim for 30 fps' },
+      { value: '45', label: 'Aim for 45 fps' },
+      { value: '60', label: 'Aim for 60 fps' },
+    ],
+  },
   { id: 'fieldOfView', group: 'Video', label: 'Field of view', help: 'How wide you see, top to bottom.', kind: 'slider', min: 45, max: 90, step: 1, value: 60, format: (v) => `${Math.round(v)}°` },
   {
     id: 'colours',

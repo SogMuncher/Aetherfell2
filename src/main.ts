@@ -11,6 +11,7 @@ import { Simulation, createState, loadFromBrowser, saveToBrowser } from './sim';
 import { NetSession } from './net';
 import { GameAudio } from './audio';
 import { Renderer, GameUI } from './render';
+import { AdaptiveRes } from './render/adaptiveRes';
 import type { MenuAction } from './render';
 import { SettingsStore } from './settings';
 import type { BodyRegionId, CheatValue, Command, EntitySnapshot, ItemId, RuneId, SimEvent, ThrowAim } from './types';
@@ -86,6 +87,7 @@ function replaceSim(next: Simulation): void {
 }
 
 /** Hands the remembered settings to sound, view and controls (on start and on every change). */
+const adaptiveRes = new AdaptiveRes();
 function applySettings(): void {
   audio.setMix({
     master: settings.num('masterVolume') / 100,
@@ -102,8 +104,7 @@ function applySettings(): void {
     colourLevels: settings.num('colours') || 24,
   };
   renderer.terrain.setMaxDistance(settings.num('renderDistance') * 1000);
-  const lines = settings.num('resolution') || 200;
-  if (renderer.viewport.height !== lines) renderer.viewport.setTargetHeight(lines);
+  applyResolution(0);
   input.mouse.sensitivity = 0.0022 * (settings.num('mouseSensitivity') / 100);
   input.mouse.invertY = settings.bool('invertMouse');
   input.turnSpeed = settings.num('turnSpeed') / 100;
@@ -283,9 +284,17 @@ startTicker(stepWorld);
 /** Guest: when we last forgot far-away land (ms). */
 let trimmedAt = 0;
 
+/** Pixel size: the chosen detail, lowered on the fly when frames run slow (setting 'adaptive' = wished fps, 0 = off). */
+function applyResolution(dt: number): void {
+  const maxLines = settings.num('resolution') || 200;
+  const lines = adaptiveRes.update(dt, maxLines, settings.num('adaptive'));
+  if (renderer.viewport.height !== lines) renderer.viewport.setTargetHeight(lines);
+}
+
 function frame(now: number): void {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
+  if (running) applyResolution(dt);
   fps = fps * 0.95 + (1 / Math.max(0.001, dt)) * 0.05;
   input.dialogueOpen = (() => {
     const id = localEntityId();

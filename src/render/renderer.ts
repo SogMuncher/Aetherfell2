@@ -47,7 +47,7 @@ export class Renderer {
   private hitFlash = new Map<number, number>();
   lastProjection: Projection | null = null;
   lastEnv: Env | null = null;
-  stats = { terrainMs: 0, spritesMs: 0, totalMs: 0 };
+  stats = { terrainMs: 0, spritesMs: 0, totalMs: 0, lightMs: 0, skyMs: 0, volumeMs: 0, vfxMs: 0, postMs: 0 };
   /** Look options from the settings menu (main.ts keeps these up to date). */
   options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24 };
 
@@ -123,27 +123,40 @@ export class Renderer {
     // Under a roof no rain falls on you (the streaks and splashes stop).
     if (env.rain > 0 && !state.volume.openSky(cx, cy, cz + 0.3)) env.rain = 0;
     this.lastEnv = env;
+    const a0 = performance.now();
     this.lightmap.build(state, tiles, cx, cy, this.time, f.alpha);
     this.terrain.time = this.time;
     this.terrain.shadow.update(state.weather, cx, cy);
+    const a1 = performance.now();
     this.terrain.draw(vp, p, env, this.lightmap);
+    const a2 = performance.now();
     drawSky(vp, p, env, this.terrain.colTop, this.time, state.weather);
+    const a3 = performance.now();
     this.volume.draw(vp, p, env, this.lightmap, state.volume);
     const t1 = performance.now();
     this.sprites.draw(vp, p, env, this.lightmap, state, tiles, f.localId, f.alpha, this.time, this.hitFlash);
+    const b0 = performance.now();
     this.particles.emit(state, tiles, cx, cy, f.dt, env);
     this.particles.update(f.dt);
     this.particles.draw(vp, p, env);
     this.particles.drawRain(vp, p, env, state.weather.wind.x, state.weather.wind.y, this.time);
     if (me) this.viewModel.draw(vp, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: sa, dt: f.dt, time: this.time });
     const t2 = performance.now();
+    const b1 = t2;
     const wl = tiles.waterLevel(cx, cy);
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
     postProcess(vp, { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0 }, this.options.colourLevels);
     vp.present();
     const t3 = performance.now();
-    this.stats.terrainMs = this.stats.terrainMs * 0.9 + (t1 - t0) * 0.1;
-    this.stats.spritesMs = this.stats.spritesMs * 0.9 + (t2 - t1) * 0.1;
+    const st = this.stats;
+    const avg = (old: number, v: number): number => old * 0.9 + v * 0.1;
+    st.lightMs = avg(st.lightMs, a1 - a0);
+    st.terrainMs = avg(st.terrainMs, a2 - a1);
+    st.skyMs = avg(st.skyMs, a3 - a2);
+    st.volumeMs = avg(st.volumeMs, t1 - a3);
+    st.spritesMs = avg(st.spritesMs, b0 - t1);
+    st.vfxMs = avg(st.vfxMs, b1 - b0);
+    st.postMs = avg(st.postMs, t3 - b1);
     this.stats.totalMs = this.stats.totalMs * 0.9 + (t3 - t0) * 0.1;
   }
 }
