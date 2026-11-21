@@ -38,7 +38,7 @@ interface Seg {
  * them. Straight runs between towers (corners, every `towerEvery` m), and a gate on each exposed side
  * that asks for one, in line with the middle of its rectangle.
  */
-export function cityWall(items: readonly Enclosed[], margin: number, kit: WallKit, salt: number): { pieces: PlannedStructure[]; gates: GateAt[] } {
+export function cityWall(items: readonly Enclosed[], margin: number, kit: WallKit, salt: number, want: (g: GateAt) => boolean = () => true): { pieces: PlannedStructure[]; gates: GateAt[] } {
   const rects = items.map((i) => ({ x0: i.cx - i.hx - margin, x1: i.cx + i.hx + margin + 1, y0: i.cy - i.hy - margin, y1: i.cy + i.hy + margin + 1 }));
   const xs = [...new Set(rects.flatMap((r) => [r.x0, r.x1]))].sort((a, b) => a - b);
   const ys = [...new Set(rects.flatMap((r) => [r.y0, r.y1]))].sort((a, b) => a - b);
@@ -114,9 +114,12 @@ export function cityWall(items: readonly Enclosed[], margin: number, kit: WallKi
       const line = s.side === 'n' ? it.cy - it.hy - margin : s.side === 's' ? it.cy + it.hy + margin + 1 : s.side === 'w' ? it.cx - it.hx - margin : it.cx + it.hx + margin + 1;
       const g0 = m - Math.floor(GATE_W / 2);
       if (line !== s.f || g0 < s.a0 + TOWER || g0 + GATE_W > s.a1 - TOWER + 1) continue;
+      const at: GateAt = { side: s.side, x: horizontal ? m : s.side === 'w' ? s.f : s.f - 1, y: horizontal ? (s.side === 'n' ? s.f : s.f - 1) : m };
+      // No road leaves here: the wall stays whole.
+      if (!want(at)) continue;
       add(kit.gate, g0, GATE_W, GATE_D, ROT_OUT[s.side]);
       spans.push({ a: g0, w: GATE_W });
-      gates.push({ side: s.side, x: horizontal ? m : s.side === 'w' ? s.f : s.f - 1, y: horizontal ? (s.side === 'n' ? s.f : s.f - 1) : m });
+      gates.push(at);
     }
     // Towers along each stretch between what stands already, straight runs in what is left.
     const sorted = [...spans].sort((p, q) => p.a - q.a);

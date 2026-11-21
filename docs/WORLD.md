@@ -28,3 +28,5 @@
 
 ## Checks
 `scripts/worldSmoke.ts` (terrain, far view), `settlementSmoke.ts`, `waysSmoke.ts`, `waterSmoke.ts`, `matterSmoke.ts`.
+
+- Gates and roads agree: ways are routed from the all-gates layout (`rawSiteInRegion`); `siteInRegion` then returns a walled city with gates only where a way leaves (`setGateRule` in roads.ts), so no gate leads nowhere. A route that would run through a city wall is dropped (`crossesWall` in wayRoute.ts). Checked in waysSmoke.

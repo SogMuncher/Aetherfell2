@@ -6,6 +6,7 @@ import { REGION_SIZE, siteInRegion, structuresIn } from './sites';
 import type { SiteLayout } from './sites';
 import { generateChunk } from './chunkgen';
 import { wayHit } from './roads';
+import { landsBySeed } from './wayParts';
 import type { WayHit } from './roads';
 import { carve, waterSpot } from './water';
 import type { WaterSpot } from './water';
@@ -28,7 +29,9 @@ function octavesFor(detail: number): number {
  * winding old roads, and flattened plateaus where settlements sit. Pure function of the seed.
  */
 export class Terrain implements WorldSampler {
-  constructor(readonly seed: number) {}
+  constructor(readonly seed: number) {
+    landsBySeed.set(seed, this);
+  }
 
   /** The bare shape of the land: the sum of content's land layers (continents, hills, mountains, bumps). */
   rawGround(x: number, y: number, octaves = 6): number {
