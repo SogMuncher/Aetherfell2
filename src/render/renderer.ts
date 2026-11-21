@@ -11,7 +11,7 @@ import { SpriteRenderer } from './entities/spriteRenderer';
 import { ViewModel } from './entities/viewModel';
 import { Particles } from './vfx/particles';
 import { postProcess } from './post';
-import { GpuSpike } from './gpu/gpuSpike';
+import { GpuRenderer } from './gpu/gpuRenderer';
 
 export interface FrameInput {
   state: SimState;
@@ -40,7 +40,8 @@ export class Renderer {
   readonly particles = new Particles();
   private lightmap = new LightMap();
   private viewModel = new ViewModel();
-  private spike: GpuSpike | null = null;
+  private gpu: GpuRenderer | null = null;
+  private readonly sampler: WorldSampler;
   private time = 0;
   private flash = 0;
   private hurt = 0;
@@ -49,13 +50,14 @@ export class Renderer {
   private hitFlash = new Map<number, number>();
   lastProjection: Projection | null = null;
   lastEnv: Env | null = null;
-  stats = { terrainMs: 0, spritesMs: 0, totalMs: 0, lightMs: 0, skyMs: 0, volumeMs: 0, vfxMs: 0, postMs: 0 };
+  stats = { gpuMs: 0, terrainMs: 0, spritesMs: 0, totalMs: 0, lightMs: 0, skyMs: 0, volumeMs: 0, vfxMs: 0, postMs: 0 };
   /** Look options from the settings menu (main.ts keeps these up to date). */
-  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24, gpuSpike: false };
+  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24, gpu: false };
 
   constructor(canvas: HTMLCanvasElement, sampler: WorldSampler, tiles: ReadonlyTiles) {
     this.viewport = new Viewport(canvas, 200);
     this.terrain = new TerrainRenderer(sampler, tiles);
+    this.sampler = sampler;
   }
 
   onEvent(e: SimEvent, state: SimState, localId: number | null): void {
@@ -93,6 +95,7 @@ export class Renderer {
     if (state.realm !== this.realm) {
       this.realm = state.realm;
       this.terrain.forgetFar();
+      this.gpu?.forget();
     }
     const me: Entity | undefined = f.localId !== null ? state.entities.get(f.localId) : undefined;
     // A fully wound-up blow makes the view tremble a little.
@@ -125,6 +128,15 @@ export class Renderer {
     // Under a roof no rain falls on you (the streaks and splashes stop).
     if (env.rain > 0 && !state.volume.openSky(cx, cy, cz + 0.3)) env.rain = 0;
     this.lastEnv = env;
+    if (this.options.gpu && this.renderGpu(f, cam, env, cx, cy, cz, me)) {
+      this.stats.totalMs = this.stats.totalMs * 0.9 + (performance.now() - t0) * 0.1;
+      this.stats.gpuMs = this.gpu?.gpuMs ?? 0;
+      return;
+    }
+    if (this.gpu) {
+      this.gpu.dispose();
+      this.gpu = null;
+    }
     const a0 = performance.now();
     this.lightmap.build(state, tiles, cx, cy, this.time, f.alpha);
     this.terrain.time = this.time;
@@ -149,18 +161,6 @@ export class Renderer {
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
     postProcess(vp, { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0 }, this.options.colourLevels);
     vp.present();
-    if (this.options.gpuSpike) {
-      try {
-        this.spike ??= new GpuSpike(vp.canvas);
-        this.spike.draw(tiles, env, { x: cx, y: cy, z: cz }, f.yaw, f.pitch, this.options.fovDegrees);
-      } catch (e) {
-        console.warn('GPU spike unavailable', e);
-        this.options.gpuSpike = false;
-      }
-    } else if (this.spike) {
-      this.spike.dispose();
-      this.spike = null;
-    }
     const t3 = performance.now();
     const st = this.stats;
     const avg = (old: number, v: number): number => old * 0.9 + v * 0.1;
@@ -172,5 +172,26 @@ export class Renderer {
     st.vfxMs = avg(st.vfxMs, b1 - b0);
     st.postMs = avg(st.postMs, t3 - b1);
     this.stats.totalMs = this.stats.totalMs * 0.9 + (t3 - t0) * 0.1;
+  }
+
+  /** GPU pipeline frame (docs/GPU-RENDER.md). Returns false when WebGL2 is unavailable, so the CPU path draws instead. */
+  private renderGpu(f: FrameInput, cam: Camera, env: Env, cx: number, cy: number, cz: number, me: Entity | undefined): boolean {
+    const { state, tiles } = f;
+    try {
+      this.gpu ??= new GpuRenderer(this.viewport.canvas, this.terrain.lod, this.sampler);
+    } catch (e) {
+      console.warn('GPU renderer unavailable, using the classic one', e);
+      this.options.gpu = false;
+      return false;
+    }
+    this.terrain.lod.beginFrame(7);
+    const wl = tiles.waterLevel(cx, cy);
+    const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
+    this.gpu.draw({
+      eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
+      env, weather: state.weather, realm: state.realm, time: this.time,
+      post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
+    });
+    return true;
   }
 }

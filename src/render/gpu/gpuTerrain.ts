@@ -1,0 +1,179 @@
+/**
+ * GPU terrain: a clipmap of nested grids around the eye, one per LOD level (cell 1 m .. 128 m), fed from the same
+ * `TerrainLod` blocks the CPU renderer reads (so burns, soot, frozen lakes and far colours all carry over).
+ * Heights and colours live in textures; the vertex shader displaces a fixed grid. Each level hides the part the
+ * finer one already covers. Fog is depth based. Read-only on the sim.
+ */
+import { compile, loc, makeTexture } from './glUtil';
+import type { Env } from '../lighting';
+import { BLOCK, LEVEL_CELL, TerrainLod } from '../raycaster/terrainLod';
+
+/** All numbers live here. */
+export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, sink: 0.03, grit: 0.09 } as const;
+const N = GPU_TERRAIN.cells;
+const V = N + 1;
+
+const VS = `#version 300 es
+uniform mat4 uVP; uniform sampler2D uH; uniform sampler2D uC; uniform vec2 uOrigin; uniform float uCell; uniform float uSink;
+out vec3 vPos; out vec4 vCol;
+void main(){
+  int i = gl_VertexID % ${V}; int j = gl_VertexID / ${V};
+  float h = texelFetch(uH, ivec2(i, j), 0).r - uSink;
+  vec3 p = vec3(uOrigin + vec2(i, j) * uCell, h);
+  vCol = texelFetch(uC, ivec2(i, j), 0);
+  vPos = p; gl_Position = uVP * vec4(p, 1.0);
+}`;
+const FS = `#version 300 es
+precision highp float;
+uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist; uniform vec3 uSun; uniform vec3 uSunDir; uniform vec3 uAmb;
+uniform vec4 uHole; uniform float uGrit;
+in vec3 vPos; in vec4 vCol; out vec4 o;
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+void main(){
+  if (vPos.x > uHole.x && vPos.x < uHole.z && vPos.y > uHole.y && vPos.y < uHole.w) discard;
+  vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos))); if (n.z < 0.0) n = -n;
+  float d = length(vPos - uEye);
+  vec3 base = vCol.rgb;
+  // Grit: per-metre speckle that fades with distance (the near ground never looks flat).
+  base *= 1.0 + (hash(floor(vPos.xy)) - 0.5) * uGrit * 2.0 * (1.0 - smoothstep(20.0, 120.0, d));
+  float lit = max(0.0, dot(n, uSunDir));
+  vec3 c = base * (uAmb + uSun * lit);
+  float f = 1.0 - exp(-d / uFogDist);
+  o = vec4(mix(c, uFog, f), 1.0);
+}`;
+
+interface Level {
+  cs: number;
+  ox: number;
+  oy: number;
+  hTex: WebGLTexture;
+  cTex: WebGLTexture;
+  h: Float32Array;
+  c: Uint8Array;
+  frame: number;
+  coarse: boolean;
+  valid: boolean;
+}
+
+export class GpuTerrain {
+  private readonly prog: WebGLProgram;
+  private readonly indexCount: number;
+  private readonly vao: WebGLVertexArrayObject;
+  private readonly levels: Level[] = [];
+  private frame = 0;
+
+  constructor(private readonly gl: WebGL2RenderingContext, private readonly lod: TerrainLod) {
+    this.prog = compile(gl, VS, FS);
+    const idx = new Uint32Array(N * N * 6);
+    let k = 0;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const a = j * V + i;
+      idx.set([a, a + 1, a + V, a + 1, a + V + 1, a + V], k);
+      k += 6;
+    }
+    this.indexCount = idx.length;
+    this.vao = gl.createVertexArray() as WebGLVertexArrayObject;
+    gl.bindVertexArray(this.vao);
+    const ib = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
+    for (let L = 0; L < GPU_TERRAIN.levels; L++) {
+      this.levels.push({
+        cs: LEVEL_CELL[L] ?? 1, ox: NaN, oy: NaN, frame: 0, coarse: true, valid: false,
+        hTex: makeTexture(gl, gl.R32F, V, V, gl.RED, gl.FLOAT),
+        cTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
+        h: new Float32Array(V * V), c: new Uint8Array(V * V * 4),
+      });
+    }
+  }
+
+  forget(): void {
+    for (const l of this.levels) l.valid = false;
+  }
+
+  /** Refills at most two levels a frame, finest first (a level moves when the eye passes its snap step, or retries while it used coarse stand-ins). */
+  update(ex: number, ey: number): void {
+    this.frame++;
+    let budget = 2;
+    for (const l of this.levels) {
+      const snap = GPU_TERRAIN.snapCells * l.cs;
+      const ox = Math.round(ex / snap) * snap - (N / 2) * l.cs;
+      const oy = Math.round(ey / snap) * snap - (N / 2) * l.cs;
+      const stale = !l.valid || ox !== l.ox || oy !== l.oy || (l.coarse && this.frame - l.frame > GPU_TERRAIN.refillEvery);
+      if (!stale || budget <= 0) continue;
+      budget--;
+      this.fill(l, ox, oy);
+    }
+  }
+
+  private fill(l: Level, ox: number, oy: number): void {
+    const gl = this.gl;
+    const L = this.levels.indexOf(l);
+    let coarse = false;
+    for (let j = 0; j < V; j++) {
+      for (let i = 0; i < V; i++) {
+        const x = ox + i * l.cs;
+        const y = oy + j * l.cs;
+        const b = this.lod.get(L, x, y);
+        if (b.level !== L) coarse = true;
+        const fx = (x - b.ox) / b.cs;
+        const fy = (y - b.oy) / b.cs;
+        const ix = Math.max(0, Math.min(BLOCK, Math.round(fx)));
+        const iy = Math.max(0, Math.min(BLOCK, Math.round(fy)));
+        const k = j * V + i;
+        l.h[k] = b.h[iy * (BLOCK + 1) + ix] ?? 0;
+        const q = Math.min(BLOCK - 1, iy) * BLOCK + Math.min(BLOCK - 1, ix);
+        const col = b.col[q] ?? 0;
+        l.c[k * 4] = col & 255;
+        l.c[k * 4 + 1] = (col >>> 8) & 255;
+        l.c[k * 4 + 2] = (col >>> 16) & 255;
+        l.c[k * 4 + 3] = b.water[q] ? 255 : 0;
+      }
+    }
+    gl.bindTexture(gl.TEXTURE_2D, l.hTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RED, gl.FLOAT, l.h);
+    gl.bindTexture(gl.TEXTURE_2D, l.cTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RGBA, gl.UNSIGNED_BYTE, l.c);
+    l.ox = ox;
+    l.oy = oy;
+    l.frame = this.frame;
+    l.coarse = coarse;
+    l.valid = true;
+  }
+
+  draw(vp: Float32Array, eye: { x: number; y: number; z: number }, env: Env): void {
+    const gl = this.gl;
+    const p = this.prog;
+    gl.useProgram(p);
+    gl.bindVertexArray(this.vao);
+    gl.uniformMatrix4fv(loc(gl, p, 'uVP'), false, vp);
+    gl.uniform3f(loc(gl, p, 'uEye'), eye.x, eye.y, eye.z);
+    gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
+    gl.uniform1f(loc(gl, p, 'uFogDist'), env.fogDist);
+    gl.uniform3f(loc(gl, p, 'uSun'), env.sunR, env.sunG, env.sunB);
+    gl.uniform3f(loc(gl, p, 'uAmb'), env.ambR, env.ambG, env.ambB);
+    gl.uniform3f(loc(gl, p, 'uSunDir'), env.lx, env.ly, env.lz);
+    gl.uniform1f(loc(gl, p, 'uGrit'), GPU_TERRAIN.grit);
+    gl.uniform1i(loc(gl, p, 'uH'), 0);
+    gl.uniform1i(loc(gl, p, 'uC'), 1);
+    for (let L = 0; L < this.levels.length; L++) {
+      const l = this.levels[L];
+      if (!l || !l.valid) continue;
+      const inner = this.levels[L - 1];
+      if (inner && inner.valid) {
+        const m = 2 * inner.cs;
+        gl.uniform4f(loc(gl, p, 'uHole'), inner.ox + m, inner.oy + m, inner.ox + N * inner.cs - m, inner.oy + N * inner.cs - m);
+      } else gl.uniform4f(loc(gl, p, 'uHole'), 0, 0, 0, 0);
+      gl.uniform2f(loc(gl, p, 'uOrigin'), l.ox, l.oy);
+      gl.uniform1f(loc(gl, p, 'uCell'), l.cs);
+      // Coarser levels sit a little lower so they never fight the finer ones where they overlap.
+      gl.uniform1f(loc(gl, p, 'uSink'), GPU_TERRAIN.sink * l.cs);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, l.hTex);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, l.cTex);
+      gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_INT, 0);
+    }
+    gl.activeTexture(gl.TEXTURE0);
+  }
+}

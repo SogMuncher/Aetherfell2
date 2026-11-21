@@ -129,7 +129,12 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `viewModel.ts` (794) held weapon as small 3D scene (being replaced by sprites)
 
 ## src/render/gpu/
-- `gpuSpike.ts` (~170) spike: WebGL2 terrain + billboards + fog on a shared depth buffer (setting 'GPU test view'); plan in docs/GPU-RENDER.md
+- `gpuRenderer.ts` (123) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
+- `gpuTerrain.ts` (179) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, depth fog
+- `gpuSky.ts` (113) full-screen sky: gradient, sun, moon, stars, cloud slabs from sky data
+- `gpuPost.ts` (98) low-res colour+depth target and the dither/vignette/tint finish
+- `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)
+- `glUtil.ts` (71) shader/texture helpers, camera basis and view-projection
 
 ## src/render/materials/
 - `textures.ts` (172) tileable procedural textures from surface layers

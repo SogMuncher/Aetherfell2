@@ -10,6 +10,7 @@ export const BIOMES: Record<string, BiomeDef> = {
   beach: { name: 'beach', when: { below: 2.2 }, ground: 'sand', roads: false, bareSlopes: false, far: [198, 184, 138], map: [196, 182, 136] },
   snow: {
     name: 'snowfields',
+    air: { count: 260, colour: [235, 240, 250], alpha: 0.7, drift: [0.8, 0.3, -0.5], box: 22, size: 1 },
     when: { above: 165 },
     ground: 'snow',
     trees: { tile: 'pine', density: 0.02 },
@@ -37,6 +38,7 @@ export const BIOMES: Record<string, BiomeDef> = {
   // Low, wet ground near the sea: sedge with sunken pools of peat and a few bushes.
   marsh: {
     name: 'marsh',
+    air: { count: 120, colour: [190, 210, 170], alpha: 0.4, drift: [0.1, 0.05, 0.15], box: 20, size: 1 },
     when: { below: 14, wetter: 0.6 },
     ground: 'sedge',
     trees: { tile: 'willow', density: 0.01, mix: [{ tile: 'oak', share: 0.25 }] },
@@ -52,6 +54,7 @@ export const BIOMES: Record<string, BiomeDef> = {
   },
   forest: {
     name: 'forest',
+    air: { count: 160, colour: [236, 222, 150], alpha: 0.55, drift: [0.15, 0.1, 0.12], box: 24, size: 1 },
     when: { wetter: 0.56 },
     ground: 'grass',
     // Thin enough to walk between and to draw: a woodland patch peaks near one tile in ten.
@@ -69,6 +72,7 @@ export const BIOMES: Record<string, BiomeDef> = {
   },
   steppe: {
     name: 'steppe',
+    air: { count: 200, colour: [214, 190, 146], alpha: 0.5, drift: [1.1, 0.4, 0.05], box: 28, size: 1 },
     when: { drier: 0.42 },
     ground: 'brush',
     trees: { tile: 'oak', density: 0.006, mix: [{ tile: 'deadTree', share: 0.45 }] },
@@ -82,6 +86,7 @@ export const BIOMES: Record<string, BiomeDef> = {
   },
   meadow: {
     name: 'meadow',
+    air: { count: 140, colour: [250, 236, 170], alpha: 0.5, drift: [0.3, 0.2, 0.1], box: 26, size: 1 },
     when: {},
     ground: 'grass',
     trees: { tile: 'oak', density: 0.025, mix: [{ tile: 'birch', share: 0.3 }] },

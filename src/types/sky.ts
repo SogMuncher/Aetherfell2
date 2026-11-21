@@ -60,3 +60,17 @@ export interface SkyDef {
   /** Beyond this distance clouds fade into the haze (metres). */
   cloudRange: number;
 }
+
+/** Floating motes in the air (dust, pollen, ash): a cheap way to make depth felt. Ambient per biome and realm. */
+export interface AirDef {
+  /** How many motes hang in the air around you. */
+  count: number;
+  colour: Rgb;
+  /** 0..1 strength. */
+  alpha: number;
+  /** Drift in metres per second (x, y, z; z negative = falling). */
+  drift: readonly [number, number, number];
+  /** Size of the cloud of motes around you (metres), and how big each dot is (pixels). */
+  box: number;
+  size: number;
+}

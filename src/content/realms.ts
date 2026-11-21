@@ -30,6 +30,7 @@ export const REALMS: Record<RealmId, RealmDef> = {
     ambient: 0.07,
     fog: [5, 4, 8],
     fogDist: 46,
+    air: { count: 180, colour: [150, 140, 120], alpha: 0.5, drift: [0.05, 0.03, -0.04], box: 14, size: 1 },
     scatter: [
       { thing: 'chest', chance: 0.35, at: 'middle' },
       { thing: 'urn', chance: 0.5, at: 'wall' },

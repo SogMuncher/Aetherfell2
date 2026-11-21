@@ -3,6 +3,7 @@ import type { BrainId, FactionId, ItemId, LootId, MaterialId, RealmId, SiteId, S
 import type { Color } from '../math';
 import type { DamageKind, Effect } from '../effects';
 import type { SwingDir } from '../input';
+import type { AirDef } from '../sky';
 
 
 /** Which family of sounds a material makes underfoot and when struck. */
@@ -86,6 +87,8 @@ export interface RealmDef {
   ambient: number;
   fog: readonly [number, number, number];
   fogDist: number;
+  /** Motes floating in the air here (dust in the halls); used when the realm has no sky biome of its own. */
+  air?: AirDef;
   /** What lies in the halls of a lattice realm: for each hall, each entry is placed with this chance (at its middle, in a corner, or along a wall). */
   scatter?: { thing: ThingId; chance: number; at: 'middle' | 'corner' | 'wall'; under?: SiteId[] }[];
   /** A lamp every traveller carries here, so the dark can be explored (colour, reach in metres, flicker). */
