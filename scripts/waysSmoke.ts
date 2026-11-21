@@ -21,8 +21,7 @@ function check(name: string, ok: boolean, detail = ''): void {
 const problems = validateContent(CONTENT);
 check('content validates (grades, way, under)', problems.length === 0, problems.join('; '));
 
-const R = 6;
-function gather(seed: number): { ways: Way[]; sites: SiteLayout[] } {
+function gather(seed: number, R = 6): { ways: Way[]; sites: SiteLayout[] } {
   const land = landOf(seed);
   const ways = new Map<string, Way>();
   const sites = new Map<string, SiteLayout>();
@@ -160,6 +159,45 @@ check('most places that keep a way are linked to another', wayPlaces === 0 || re
   check('an artery is open exactly beneath every way', total > 0 && open / total > 0.99, `${open}/${total}`);
   check('a great hall lies under each place that has an undercroft', hallsWanted > 0 && halls / hallsWanted > 0.95, `${halls}/${hallsWanted}`);
   check('those halls know which place is above them (for their scatter)', hallsWanted > 0 && tagged / hallsWanted > 0.95, `${tagged}/${hallsWanted}`);
+}
+
+// ---- gates and walls ------------------------------------------------------------------------------
+{
+  let cities = 0;
+  let gates = 0;
+  let loose = 0;
+  let unopened = 0;
+  let through = 0;
+  for (const seed of [1, 2, 3]) {
+    const { ways, sites } = gather(seed, 14);
+    for (const s of sites) {
+      if (s.layout.shape !== 'city' || s.rx < 1 || s.ry < 1 || s.rx > 12 || s.ry > 12) continue;
+      cities++;
+      const ends = ways.flatMap((w) => [w.pts[0], w.pts[w.pts.length - 1]]).filter((p): p is { x: number; y: number } => p !== undefined);
+      const near = (p: { x: number; y: number }, q: { x: number; y: number }): boolean => Math.abs(p.x - q.x) < 2 && Math.abs(p.y - q.y) < 2;
+      for (const m of s.mouths ?? []) {
+        gates++;
+        if (!ends.some((e) => near(e, m))) loose++;
+      }
+      for (const w of ways) {
+        const e = siteEnd(w, s);
+        if (e && !(s.mouths ?? []).some((m) => near(m, e))) unopened++;
+      }
+      // A way never runs through the wall of a city it does not end at.
+      const mg = (s.layout.walls.margin ?? 0) + 1;
+      for (const w of ways) {
+        if (w.a === s || w.b === s) continue;
+        for (const p of w.pts) if (s.footprint.some((r) => p.x > r.x0 - mg && p.x < r.x1 + mg && p.y > r.y0 - mg && p.y < r.y1 + mg)) through++;
+      }
+    }
+  }
+  function siteEnd(w: Way, s: SiteLayout): { x: number; y: number } | undefined {
+    return w.a.rx === s.rx && w.a.ry === s.ry ? w.pts[0] : w.b.rx === s.rx && w.b.ry === s.ry ? w.pts[w.pts.length - 1] : undefined;
+  }
+  check('some walled cities were found', cities > 0, `${cities} cities, ${gates} gates`);
+  check('every gate has a road leaving it', loose === 0, `${loose} gates lead nowhere`);
+  check('every road that meets a city leaves by an open gate', unopened === 0, `${unopened} roads end at a plain wall`);
+  check('no road runs through another city\'s wall', through === 0, `${through} route points inside walls`);
 }
 
 if (failed) throw new Error(`${failed} way check(s) failed`);

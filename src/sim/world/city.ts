@@ -39,7 +39,7 @@ const SIDES: readonly CompassSide[] = ['n', 'e', 's', 'w'];
 const OPPOSITE: Record<CompassSide, CompassSide> = { n: 's', s: 'n', e: 'w', w: 'e' };
 
 /** The plan for the city whose middle is (cx, cy) in region (rx, ry). */
-export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy: number, l: CityLayout, wet: WetProbe = () => false): CityPlan {
+export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy: number, l: CityLayout, wet: WetProbe = () => false, open: readonly Pt[] | null = null): CityPlan {
   const rr = (w: number) => (k: number, a = 0, b = 0): number => hash2(seed + 500 + k + w * 1009, rx * 31 + a, ry * 17 + b);
   const r = rr(0);
   const hx = l.half[0] + Math.floor(r(1) * (l.half[1] - l.half[0] + 1));
@@ -109,7 +109,18 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
   };
   // One wall round all of it.
   const M = l.walls.margin ?? 0;
-  const wall = cityWall(wards.map((w) => ({ cx: w.cx, cy: w.cy, hx: w.hx, hy: w.hy, gates: SIDES })), M, l.walls, Math.floor(r(7) * 2147483647));
+  // A gate opens only where the ground out front is dry and (once roads are known) a road really runs out of it.
+  const OUT = 40;
+  const outFrom = (g: { side: CompassSide; x: number; y: number }): Pt => ({ x: g.x + (g.side === 'e' ? OUT : g.side === 'w' ? -OUT : 0), y: g.y + (g.side === 's' ? OUT : g.side === 'n' ? -OUT : 0) });
+  const gateOk = (g: { side: CompassSide; x: number; y: number }): boolean => {
+    const dx = g.side === 'e' ? 1 : g.side === 'w' ? -1 : 0;
+    const dy = g.side === 's' ? 1 : g.side === 'n' ? -1 : 0;
+    for (let d = 1; d <= OUT; d += 2) if (wet(g.x + dx * d, g.y + dy * d)) return false;
+    if (!open) return true;
+    const m = outFrom(g);
+    return open.some((p) => Math.abs(p.x - m.x) < 2 && Math.abs(p.y - m.y) < 2);
+  };
+  const wall = cityWall(wards.map((w) => ({ cx: w.cx, cy: w.cy, hx: w.hx, hy: w.hy, gates: SIDES })), M, l.walls, Math.floor(r(7) * 2147483647), gateOk);
   wall.pieces.forEach(push);
   const painters: ((x: number, y: number) => TileKind | null)[] = [];
   wards.forEach((w, wi) => painters.push(raiseWard(w, rr(wi), l, push, dwellings)));
@@ -123,21 +134,15 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
   }
 
   const mw = (l.streets.main - 1) / 2;
-  const OUT = 40;
   const inside = (w: Ward, x: number, y: number, m = 0): boolean => Math.abs(x - w.cx) <= w.hx + m && Math.abs(y - w.cy) <= w.hy + m;
   // Roads running out from the gates, where the ground is dry.
   const mouths: Pt[] = [];
   const stubs: { g: (typeof wall.gates)[number]; w: number }[] = [];
   for (const g of wall.gates) {
-    const dx = g.side === 'e' ? 1 : g.side === 'w' ? -1 : 0;
-    const dy = g.side === 's' ? 1 : g.side === 'n' ? -1 : 0;
-    let free = true;
-    for (let d = 1; d <= OUT && free; d += 2) if (wet(g.x + dx * d, g.y + dy * d)) free = false;
-    if (!free) continue;
     // The ward whose middle this gate lines up with sets the width of the main street.
     const owner = wards.find((w) => (g.side === 'n' || g.side === 's' ? w.cx === g.x : w.cy === g.y));
     stubs.push({ g, w: ((owner?.streets.main ?? l.streets.main) - 1) / 2 });
-    mouths.push({ x: g.x + dx * OUT, y: g.y + dy * OUT });
+    mouths.push(outFrom(g));
   }
   const onStub = (x: number, y: number): boolean => {
     for (const { g, w } of stubs) {

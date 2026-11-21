@@ -1,5 +1,5 @@
-import { CELL, type Land, type RegionWays, SPAN, type Seg, type Way, type WayHit, cellKey, chosen, netOf, siteKey, sitesAround } from './wayParts';
-import { type Pt, REGION_SIZE } from './sites';
+import { CELL, type Land, landsBySeed, type RegionWays, SPAN, type Seg, type Way, type WayHit, cellKey, chosen, netOf, siteKey, sitesAround } from './wayParts';
+import { type Pt, REGION_SIZE, type SiteLayout, setGateRule } from './sites';
 import { wayBetween, wayBox } from './wayRoute';
 
 export type { Land, Way, WayHit } from './wayParts';
@@ -88,3 +88,24 @@ export function wayHit(land: Land, x: number, y: number, spread = 0): WayHit | n
   }
   return best;
 }
+
+/** The street ends of a walled place that a way really leaves by: its gates open there and nowhere else. */
+function usedMouths(land: Land, site: SiteLayout): Pt[] {
+  const out: Pt[] = [];
+  const mine = chosen(land, site);
+  const me = siteKey(site);
+  for (const o of sitesAround(land, site.rx, site.ry, SPAN)) {
+    if (siteKey(o) === me) continue;
+    if (!mine.includes(siteKey(o)) && !chosen(land, o).includes(me)) continue;
+    const w = wayBetween(land, site, o);
+    if (!w || w.pts.length === 0) continue;
+    const end = (w.a === site || siteKey(w.a) === me ? w.pts[0] : w.pts[w.pts.length - 1]) as Pt;
+    out.push(end);
+  }
+  return out;
+}
+
+setGateRule((seed, site) => {
+  const land = landsBySeed.get(seed);
+  return land ? usedMouths(land, site) : null;
+});

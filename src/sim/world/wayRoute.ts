@@ -1,5 +1,5 @@
 import { CONTENT } from '../../content';
-import { type Land, type Way, centre, dist, gradeOf, mouth, netOf, siteKey } from './wayParts';
+import { SPAN, type Land, type Way, centre, dist, gradeOf, mouth, netOf, siteKey, sitesAround } from './wayParts';
 import type { Pt, SiteLayout } from './sites';
 import { type Span, planBridge } from './decks';
 import type { WayGradeDef } from '../../types';
@@ -139,6 +139,25 @@ export function route(a: Pt, b: Pt, bend: number, wander: number, phase: number)
   return pts;
 }
 
+/** Does a route run through the wall of any walled place near it? Roads cross walls only at gates, so such a route is no route. */
+function crossesWall(land: Land, pts: Pt[], near: SiteLayout): boolean {
+  const walls = sitesAround(land, near.rx, near.ry, SPAN)
+    .filter((s) => s.layout.shape === 'city' && s.footprint.length > 0)
+    .map((s) => ({ m: (s.layout.shape === 'city' ? s.layout.walls.margin ?? 0 : 0) + 2, rects: s.footprint }));
+  if (walls.length === 0) return false;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const p = pts[i] as Pt;
+    const q = pts[i + 1] as Pt;
+    const steps = Math.max(1, Math.ceil(dist(p, q) / 3));
+    for (let k = 0; k <= steps; k++) {
+      const x = p.x + ((q.x - p.x) * k) / steps;
+      const y = p.y + ((q.y - p.y) * k) / steps;
+      for (const w of walls) for (const r of w.rects) if (x >= r.x0 - w.m && x <= r.x1 + w.m + 1 && y >= r.y0 - w.m && y <= r.y1 + w.m + 1) return true;
+    }
+  }
+  return false;
+}
+
 export function wayBetween(land: Land, a: SiteLayout, b: SiteLayout): Way | null {
   const [p, q] = siteKey(a) < siteKey(b) ? [a, b] : [b, a];
   const key = `${siteKey(p)}~${siteKey(q)}`;
@@ -163,6 +182,7 @@ export function wayBetween(land: Land, a: SiteLayout, b: SiteLayout): Way | null
       const pts = route(pa, pb, bend, def.wander, phase);
       const c = cost(land, pts);
       if (c.wet > r.wet) continue;
+      if (crossesWall(land, pts, p)) continue;
       // A route over water it cannot bridge (it runs along a river, or the banks are too far apart) is a poor one.
       const bridged = bridgeUp(land, pts, key, def);
       const score = c.cost + bridged.unbridged * 400;

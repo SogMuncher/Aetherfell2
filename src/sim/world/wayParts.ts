@@ -1,5 +1,5 @@
 import { CONTENT } from '../../content';
-import { type Pt, type SiteLayout, siteInRegion } from './sites';
+import { type Pt, type SiteLayout, rawSiteInRegion } from './sites';
 import type { Span } from './decks';
 import type { WayGradeDef } from '../../types';
 
@@ -67,6 +67,8 @@ export interface Net {
 export const CELL = 32;
 export const SPAN = 3;
 export const nets = new Map<number, Net>();
+/** The land of each seed in use (set by Terrain), so places can ask which of their gates a road uses. */
+export const landsBySeed = new Map<number, Land>();
 
 export function netOf(seed: number): Net {
   let n = nets.get(seed);
@@ -93,7 +95,7 @@ export function sitesAround(land: Land, rx: number, ry: number, span: number): S
   const probe = (x: number, y: number): number => land.rawGround(x, y, 3);
   for (let j = -span; j <= span; j++) {
     for (let i = -span; i <= span; i++) {
-      const s = siteInRegion(land.seed, rx + i, ry + j, probe);
+      const s = rawSiteInRegion(land.seed, rx + i, ry + j, probe);
       if (s && gradeOf(s) !== undefined) out.push(s);
     }
   }
