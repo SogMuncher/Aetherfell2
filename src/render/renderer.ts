@@ -178,7 +178,7 @@ export class Renderer {
   private renderGpu(f: FrameInput, cam: Camera, env: Env, cx: number, cy: number, cz: number, me: Entity | undefined): boolean {
     const { state, tiles } = f;
     try {
-      this.gpu ??= new GpuRenderer(this.viewport.canvas, this.terrain.lod, this.sampler);
+      this.gpu ??= new GpuRenderer(this.viewport.canvas, this.terrain.lod, this.sampler, tiles);
     } catch (e) {
       console.warn('GPU renderer unavailable, using the classic one', e);
       this.options.gpu = false;

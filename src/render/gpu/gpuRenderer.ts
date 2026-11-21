@@ -7,11 +7,12 @@ import { CONTENT } from '../../content';
 import type { AirDef, WorldSampler } from '../../types';
 import type { Env } from '../lighting';
 import type { TerrainLod } from '../raycaster/terrainLod';
-import type { ReadonlyVolume, WeatherState } from '../../types';
+import type { ReadonlyTiles, ReadonlyVolume, WeatherState } from '../../types';
 import { GpuAir } from './gpuAir';
 import { GpuPost } from './gpuPost';
 import type { PostParams } from './gpuPost';
 import { GpuSky } from './gpuSky';
+import { makeSurfaceAtlas } from './gpuSurfaces';
 import { GpuStructures } from './gpuStructures';
 import { GpuTerrain } from './gpuTerrain';
 import { camBasis, viewProj } from './glUtil';
@@ -52,13 +53,14 @@ export class GpuRenderer {
   /** GPU time of a frame in ms (0 when the browser cannot measure it). */
   gpuMs = 0;
 
-  constructor(private readonly host: HTMLCanvasElement, lod: TerrainLod, private readonly sampler: WorldSampler) {
+  constructor(private readonly host: HTMLCanvasElement, lod: TerrainLod, private readonly sampler: WorldSampler, tiles: ReadonlyTiles) {
     this.canvas.style.cssText = 'position:absolute;image-rendering:pixelated;image-rendering:crisp-edges;pointer-events:none';
     const gl = this.canvas.getContext('webgl2', { antialias: false, alpha: false });
     if (!gl) throw new Error('WebGL2 not available');
     this.gl = gl;
-    this.terrain = new GpuTerrain(gl, lod);
-    this.structures = new GpuStructures(gl);
+    const surf = makeSurfaceAtlas(gl);
+    this.terrain = new GpuTerrain(gl, lod, tiles, surf);
+    this.structures = new GpuStructures(gl, surf);
     this.sky = new GpuSky(gl);
     this.air = new GpuAir(gl);
     this.post = new GpuPost(gl);
