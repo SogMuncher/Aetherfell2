@@ -1,0 +1,123 @@
+/**
+ * The GPU pipeline (stage 1: terrain, sky, air motes, post). One WebGL2 canvas at the same low resolution as the CPU
+ * view, one shared depth buffer, passes in this order: sky, terrain (LOD clipmap), air motes, post (dither, tints).
+ * Read-only on sim state; the CPU renderer stays alongside until the last stage is verified (docs/GPU-RENDER.md).
+ */
+import { CONTENT } from '../../content';
+import type { AirDef, WorldSampler } from '../../types';
+import type { Env } from '../lighting';
+import type { TerrainLod } from '../raycaster/terrainLod';
+import type { WeatherState } from '../../types';
+import { GpuAir } from './gpuAir';
+import { GpuPost } from './gpuPost';
+import type { PostParams } from './gpuPost';
+import { GpuSky } from './gpuSky';
+import { GpuTerrain } from './gpuTerrain';
+import { camBasis, viewProj } from './glUtil';
+
+const NEAR = 0.3;
+const FAR = 20000;
+
+export interface GpuFrame {
+  eye: { x: number; y: number; z: number };
+  yaw: number;
+  pitch: number;
+  fovDegrees: number;
+  env: Env;
+  weather: WeatherState;
+  realm: string;
+  time: number;
+  post: PostParams;
+}
+
+interface TimerExt {
+  TIME_ELAPSED_EXT: number;
+  GPU_DISJOINT_EXT: number;
+}
+
+export class GpuRenderer {
+  private readonly canvas = document.createElement('canvas');
+  private readonly gl: WebGL2RenderingContext;
+  private readonly terrain: GpuTerrain;
+  private readonly sky: GpuSky;
+  private readonly air: GpuAir;
+  private readonly post: GpuPost;
+  private readonly timer: TimerExt | null;
+  private query: WebGLQuery | null = null;
+  private frames = 0;
+  private biomeAir: AirDef | undefined;
+  /** GPU time of a frame in ms (0 when the browser cannot measure it). */
+  gpuMs = 0;
+
+  constructor(private readonly host: HTMLCanvasElement, lod: TerrainLod, private readonly sampler: WorldSampler) {
+    this.canvas.style.cssText = 'position:absolute;image-rendering:pixelated;image-rendering:crisp-edges;pointer-events:none';
+    const gl = this.canvas.getContext('webgl2', { antialias: false, alpha: false });
+    if (!gl) throw new Error('WebGL2 not available');
+    this.gl = gl;
+    this.terrain = new GpuTerrain(gl, lod);
+    this.sky = new GpuSky(gl);
+    this.air = new GpuAir(gl);
+    this.post = new GpuPost(gl);
+    this.timer = gl.getExtension('EXT_disjoint_timer_query_webgl2') as TimerExt | null;
+    host.insertAdjacentElement('afterend', this.canvas);
+    host.style.opacity = '0';
+  }
+
+  forget(): void {
+    this.terrain.forget();
+  }
+
+  dispose(): void {
+    this.canvas.remove();
+    this.host.style.opacity = '';
+  }
+
+  private fit(): void {
+    const { width, height, style } = this.host;
+    if (this.canvas.width !== width || this.canvas.height !== height) {
+      this.canvas.width = width;
+      this.canvas.height = height;
+    }
+    this.canvas.style.width = style.width;
+    this.canvas.style.height = style.height;
+    this.canvas.style.left = `${this.host.offsetLeft}px`;
+    this.canvas.style.top = `${this.host.offsetTop}px`;
+  }
+
+  draw(f: GpuFrame): void {
+    const gl = this.gl;
+    this.fit();
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    this.frames++;
+    this.readTimer();
+    const timing = this.timer && !this.query;
+    if (timing && this.timer) {
+      this.query = gl.createQuery();
+      if (this.query) gl.beginQuery(this.timer.TIME_ELAPSED_EXT, this.query);
+    }
+    const cam = camBasis(f.yaw, f.pitch, f.fovDegrees, w / h);
+    const vp = viewProj(f.eye, cam, NEAR, FAR);
+    this.terrain.update(f.eye.x, f.eye.y);
+    this.post.begin(w, h);
+    this.sky.draw(cam, f.eye, f.env, f.weather, f.time);
+    this.terrain.draw(vp, f.eye, f.env);
+    if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
+    const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;
+    this.air.draw(vp, f.eye, air, f.time, 0.35 + 0.65 * f.env.day);
+    this.post.finish(f.post);
+    if (timing && this.timer && this.query) gl.endQuery(this.timer.TIME_ELAPSED_EXT);
+  }
+
+  private readTimer(): void {
+    const gl = this.gl;
+    if (!this.timer || !this.query) return;
+    if (!gl.getQueryParameter(this.query, gl.QUERY_RESULT_AVAILABLE)) return;
+    if (!gl.getParameter(this.timer.GPU_DISJOINT_EXT)) {
+      const ns = gl.getQueryParameter(this.query, gl.QUERY_RESULT) as number;
+      this.gpuMs = this.gpuMs * 0.9 + (ns / 1e6) * 0.1;
+    }
+    gl.deleteQuery(this.query);
+    this.query = null;
+  }
+}

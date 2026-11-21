@@ -103,7 +103,18 @@ export const SETTINGS: readonly SettingDef[] = [
   },
   { id: 'screenShake', group: 'Video', label: 'Screen shake', help: 'The view jolts when you are hit or land hard.', kind: 'toggle', value: true },
   { id: 'headBob', group: 'Video', label: 'Head bob', help: 'The view bobs a little as you walk.', kind: 'toggle', value: true },
-  { id: 'gpuSpike', group: 'Video', label: 'GPU test view (experimental)', help: 'Draws a rough hills-and-stones test scene on the graphics card to try out the coming faster renderer.', kind: 'toggle', value: false },
+  {
+    id: 'renderer',
+    group: 'Video',
+    label: 'Graphics engine',
+    help: 'Classic draws on the processor. The graphics card engine is experimental: land, sky and air only so far (no creatures, buildings or effects yet).',
+    kind: 'choice',
+    value: 'classic',
+    options: [
+      { value: 'classic', label: 'Classic' },
+      { value: 'gpu', label: 'Graphics card (experimental)' },
+    ],
+  },
   { id: 'showFps', group: 'Video', label: 'Show frame rate and details', help: 'The same as pressing F3.', kind: 'toggle', value: false },
 
   // Controls

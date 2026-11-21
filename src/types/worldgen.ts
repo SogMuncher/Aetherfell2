@@ -1,4 +1,5 @@
 import type { RGB } from './tiles';
+import type { AirDef } from './sky';
 
 
 /**
@@ -46,6 +47,8 @@ export interface BiomeWhen {
 /** A kind of landscape: when it appears, what ground it is made of, what grows there, how it looks from afar. */
 export interface BiomeDef {
   readonly name: string;
+  /** Motes floating in the air of this landscape (pollen, dust, ash). */
+  readonly air?: AirDef;
   readonly when: BiomeWhen;
   /** Tile id of its plain ground. */
   readonly ground: string;
