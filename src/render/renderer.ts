@@ -189,12 +189,13 @@ export class Renderer {
     const billboards = this.sprites.collect(p, state, tiles, f.localId, f.alpha, this.time, this.hitFlash);
     const wl = tiles.waterLevel(cx, cy);
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
+    this.terrain.shadow.update(state.weather, cx, cy);
     this.particles.emit(state, tiles, cx, cy, f.dt, env);
     this.particles.update(f.dt);
     const wind = state.weather.wind;
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, lightmap: this.lightmap, tiles, billboards, motes: this.particles.motes, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, lightmap: this.lightmap, tiles, billboards, motes: this.particles.motes, shadow: this.terrain.shadow, shadowOn: this.terrain.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;

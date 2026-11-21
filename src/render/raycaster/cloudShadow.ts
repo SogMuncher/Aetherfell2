@@ -54,6 +54,11 @@ export class CloudShadow {
     }
   }
 
+  /** The grid as it stands (for a drawer that reads it as a texture): values, origin in grid cells, cell and grid size, average. */
+  get state(): { grid: Float32Array; ox: number; oy: number; cell: number; size: number; mean: number } {
+    return { grid: this.grid, ox: this.ox, oy: this.oy, cell: CELL, size: SIZE, mean: this.mean };
+  }
+
   /** Share of sunlight reaching (x, y): 1 in the open, lower in a cloud's shadow. */
   at(x: number, y: number): number {
     const gx = x / CELL - this.ox - 0.5;
