@@ -2,7 +2,6 @@ import type { Effect, Entity, SimContext, SimSystem, ThingDef } from '../../type
 import { GROUND_Z, countItem, packKey, removeItem, unpackSpot } from '../../types';
 import { rainAt, rollLoot, thingDef } from '../../content';
 
-const MAX_SPARKS = 48;
 const HEAT: readonly Effect[] = [{ type: 'heat', amount: 1 }];
 const RAIN: readonly Effect[] = [{ type: 'soak', amount: 0.4 }];
 
@@ -27,8 +26,17 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
   const step = state.tick;
   let sparks = -1;
   // What a big fire throws up on the wind (sparks), from the rules.
-  const mote = ctx.content.rules.fire.mote;
-  for (const key of matter.burning()) {
+  const rule = ctx.content.rules.fire;
+  const mote = rule.mote;
+  // Fires far from every player burn out but sleep: they no longer spread, throw sparks or scorch.
+  const eyes: { x: number; y: number }[] = [];
+  for (const id of Object.values(state.players)) {
+    const p = state.entities.get(id);
+    if (p) eyes.push(p.pos);
+  }
+  const sleep2 = rule.sleep * rule.sleep;
+  const burning = matter.burning();
+  for (const key of burning) {
     const { x, y, z } = unpackSpot(key);
     const ground = z === GROUND_Z;
     const inf = matter.info(x, y, z);
@@ -47,7 +55,7 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
     }
     // Oil burns first (fuel untouched), then the material's own fuel. Visible values only change on
     // the spot's spread beat so fires don't flood the network with tiny updates.
-    const beat = (step + key) % 4 === 0;
+    const beat = (step + key) % rule.beat === 0;
     if (oil > 0) {
       if (beat) matter.set('oil', x, y, z, oil - 12);
     } else matter.set('fuel', x, y, z, matter.get('fuel', x, y, z) - 1);
@@ -72,7 +80,10 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
     }
     // Spread every few ticks, staggered so fires do not pulse in lockstep.
     if (!beat) continue;
-    const heat = Math.min(1, fire / 160) * (oil > 0 ? 2.2 : 1);
+    if (eyes.length > 0 && !eyes.some((p) => (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) < sleep2)) continue;
+    // A fire with little fuel left spreads less.
+    const left = oil > 0 ? 1 : Math.max(rule.dying, Math.min(1, matter.get('fuel', x, y, z) / Math.max(1, inf.fuel)));
+    const heat = Math.min(1, fire / 160) * (oil > 0 ? 2.2 : 1) * left;
     matter.forNeighbours(x, y, z, (nx, ny, nz, w) => {
       const n = matter.info(nx, ny, nz);
       if (!n) return;
@@ -84,17 +95,17 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
       const flat = Math.hypot(dx, dy);
       const along = flat > 0 ? (dx * wux + dy * wuy) / flat : 0;
       const windF = Math.max(0.12, 1 + along * windSpeed * 0.28);
-      const p = (n.flammability + (nOil > 0 ? 0.9 : 0)) * 0.16 * heat * windF * w;
+      const p = (n.flammability + (nOil > 0 ? 0.9 : 0)) * rule.spread * heat * windF * w;
       if (rng.chance(p)) heatSpot(nx, ny, nz);
     });
     const top = ground ? tiles.ground(x, y) : z;
     // Strong wind lifts burning motes far ahead of the fire front.
-    if (fire > 120 && rng.chance(0.004 + windSpeed * 0.0035)) {
+    if (fire > 120 && rng.chance(rule.spark.chance + windSpeed * rule.spark.wind)) {
       if (sparks < 0) {
         sparks = 0;
         for (const e of state.entities.values()) if (e.def === mote) sparks++;
       }
-      if (sparks < MAX_SPARKS) {
+      if (sparks < rule.spark.max) {
         sparks++;
         ctx.spawn(mote, x + 0.5, y + 0.5, {
           z: top + 1.2,

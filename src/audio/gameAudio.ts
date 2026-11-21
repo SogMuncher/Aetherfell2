@@ -160,6 +160,18 @@ export class GameAudio {
     return { pan: Math.sin(a) * Math.min(1, d / 2), d };
   }
 
+  private fireSec = 0;
+  private fireCount = 0;
+  /** Fire one-shots (catching, dousing) share a few voices per second, whatever the size of the blaze. */
+  private fireShot(t: number): boolean {
+    const sec = Math.floor(t);
+    if (sec !== this.fireSec) {
+      this.fireSec = sec;
+      this.fireCount = 0;
+    }
+    return ++this.fireCount <= CONTENT.rules.fire.audio.oneShots;
+  }
+
   private at(x: number, y: number, maxD = 70): AudioNode | null {
     const e = this.e;
     if (!e) return null;
@@ -439,12 +451,12 @@ export class GameAudio {
         break;
       }
       case 'ignited': {
-        const out = this.at(ev.x + 0.5, ev.y + 0.5, 40);
+        const out = this.fireShot(t) ? this.at(ev.x + 0.5, ev.y + 0.5, 40) : null;
         if (out && Math.random() < 0.3) e.burst(out, t, jit(0.6, 0.25), jit(0.12, 0.2), 'lowpass', jit(300, 0.2), { to: jit(1200, 0.2), attack: 0.05 });
         break;
       }
       case 'doused': {
-        const out = this.at(ev.x + 0.5, ev.y + 0.5, 30);
+        const out = this.fireShot(t) ? this.at(ev.x + 0.5, ev.y + 0.5, 30) : null;
         if (out && Math.random() < 0.4) e.burst(out, t, jit(0.8, 0.25), jit(0.1, 0.2), 'highpass', jit(3000, 0.15), { to: jit(1800, 0.15), attack: 0.02 });
         break;
       }
@@ -571,8 +583,8 @@ export class GameAudio {
 
     const day = !isNight(CONTENT.rules.day, w.time);
     if (s.fire > 0.05 && now > this.nextCrackle) {
-      this.nextCrackle = now + rnd(0.03, 0.18) / Math.max(0.2, s.fire);
-      e.burst(e.amb, now, 0.02, 0.08 * s.fire, 'highpass', rnd(2000, 5000), { q: 1 });
+      this.nextCrackle = now + rnd(0.06, 0.2) / Math.max(0.2, s.fire);
+      e.burst(e.amb, now, 0.02, 0.08 * Math.min(s.fire, CONTENT.rules.fire.audio.crackle), 'highpass', rnd(2000, 5000), { q: 1 });
     }
     if (day && w.rain < 0.3 && s.trees > 0.05 && now > this.nextBird) {
       this.nextBird = now + rnd(1.5, 6) / (0.4 + s.trees);
@@ -582,7 +594,7 @@ export class GameAudio {
       this.nextCricket = now + rnd(0.3, 1.2);
       const f = rnd(4200, 5200);
       const pan = e.spatial(rnd(-1, 1), rnd(4, 18));
-      for (let i = 0; i < 3; i++) e.tone(pan, 'sine', f, now + i * 0.05, 0.035, 0.02, { attack: 0.004 });
+      if (pan) for (let i = 0; i < 3; i++) e.tone(pan, 'sine', f, now + i * 0.05, 0.035, 0.02, { attack: 0.004 });
     }
     // Creatures out there call now and then in their own voices: hunters by night, shy things by day.
     if (now > this.nextCall) {
@@ -636,6 +648,7 @@ export class GameAudio {
     const e = this.e;
     if (!e) return;
     const out = e.spatial(rnd(-1, 1), rnd(6, 30));
+    if (!out) return;
     const kind = Math.floor(Math.random() * 3);
     const t = e.now;
     const base = rnd(2200, 3600);

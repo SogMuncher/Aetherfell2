@@ -101,8 +101,26 @@ export interface RulesDef {
       mend: number;
     };
   };
-  /** What a big fire throws up on the wind. */
-  fire: { mote: ThingId };
+  /** Fire: what it throws on the wind, how fast it spreads, how many may burn, and how it looks and sounds. */
+  fire: {
+    mote: ThingId;
+    /** Chance scale for a flame to catch a neighbour per spread beat (times flammability, wind, heat). */
+    spread: number;
+    /** Ticks between spread beats. */
+    beat: number;
+    /** The weakest a dying fire spreads, as a share of full (a fire with little fuel left barely spreads). */
+    dying: number;
+    /** At most this many spots burn at once; further fires do not catch. */
+    max: number;
+    /** Fires farther than this (m) from every player burn out but no longer spread (they sleep). */
+    sleep: number;
+    /** Sparks on the wind: chance per burning spot per tick (+ per m/s of wind), and how many may fly at once. */
+    spark: { chance: number; wind: number; max: number };
+    /** Drawing: palette from hot to cool, flames per second for the whole view, per-fire rates, reach (m). */
+    vfx: { palette: number[]; smoke: number[]; budget: number; flame: number; smokeRate: number; ember: number; range: number; pixel: number };
+    /** Sound: fire voices (rate-limited one-shots per second), crackle level cap. */
+    audio: { oneShots: number; crackle: number };
+  };
   /** A fresh traveller. `prepared` runes are kept only if known. */
   start: { inventory: ItemStack[]; wield: ItemId | null; /** Worn from the start. */ worn: ItemId[]; prepared: RuneId[] };
   /**

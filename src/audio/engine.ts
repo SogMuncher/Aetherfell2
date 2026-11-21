@@ -30,7 +30,14 @@ export interface NoiseOpts {
   hold?: number;
 }
 
+/** Shared voice budget: past these, new one-shots are dropped instead of piling up until the browser gives out. */
+const MAX_VOICES = 96;
+const MAX_OUTS = 40;
+
 export class AudioEngine {
+  /** Live one-shot sources and positioned outputs. */
+  private voices = 0;
+  private outs = 0;
   readonly ctx: AudioContext;
   readonly master: GainNode;
   readonly sfx: GainNode;
@@ -138,9 +145,11 @@ export class AudioEngine {
   }
 
   tone(dst: AudioNode, type: OscillatorType, freq: number, t: number, dur: number, level: number, o: ToneOpts = {}): void {
-    if (!(level > 0) || !(freq > 10)) return;
+    if (!(level > 0) || !(freq > 10) || this.voices >= MAX_VOICES) return;
     const ctx = this.ctx;
     const osc = ctx.createOscillator();
+    this.voices++;
+    osc.onended = () => { this.voices--; };
     const g = ctx.createGain();
     osc.type = type;
     osc.frequency.setValueAtTime(o.from ?? freq, t);
@@ -195,10 +204,12 @@ export class AudioEngine {
   }
 
   burst(dst: AudioNode, t: number, dur: number, level: number, type: BiquadFilterType, freq: number, o: NoiseOpts = {}): void {
-    if (!(level > 0)) return;
+    if (!(level > 0) || this.voices >= MAX_VOICES) return;
     const ctx = this.ctx;
     const src = ctx.createBufferSource();
     src.buffer = this.noise;
+    this.voices++;
+    src.onended = () => { this.voices--; };
     const f = ctx.createBiquadFilter();
     f.type = type;
     f.frequency.setValueAtTime(freq, t);
@@ -232,7 +243,9 @@ export class AudioEngine {
   }
 
   /** A short-lived positioned output: stereo pan and distance roll-off (far sounds lose their highs). */
-  spatial(pan: number, distance: number): AudioNode {
+  spatial(pan: number, distance: number): AudioNode | null {
+    if (this.outs >= MAX_OUTS) return null;
+    this.outs++;
     const ctx = this.ctx;
     const g = ctx.createGain();
     g.gain.value = 1 / (1 + distance / 7);
@@ -245,6 +258,7 @@ export class AudioEngine {
     lp.connect(p);
     p.connect(this.sfx);
     setTimeout(() => {
+      this.outs--;
       g.disconnect();
       lp.disconnect();
       p.disconnect();
