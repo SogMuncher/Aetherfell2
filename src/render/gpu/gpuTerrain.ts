@@ -23,7 +23,7 @@ const V = N + 1;
 
 const VS = `#version 300 es
 uniform mat4 uVP; uniform sampler2D uH; uniform sampler2D uC; uniform vec3 uEye; uniform vec2 uCanopy; uniform vec2 uOrigin; uniform float uCell; uniform float uSink;
-out vec3 vPos; out vec4 vCol;
+out vec3 vPos; out vec3 vCol; flat out float vA;
 void main(){
   int i = gl_VertexID % ${V}; int j = gl_VertexID / ${V};
   vec2 hc = texelFetch(uH, ivec2(i, j), 0).rg;
@@ -31,7 +31,7 @@ void main(){
   // Treetops rise in with distance while the tree pictures fade out, so forests never pop.
   float h = hc.r + hc.g * smoothstep(uCanopy.x, uCanopy.y, length(xy - uEye.xy)) - uSink;
   vec3 p = vec3(xy, h);
-  vCol = texelFetch(uC, ivec2(i, j), 0);
+  vec4 cc = texelFetch(uC, ivec2(i, j), 0); vCol = cc.rgb; vA = cc.a; // alpha (water, fire glow) is per triangle: it must never blend, or water edges glow like fire
   vPos = p; gl_Position = uVP * vec4(p, 1.0);
 }`;
 const FS = `#version 300 es
@@ -41,14 +41,14 @@ ${LIGHT_SHADER}
 uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist; uniform vec3 uSun; uniform vec3 uSunDir; uniform vec3 uAmb;
 uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade;
 uniform sampler2D uState; uniform float uRainWet; uniform sampler2D uShade; uniform vec4 uShadeO; uniform vec3 uHorizon; uniform float uDay, uTime, uShadeOn;
-in vec3 vPos; in vec4 vCol; out vec4 o;
+in vec3 vPos; in vec3 vCol; flat in float vA; out vec4 o;
 float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 void main(){
   if (vPos.x > uHole.x && vPos.x < uHole.z && vPos.y > uHole.y && vPos.y < uHole.w) discard;
   vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos))); if (n.z < 0.0) n = -n;
   float d = length(vPos - uEye);
-  vec3 base = vCol.rgb;
+  vec3 base = vCol;
   if (uTexOn > 0.5) {
     uint code = texelFetch(uCode, ivec2(floor((vPos.xy - uOrigin) / uCell)), 0).r;
     if (code != 255u) base = mix(surf(int(code), false, vPos.xy * 16.0), base, smoothstep(uTexFade.x, uTexFade.y, d));
@@ -69,18 +69,18 @@ void main(){
   if (uTexOn > 0.5) {
     // What has happened to the ground (the same cell state the sim's rules use): soot darkens, wet darkens and cools, oil sheens, fire glows.
     vec4 st = texelFetch(uState, ivec2(floor((vPos.xy - uOrigin) / uCell)), 0);
-    float soot = st.r, wet = min(1.0, st.g + (vCol.a > 0.99 ? 0.0 : uRainWet)), oil = st.b, fire = st.a;
+    float soot = st.r, wet = min(1.0, st.g + (vA > 0.99 ? 0.0 : uRainWet)), oil = st.b, fire = st.a;
     lv *= 1.0 - soot * 0.75;
     lv *= vec3(1.0, 1.0, 1.04) * (1.0 - wet * 0.28);
     base = base * (1.0 - oil * 0.6) + vec3(40.0, 30.0, 18.0) / 255.0 * oil + (hash(floor(vPos.xy * 8.0)) > 0.9 ? oil * 0.24 : 0.0);
     lv += fire * (0.7 + 0.3 * sin(uTime * 20.0 + vPos.x * 3.0)) * vec3(1.4, 0.6, 0.15);
   }
   vec3 c = base * lv;
-  if (vCol.a > 0.99) {
+  if (vA > 0.99) {
     float glint = d < 900.0 && h2(floor(vPos.xy * 0.5 + vec2(floor(uTime * 2.0), 0.0))) > 0.992 ? (1.4 * uDay + 0.3) * 0.31 : 0.0;
     c = (base * 0.75 + uHorizon * 0.25 + glint) * lv; // as Classic: a quarter sky, lit like the ground
-  } else if (vCol.a > 0.0) {
-    float fl = vCol.a * 2.0 * (0.75 + 0.25 * sin(uTime * 9.0 + vPos.x * 0.7 + vPos.y * 0.3));
+  } else if (vA > 0.0) {
+    float fl = vA * 2.0 * (0.75 + 0.25 * sin(uTime * 9.0 + vPos.x * 0.7 + vPos.y * 0.3));
     c += vec3(0.9, 0.38, 0.09) * fl;
   }
   float f = 1.0 - exp(-d / uFogDist);
