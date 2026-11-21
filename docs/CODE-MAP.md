@@ -219,16 +219,17 @@ Search this first, then open only the file you need. Update the entry (and line 
 
 ## src/sim/world/
 - `chunkgen.ts` (201) Builds a chunk from the seed alone. Same seed, same chunk — on every machine.
-- `city.ts` (179) cityLayout: walls, gates, streets, wards
-- `cityParts.ts` (161) city constants, houses, ring wall
-- `cityWard.ts` (165) one ward: keep, landmarks, blocks
+- `city.ts` (190) cityLayout: walls, gates, streets, wards
+- `cityParts.ts` (84) city constants, houses
+- `cityWall.ts` (150) one wall round the merged outline of rectangles: towers, runs, gates
+- `cityWard.ts` (157) one ward: keep, landmarks, blocks
 - `crossings.ts` (201) Where water meets people. Bridges come with the ways (sim/world/roads.ts routes each way straight across the water it
 - `decks.ts` (174) Decks over water: bridges where a way crosses a river or lake, piers where a port meets the water. One shape of thing
 - `matter.ts` (198) ctx.matter: stuff at (x,y,z) for tiles and cells
 - `noise.ts` (59) Small, fast, seedable noise helpers. Pure functions of (seed, coords).
 - `realms.ts` (93) Who goes along when the party changes realm: the travellers and what they carry.
 - `roads.ts` (90) ways per region: waysTouching, wayHit
-- `sites.ts` (238) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
+- `sites.ts` (266) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
 - `terrain.ts` (216) The shape of the land: continents, rolling hills, ridged mountains, a moisture field for biomes,
 - `underworld.ts` (256) The ground of the underworld: a lattice of halls joined by corridors, laid on a 16 m grid exactly
 - `volume.ts` (347) VolumeStore: sparse 3D brick store (C)

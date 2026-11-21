@@ -1,4 +1,4 @@
-import type { HouseGeometry, LocationKind, PlannedStructure, SiteDef, SiteLayoutDef, TileKind } from '../../types';
+import type { HouseGeometry, LocationKind, PlannedStructure, SiteDef, SiteLayoutDef, TileKind, VillageStyle } from '../../types';
 import { CONTENT, fillText } from '../../content';
 import { cityLayout } from './city';
 import { structuredHouse } from './cityParts';
@@ -167,22 +167,43 @@ function layout(seed: number, kind: LocationKind, def: SiteDef, rx: number, ry: 
     return { kind, rx, ry, cx, cy, radius: c.radius, name: siteName(seed, rx, ry, kind), layout: l, houses: c.houses, plan: c.plan, index: indexPlan(c.plan), square: c.square, paint: c.paint, mouths: c.mouths, footprint: c.footprint, gates: c.gates };
   }
   if (l.shape === 'village') {
-    const [lo, hi] = l.houses;
+    // The village rolls one of its layout styles by weight; a style can change the pattern, size and building mix.
+    const style = pickStyle(l.styles, hash2(seed + 9, rx, ry));
+    const [lo, hi] = style?.houses ?? l.houses;
     const n = lo + Math.floor(hash2(seed + 6, rx, ry) * (hi - lo + 1));
-    const [rin, rout] = l.ring ?? [14, 22];
+    const [rin, rout] = style?.ring ?? l.ring ?? [14, 22];
+    const mix = style?.buildings ?? l.buildings;
+    const pattern = style?.pattern ?? 'ring';
+    const axis = hash2(seed + 10, rx, ry) * Math.PI;
     // Each house gets a few tries at a free spot, so a big village fills up instead of losing houses to overlaps.
     let placed = 0;
     for (let t = 0; placed < n && t < n * 6; t++) {
       const salt = seed + 1000 + t * 37;
-      const id = pickBuilding(l.buildings, hash2(salt, rx, ry));
+      const id = pickBuilding(mix, hash2(salt, rx, ry));
       if (!id) continue;
-      const a = hash2(seed + 7 + t * 5, rx, ry) * Math.PI * 2;
-      const d = rin + Math.sqrt(hash2(seed + 8 + t * 3, rx, ry)) * (rout - rin);
-      const mx = cx + Math.cos(a) * d;
-      const my = cy + Math.sin(a) * d;
+      const u = hash2(seed + 7 + t * 5, rx, ry);
+      const v = hash2(seed + 8 + t * 3, rx, ry);
+      // Where it goes, and the spot its front faces (the square, or the lane).
+      let mx: number;
+      let my: number;
+      let fx = cx;
+      let fy = cy;
+      if (pattern === 'street' || pattern === 'cross') {
+        const a = axis + (pattern === 'cross' && t % 2 === 1 ? Math.PI / 2 : 0);
+        const along = (u * 2 - 1) * rout;
+        const side = (t % 4 < 2 ? -1 : 1) * (rin + v * 4);
+        fx = cx + Math.cos(a) * along;
+        fy = cy + Math.sin(a) * along;
+        mx = fx - Math.sin(a) * side;
+        my = fy + Math.cos(a) * side;
+      } else {
+        const d = pattern === 'scatter' ? Math.sqrt(v) * rout : rin + Math.sqrt(v) * (rout - rin);
+        mx = cx + Math.cos(u * Math.PI * 2) * d;
+        my = cy + Math.sin(u * Math.PI * 2) * d;
+      }
       const sdef = CONTENT.structures[id];
       if (!sdef) continue;
-      const h = structuredHouse(id, sdef, (k) => hash2(salt + k, rx, ry), mx, my, cx, cy);
+      const h = structuredHouse(id, sdef, (k) => hash2(salt + k, rx, ry), mx, my, fx, fy);
       // Leave room: nothing built on top of an earlier house, or in a river or lake.
       if (taken.some((o) => h.bounds.x0 <= o.x1 && h.bounds.x1 >= o.x0 && h.bounds.y0 <= o.y1 && h.bounds.y1 >= o.y0)) continue;
       if (isWetAt(seed, mx, my) || isWetAt(seed, h.x0, h.y0) || isWetAt(seed, h.x1, h.y1)) continue;
@@ -194,6 +215,13 @@ function layout(seed: number, kind: LocationKind, def: SiteDef, rx: number, ry: 
   }
   const r = def.radius;
   return { kind, rx, ry, cx, cy, radius: r, name: siteName(seed, rx, ry, kind), layout: l, houses, plan, index: indexPlan(plan), square: { x: cx, y: cy }, footprint: [{ x0: cx - r, y0: cy - r, x1: cx + r, y1: cy + r }], gates: [] };
+}
+
+/** Picks one layout style by weight from a roll in 0..1 (none: the layout's own numbers). */
+function pickStyle(styles: readonly VillageStyle[] | undefined, roll: number): VillageStyle | undefined {
+  if (!styles || styles.length === 0) return undefined;
+  const id = pickBuilding(Object.fromEntries(styles.map((st, i) => [String(i), st.weight])), roll);
+  return id !== null ? styles[Number(id)] : undefined;
 }
 
 /** Picks a building kind by weight from a roll in 0..1. */

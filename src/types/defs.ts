@@ -20,7 +20,7 @@ export type { SoundClass, MaterialDef, LightDef, HeldLightDef, WeaponStats, Burs
 export type { ItemCategory, ItemForm, VesselBody, ItemLook, ItemDef } from './defs/items';
 export type { Delivery, SpellSound, SpellDef, MoteLook, SpellLook, EssenceLook, LookTweak, EssencePart, ShapePart, PowerPart, RuneDef, StatusDef } from './defs/magic';
 export type { BehaviourDef, BehaviourKind, BrainDef, LootEntry, LootDef, HabitatDef, Placement, PopulationEntry } from './defs/brains';
-export type { SiteLayoutDef, CompassSide, DistrictDef, Landmark, CityLayout, WardDef, SiteDef } from './defs/sites';
+export type { SiteLayoutDef, CompassSide, DistrictDef, Landmark, CityLayout, WardDef, SiteDef, StreetStyle, VillageStyle } from './defs/sites';
 export type { QuestTemplate, QuestWords, TradeDef, RoleDef, FactionDef } from './defs/social';
 export type { ReactionDef, SwingDef, RulesDef, HudTheme, DayRules } from './defs/rules';
 

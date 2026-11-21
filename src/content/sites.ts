@@ -13,7 +13,15 @@ export const SITES: Record<SiteId, SiteDef> = {
     ground: [2, 55],
     radius: 58,
     name: '{base}',
-    layout: { shape: 'village', houses: [9, 15], square: 9, ring: [13, 48], buildings: { cottage: 5, hall: 2, smithy: 1 }, centre: 'well', path: T.Road, ground: T.Grass },
+    layout: { shape: 'village', houses: [9, 15], square: 9, ring: [13, 48], buildings: { cottage: 5, hall: 2, smithy: 1 }, centre: 'well', path: T.Road, ground: T.Grass,
+      // Each village rolls one of these: add a row (or change a weight) for a new kind of village.
+      styles: [
+        { weight: 4, pattern: 'ring' },
+        { weight: 2.5, pattern: 'street', ring: [7, 44], houses: [10, 16], buildings: { cottage: 4, workshop: 2, tavern: 1, smithy: 1, hall: 1 } },
+        { weight: 1.5, pattern: 'cross', ring: [8, 40], houses: [12, 18], buildings: { cottage: 5, townhouse: 2, workshop: 1, smithy: 1 } },
+        { weight: 2, pattern: 'scatter', ring: [10, 46], houses: [8, 12], buildings: { cottage: 4, farmhouse: 3, barn: 2, hovel: 1 } },
+      ],
+    },
     rumour: 'a village called {name}',
     mood: { settlement: 1 },
     way: { grade: 'road', links: 3 },
@@ -186,6 +194,11 @@ export const SITES: Record<SiteId, SiteDef> = {
         ],
       },
       streets: { every: 21, width: 3, main: 5 },
+      streetStyles: [
+        { weight: 3, every: 21, width: 3, main: 5 },
+        { weight: 1, every: 17, width: 3, main: 5 },
+        { weight: 1, every: 27, width: 5, main: 7 },
+      ],
       districts: [
         // Round the plaza: the best houses, inns and shops.
         { name: 'market', from: 0, to: 0.55, lots: { townhouse: 4, workshop: 3, manor: 1 }, fill: 0.9, block: { chance: 0.2, buildings: { tavern: 3, manor: 1 } } },
@@ -227,7 +240,7 @@ export const SITES: Record<SiteId, SiteDef> = {
     layout: {
       shape: 'city',
       half: [84, 100],
-      walls: { run: 'cityWall', tower: 'wallTower', gate: 'cityGate', towerEvery: 26 },
+      walls: { run: 'cityWall', tower: 'wallTower', gate: 'cityGate', towerEvery: 26, margin: 10 },
       centre: {
         plaza: 26,
         keep: 'keep',
@@ -241,6 +254,13 @@ export const SITES: Record<SiteId, SiteDef> = {
         ],
       },
       streets: { every: 21, width: 3, main: 5 },
+      // Each ward picks a street pattern: tight lanes, the usual grid, or wide boulevards.
+      streetStyles: [
+        { weight: 3, every: 21, width: 3, main: 5 },
+        { weight: 2, every: 15, width: 3, main: 5 },
+        { weight: 2, every: 27, width: 5, main: 7 },
+        { weight: 1, every: 33, width: 5, main: 9 },
+      ],
       districts: [
         // Round the plaza: the best houses, inns and shops.
         { name: 'market', from: 0, to: 0.55, lots: { townhouse: 4, workshop: 3, manor: 1 }, fill: 0.9, block: { chance: 0.2, buildings: { tavern: 3, manor: 1 } } },
@@ -302,7 +322,7 @@ export const SITES: Record<SiteId, SiteDef> = {
           {
             name: 'old town',
             weight: 3,
-            walled: false,
+            round: true,
             plaza: 8,
             landmarks: [],
             districts: [{ name: 'tenements', from: 0, to: 2, lots: { cottage: 4, hovel: 3, workshop: 1, tavern: 1 }, fill: 0.85, block: { chance: 0.1, buildings: { tavern: 1, warehouse: 1 } } }],
@@ -310,7 +330,7 @@ export const SITES: Record<SiteId, SiteDef> = {
           {
             name: 'shanties',
             weight: 2.5,
-            walled: false,
+            round: true,
             plaza: 6,
             landmarks: [],
             districts: [{ name: 'shanties', from: 0, to: 2, lots: { hovel: 5, cottage: 1 }, fill: 0.7 }],
@@ -318,7 +338,7 @@ export const SITES: Record<SiteId, SiteDef> = {
           {
             name: 'farms',
             weight: 1.5,
-            walled: false,
+            round: true,
             plaza: 6,
             landmarks: [],
             districts: [{ name: 'farmland', from: 0, to: 2, lots: { farmhouse: 2, barn: 2, hovel: 1 }, fill: 0.45 }],

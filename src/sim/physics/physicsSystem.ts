@@ -81,8 +81,16 @@ function impactOf(ctx: SimContext, e: Entity, d: ThingDef): (Burst & { minSpeed:
 export const physicsSystem: SimSystem = (ctx: SimContext) => {
   const { state, tiles, dt, content } = ctx;
   const vol = state.volume;
+  // Bodies far from every player sleep: their ground may not even be loaded, and asking for it would regrow it every tick.
+  const watchers: Entity[] = [];
+  for (const id of Object.values(state.players)) {
+    const p = state.entities.get(id);
+    if (p && !p.dead) watchers.push(p);
+  }
+  const awake2 = content.rules.awake * content.rules.awake;
   for (const e of state.entities.values()) {
     if (e.dead) continue;
+    if (watchers.length > 0 && !watchers.some((p) => (p.pos.x - e.pos.x) ** 2 + (p.pos.y - e.pos.y) ** 2 < awake2)) continue;
     const d = thingDef(content, e.def);
     if (e.heldBy !== null) {
       const h = state.entities.get(e.heldBy);

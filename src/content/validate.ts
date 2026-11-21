@@ -130,7 +130,7 @@ export function validateContent(c: Content): string[] {
     if (!(s.chance >= 0 && s.chance <= 1)) out.push(`${w}: chance must be between 0 and 1`);
     if (l.shape === 'village') {
       [l.path, l.ground].forEach((k) => tile(k, w));
-      for (const b of Object.keys(l.buildings)) need(b in c.structures, w, `building '${b}'`);
+      for (const b of [...Object.keys(l.buildings), ...(l.styles ?? []).flatMap((st) => Object.keys(st.buildings ?? {}))]) need(b in c.structures, w, `building '${b}'`);
       if (l.centre !== undefined) need(l.centre in c.tileIds, w, `tile '${l.centre}'`);
     }
     else if (l.shape === 'rings') [l.wall, l.floor, l.scatter.tile].forEach((k) => tile(k, w));
@@ -141,7 +141,7 @@ export function validateContent(c: Content): string[] {
       for (const d of l.districts) {
         for (const id of [...Object.keys(d.lots), ...Object.keys(d.block?.buildings ?? {})]) need(id in c.structures, `${w} district '${d.name}'`, `structure '${id}'`);
       }
-      if (l.streets.width % 2 === 0 || l.streets.main % 2 === 0) out.push(`${w}: street widths must be odd`);
+      for (const st of [l.streets, ...(l.streetStyles ?? [])]) if (st.width % 2 === 0 || st.main % 2 === 0) out.push(`${w}: street widths must be odd`);
     } else [l.innerTile, l.floor].forEach((k) => tile(k, w));
     if (s.way) {
       need(s.way.grade in c.world.roads.grades, w, `way grade '${s.way.grade}'`);

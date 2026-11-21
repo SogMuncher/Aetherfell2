@@ -381,6 +381,10 @@ export class Particles {
         const out = d.mount ? 0.1 : 0;
         this.one(fx('torchFlame'), e.pos.x + Math.cos(e.angle) * out + (Math.random() - 0.5) * w, e.pos.y + Math.sin(e.angle) * out + (Math.random() - 0.5) * w, e.z + d.body.height * (d.body.radius > 0.3 ? 0.3 : 1) + 0.05, wind.x * 0.05, wind.y * 0.05, 0.8 + Math.random() * 0.6, 1, d.body.radius > 0.3 ? 1.7 : 1);
       }
+      // Fires that smoke (hearths, campfires) send it up from their vent, when near enough to see.
+      if (d.smoke && dx * dx + dy * dy < 45 * 45 && Math.random() < dt * d.smoke.rate) {
+        this.one(fx('tileSmoke'), e.pos.x + (Math.random() - 0.5) * 0.3, e.pos.y + (Math.random() - 0.5) * 0.3, e.z + d.smoke.rise, wind.x * 0.4, wind.y * 0.4, 1.0, 0.75 + Math.random() * 0.5);
+      }
       // A torch in someone's hand burns at the end of their arm (your own is drawn with the view model).
       const held = d.actor ? heldLight(CONTENT, e) : undefined;
       if (held?.flame && dx * dx + dy * dy > 0.5 && Math.random() < dt * 22) {
