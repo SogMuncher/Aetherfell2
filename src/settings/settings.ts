@@ -107,7 +107,7 @@ export const SETTINGS: readonly SettingDef[] = [
     id: 'renderer',
     group: 'Video',
     label: 'Graphics engine',
-    help: 'Classic draws on the processor. The graphics card engine is experimental: land, sky and air only so far (no creatures, buildings or effects yet).',
+    help: 'Classic draws on the processor. The graphics card engine is experimental: graphics-card engine, full parity with Classic.',
     kind: 'choice',
     value: 'classic',
     options: [

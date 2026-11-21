@@ -56,9 +56,9 @@ uvec2 cellAt(int slot, ivec3 l){
   return texelFetch(uAtlas, ivec2((slot % 32) * 64 + (l.z & 3) * 16 + l.x, (slot / 32) * 64 + (l.z >> 2) * 16 + l.y), 0).rg;
 }
 int fdiv(int a, int b){ return (a - (((a % b) + b) % b)) / b; }
-/** Is there anything solid straight above this cell (so the sun cannot reach it)? */
+/** Is there anything solid in this cell or straight above it (Classic: the column top reaches past the point), so the sun cannot reach? */
 bool covered(ivec3 c){
-  for (int k = 1; k <= 24; k++){
+  for (int k = 0; k <= 24; k++){
     ivec3 q = c + ivec3(0, 0, k);
     ivec3 g = ivec3(fdiv(q.x, 16) - uGrid0.x, fdiv(q.y, 16) - uGrid0.y, fdiv(q.z, 16) + ${GRID.zLow});
     if (g.x < 0 || g.y < 0 || g.x >= ${GW} || g.y >= ${GW} || g.z < 0 || g.z >= ${GRID.zCount}) continue;
@@ -79,7 +79,11 @@ void main(){
   ivec3 cell = clamp(ivec3(floor(p)), ivec3(bmin), ivec3(bmax) - 1);
   ivec3 st = ivec3(sign(d)); vec3 tDelta = abs(inv);
   vec3 tMax = vec3(((d.x > 0.0 ? float(cell.x + 1) : float(cell.x)) - org.x) * inv.x, ((d.y > 0.0 ? float(cell.y + 1) : float(cell.y)) - org.y) * inv.y, ((d.z > 0.0 ? float(cell.z + 1) : float(cell.z)) - org.z) * inv.z);
-  float tc = tin; int axis = -1; bool hit = false; vec3 n = vec3(0.0); float th = 0.0; int mat = 0;
+  float tc = tin; int axis = -1;
+  // The box face the ray came in through: a wall flush with the box edge is hit in the very first cell and must not read as a floor.
+  vec3 tm = min(ta, tb);
+  if (tin > 0.0) axis = (tm.x >= tm.y && tm.x >= tm.z) ? 0 : (tm.y >= tm.z ? 1 : 2);
+  bool hit = false; vec3 n = vec3(0.0); float th = 0.0; int mat = 0;
   for (int i = 0; i < 64; i++){
     if (any(lessThan(cell, ivec3(bmin))) || any(greaterThanEqual(cell, ivec3(bmax)))) break;
     uvec2 sm = cellAt(slot, cell - origin);
