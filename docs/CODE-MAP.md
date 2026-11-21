@@ -80,6 +80,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
 - `shapes.ts` (234) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
 - `sites.ts` (341) named places: odds, layout, population (D)
+- `gateRule.ts` (12) where roads tell sites which city gates to open (own file so the start-up order never breaks)
 - `sky.ts` (30) The sky. Each cloud layer is a sheet of drifting shapes at its own height, size and speed, and
 - `skyField.ts` (187) Where the clouds are. One pure function of the sky data, the weather (cover, storminess, how far
 - `spellcraft.ts` (286) composes a spell from up to 3 runes; spell descriptions

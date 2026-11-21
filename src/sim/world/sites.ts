@@ -2,6 +2,7 @@ import type { HouseGeometry, LocationKind, PlannedStructure, SiteDef, SiteLayout
 import { CONTENT, fillText } from '../../content';
 import { cityLayout } from './city';
 import { structuredHouse } from './cityParts';
+import { gateRule } from './gateRule';
 import { hash2 } from './noise';
 import { isWater } from './water';
 
@@ -84,16 +85,6 @@ const cache = new Map<string, SiteLayout | null>();
 const finalCache = new Map<string, SiteLayout>();
 const finishing = new Set<string>();
 
-/**
- * Says which street ends of a walled place roads really use (set by roads.ts, which knows the land). A gate opens in
- * the wall only where a road runs out of it; null = not known (every dry gate opens).
- */
-export type GateRule = (seed: number, site: SiteLayout) => Pt[] | null;
-let gateRule: GateRule | null = null;
-export function setGateRule(f: GateRule): void {
-  gateRule = f;
-}
-
 /** A steady number for a site id, so its rolls depend on its name, not on where it is listed. */
 function idSeed(id: string): number {
   let h = 2166136261;
@@ -158,14 +149,14 @@ function yieldsToGreater(seed: number, rx: number, ry: number, cx: number, cy: n
  */
 export function siteInRegion(seed: number, rx: number, ry: number, rawGround: (x: number, y: number) => number): SiteLayout | null {
   const site = rawSiteInRegion(seed, rx, ry, rawGround);
-  if (!site || site.layout.shape !== 'city' || !gateRule || site.gates.length === 0) return site;
+  if (!site || site.layout.shape !== 'city' || !gateRule.current || site.gates.length === 0) return site;
   const key = `${seed}:${rx}:${ry}`;
   const done = finalCache.get(key);
   if (done) return done;
   if (finishing.has(key)) return site;
   finishing.add(key);
   try {
-    const open = gateRule(seed, site);
+    const open = gateRule.current(seed, site);
     if (!open) return site;
     const c = cityLayout(seed, rx, ry, site.cx, site.cy, site.layout, (x, y) => isWetAt(seed, x, y), open);
     const out: SiteLayout = { ...site, plan: c.plan, index: indexPlan(c.plan), paint: c.paint, mouths: c.mouths, gates: c.gates, houses: c.houses, square: c.square };

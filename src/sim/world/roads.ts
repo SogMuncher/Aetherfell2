@@ -1,5 +1,6 @@
 import { CELL, type Land, landsBySeed, type RegionWays, SPAN, type Seg, type Way, type WayHit, cellKey, chosen, netOf, siteKey, sitesAround } from './wayParts';
-import { type Pt, REGION_SIZE, type SiteLayout, setGateRule } from './sites';
+import { type Pt, REGION_SIZE, type SiteLayout } from './sites';
+import { setGateRule } from './gateRule';
 import { wayBetween, wayBox } from './wayRoute';
 
 export type { Land, Way, WayHit } from './wayParts';
