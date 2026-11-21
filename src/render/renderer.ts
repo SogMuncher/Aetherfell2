@@ -11,6 +11,7 @@ import { SpriteRenderer } from './entities/spriteRenderer';
 import { ViewModel } from './entities/viewModel';
 import { Particles } from './vfx/particles';
 import { postProcess } from './post';
+import { GpuSpike } from './gpu/gpuSpike';
 
 export interface FrameInput {
   state: SimState;
@@ -39,6 +40,7 @@ export class Renderer {
   readonly particles = new Particles();
   private lightmap = new LightMap();
   private viewModel = new ViewModel();
+  private spike: GpuSpike | null = null;
   private time = 0;
   private flash = 0;
   private hurt = 0;
@@ -49,7 +51,7 @@ export class Renderer {
   lastEnv: Env | null = null;
   stats = { terrainMs: 0, spritesMs: 0, totalMs: 0, lightMs: 0, skyMs: 0, volumeMs: 0, vfxMs: 0, postMs: 0 };
   /** Look options from the settings menu (main.ts keeps these up to date). */
-  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24 };
+  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24, gpuSpike: false };
 
   constructor(canvas: HTMLCanvasElement, sampler: WorldSampler, tiles: ReadonlyTiles) {
     this.viewport = new Viewport(canvas, 200);
@@ -147,6 +149,18 @@ export class Renderer {
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
     postProcess(vp, { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0 }, this.options.colourLevels);
     vp.present();
+    if (this.options.gpuSpike) {
+      try {
+        this.spike ??= new GpuSpike(vp.canvas);
+        this.spike.draw(tiles, env, { x: cx, y: cy, z: cz }, f.yaw, f.pitch, this.options.fovDegrees);
+      } catch (e) {
+        console.warn('GPU spike unavailable', e);
+        this.options.gpuSpike = false;
+      }
+    } else if (this.spike) {
+      this.spike.dispose();
+      this.spike = null;
+    }
     const t3 = performance.now();
     const st = this.stats;
     const avg = (old: number, v: number): number => old * 0.9 + v * 0.1;

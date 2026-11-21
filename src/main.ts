@@ -102,6 +102,7 @@ function applySettings(): void {
     bob: settings.bool('headBob'),
     fovDegrees: settings.num('fieldOfView'),
     colourLevels: settings.num('colours') || 24,
+    gpuSpike: settings.bool('gpuSpike'),
   };
   renderer.terrain.setMaxDistance(settings.num('renderDistance') * 1000);
   applyResolution(0);

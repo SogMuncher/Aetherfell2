@@ -16,6 +16,8 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 - `vfx/particles.ts` + `particleKinds.ts`: spell/effect looks come from rune `look` data.
 - Held item: `entities/viewModel.ts` and `mesh.ts` (being replaced by sprites in another thread; do not extend).
 
+- GPU port is planned: `docs/GPU-RENDER.md` (spike in `gpu/gpuSpike.ts`).
+
 ## Add / change
 - New creature/plant/prop look: data (`content/looks.ts`, `forms.ts`, `props.ts`, `palettes.ts`), no render code.
 - New draw pass: read state + content only; keep per-frame work budgeted.
