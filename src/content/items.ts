@@ -11,6 +11,7 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   healingDraught: { name: 'Healing draught', category: 'potion', weight: 0.3, value: 12, tint: 0xd04040, use: [{ type: 'heal', amount: 45 }] },
   manaTonic: { name: 'Aether tonic', category: 'potion', weight: 0.3, value: 14, tint: 0x4070e0, look: { sparkle: true, glow: 0xb0d0ff }, use: [{ type: 'restore', stat: 'mana', amount: 45 }] },
   antidote: { name: 'Bitterroot antidote', category: 'potion', weight: 0.2, value: 10, tint: 0x60b050, use: [{ type: 'cure', tag: 'poison' }, { type: 'heal', amount: 5 }] },
+  vigourTonic: { name: 'Vigour tonic', category: 'potion', weight: 0.3, value: 10, tint: 0xe0c040, use: [{ type: 'restore', stat: 'stamina', amount: 80 }] },
   bread: { name: 'Bread', category: 'food', weight: 0.2, value: 2, tint: 0xc09050, use: [{ type: 'heal', amount: 10 }, { type: 'restore', stat: 'stamina', amount: 30 }] },
   venison: { name: 'Venison', category: 'food', weight: 1, value: 6, tint: 0x9a3a2a, use: [{ type: 'heal', amount: 16 }, { type: 'restore', stat: 'stamina', amount: 30 }] },
   oilFlask: {
