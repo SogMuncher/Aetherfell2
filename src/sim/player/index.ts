@@ -1,0 +1,1 @@
+export { playerSystem } from './playerSystem';

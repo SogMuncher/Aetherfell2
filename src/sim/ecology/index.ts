@@ -1,0 +1,1 @@
+export { ecologySystem } from './ecologySystem';

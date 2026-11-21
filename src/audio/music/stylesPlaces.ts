@@ -1,0 +1,117 @@
+import type { StyleDef } from './styleTypes';
+import { CALM_CELLS, DANCE_CELLS, SLOW_CELLS, c } from './styleTypes';
+
+/** Moods of settlements and seasons: village … hearth. */
+export const STYLES_PLACES = {
+  /** A lived-in village: lutes, fiddles and a dance in six-eight. */
+  village: {
+    name: 'Village life',
+    tempo: [96, 116],
+    meters: ['sixEight', 'sixEight', 'four', 'three'],
+    modes: ['mixolydian', 'ionian', 'dorian'],
+    roots: [50, 55, 52, 48],
+    progressions: [[0, 3, 4, 0], [0, 6, 3, 0], [0, 4, 0, 4], [0, 3, 0, 4], [5, 4, 0, 0], [0, 6, 0, 4]],
+    chordBars: [1, 1, 2],
+    colors: { triad: 4, sus4: 1, seventh: 1 },
+    swing: 0.12,
+    rest: 0.15,
+    sectionBars: [8, 16],
+    melody: { cells: DANCE_CELLS, leap: 3, space: 0.15, theme: false },
+    layers: [
+      { role: 'arp', instrument: 'lute', lo: 55, hi: 76, level: 0.8, enter: 0, rate: 2, shape: 'updown', pan: -0.3 },
+      { role: 'bass', instrument: 'pluckBass', lo: 38, hi: 52, level: 0.7, enter: 0.1 },
+      { role: 'melody', instrument: 'fiddle', lo: 64, hi: 86, level: 0.8, enter: 0.25, pan: 0.2 },
+      { role: 'perc', instrument: 'frameDrum', lo: 0, hi: 0, level: 0.55, enter: 0.2, on: 'beats' },
+      { role: 'perc', instrument: 'frameDrum', lo: 0, hi: 0, level: 0.35, enter: 0.4, hits: 5, on: 'euclid', bright: 0.8, pan: 0.3 },
+      { role: 'perc', instrument: 'shaker', lo: 0, hi: 0, level: 0.45, enter: 0.5, on: 'offbeats', pan: -0.35 },
+      { role: 'counter', instrument: 'flute', lo: 72, hi: 91, level: 0.55, enter: 0.55, echo: 0.3, pan: -0.15 },
+    ],
+    mix: { level: 0.85, hall: 0.45, cave: 0, echo: 0.3, tone: 9500 },
+    minBars: 8,
+    affinity: (s) => s.settlement * 0.85 * (1 - s.night * 0.35) * (1 - s.danger),
+    energy: (s) => c(0.35 + s.settlement * 0.3 + s.company * 0.25 - s.night * 0.2),
+  },
+
+  /** Snowfields and ice: cold, clear, crystalline. */
+  snow: {
+    name: 'Snowfields',
+    tempo: [62, 76],
+    meters: ['four', 'three'],
+    modes: ['aeolian', 'lydian', 'dorian'],
+    roots: [52, 50, 47, 45],
+    progressions: [[0, 5, 2, 6], [0, 3, 5, 4], [0, 6, 5, 6], [0, 2, 3, 2]],
+    chordBars: [2, 2, 4],
+    colors: { sus2: 3, add9: 2, triad: 1, sus4: 1 },
+    swing: 0,
+    rest: 0.25,
+    sectionBars: [8, 16],
+    melody: { cells: SLOW_CELLS, leap: 4, space: 0.35, theme: false },
+    layers: [
+      { role: 'pad', instrument: 'glass', lo: 60, hi: 81, level: 0.7, enter: 0, voices: 3 },
+      { role: 'arp', instrument: 'celesta', lo: 72, hi: 96, level: 0.55, enter: 0.1, rate: 2, shape: 'random', echo: 0.8, pan: 0.35 },
+      { role: 'texture', instrument: 'bell', lo: 76, hi: 91, level: 0.35, enter: 0.1, chance: 0.05, echo: 0.6, pan: -0.4 },
+      { role: 'pad', instrument: 'strings', lo: 55, hi: 79, level: 0.5, enter: 0.35, voices: 3, bright: 0.7 },
+      { role: 'melody', instrument: 'flute', lo: 69, hi: 91, level: 0.7, enter: 0.35, echo: 0.6 },
+      { role: 'bass', instrument: 'cello', lo: 33, hi: 48, level: 0.4, enter: 0.5 },
+    ],
+    mix: { level: 0.85, hall: 0.9, cave: 0.1, echo: 0.9, tone: 12000 },
+    minBars: 8,
+    affinity: (s) => s.snow * 0.8 * (1 - s.depth),
+    energy: (s) => c(0.25 + s.speed * 0.25 + s.company * 0.2 + s.wind * 0.2),
+  },
+
+  /** Shores and lakes: rolling, swaying, gentle. */
+  coast: {
+    name: 'Shoreline',
+    tempo: [68, 80],
+    meters: ['sixEight', 'three'],
+    modes: ['mixolydian', 'ionian', 'dorian'],
+    roots: [48, 50, 45, 52],
+    progressions: [[0, 6, 3, 0], [0, 4, 3, 0], [0, 3, 6, 3], [0, 5, 3, 4]],
+    chordBars: [2],
+    colors: { add9: 2, sus2: 2, triad: 2, seventh: 1 },
+    swing: 0,
+    rest: 0.25,
+    sectionBars: [8, 16],
+    melody: { cells: CALM_CELLS, leap: 3, space: 0.35, theme: false },
+    layers: [
+      { role: 'pad', instrument: 'warmPad', lo: 52, hi: 74, level: 0.75, enter: 0, voices: 3, bright: 0.45 },
+      { role: 'arp', instrument: 'harp', lo: 55, hi: 86, level: 0.85, enter: 0.1, rate: 2, shape: 'updown', echo: 0.6, pan: 0.3 },
+      { role: 'bass', instrument: 'pluckBass', lo: 36, hi: 50, level: 0.55, enter: 0.3 },
+      { role: 'melody', instrument: 'flute', lo: 67, hi: 88, level: 0.75, enter: 0.35, echo: 0.45, pan: -0.2 },
+      { role: 'pad', instrument: 'choir', lo: 57, hi: 74, level: 0.4, enter: 0.6, voices: 3, bright: 0.3 },
+    ],
+    mix: { level: 0.85, hall: 0.8, cave: 0, echo: 0.8, tone: 9000 },
+    minBars: 8,
+    affinity: (s) => (s.water * 0.55 + s.sand * 0.35) * (1 - s.night * 0.5) * (1 - s.depth),
+    energy: (s) => c(0.3 + s.speed * 0.25 + s.company * 0.2),
+  },
+
+  /** By a fire: cosy, warm, safe for a moment. */
+  hearth: {
+    name: 'Fireside',
+    tempo: [70, 84],
+    meters: ['three', 'sixEight', 'four'],
+    modes: ['dorian', 'mixolydian', 'aeolian'],
+    roots: [50, 45, 48],
+    progressions: [[0, 3, 0, 4], [0, 6, 3, 4], [0, 5, 3, 6], [0, 3, 6, 0]],
+    chordBars: [1, 2],
+    colors: { triad: 2, seventh: 2, add9: 1, sus4: 1 },
+    swing: 0.15,
+    rest: 0.15,
+    sectionBars: [8, 16],
+    melody: { cells: CALM_CELLS, leap: 3, space: 0.3, theme: true },
+    layers: [
+      { role: 'arp', instrument: 'lute', lo: 52, hi: 72, level: 0.85, enter: 0, rate: 2, shape: 'up', pan: -0.2 },
+      { role: 'bass', instrument: 'pluckBass', lo: 36, hi: 50, level: 0.55, enter: 0.2 },
+      { role: 'melody', instrument: 'fiddle', lo: 62, hi: 81, level: 0.6, enter: 0.3, pan: 0.2 },
+      { role: 'pad', instrument: 'warmPad', lo: 52, hi: 70, level: 0.5, enter: 0.3, voices: 3, bright: 0.3 },
+      { role: 'perc', instrument: 'frameDrum', lo: 0, hi: 0, level: 0.35, enter: 0.5, on: 'accents' },
+    ],
+    mix: { level: 0.95, hall: 0.4, cave: 0, echo: 0.3, tone: 7500 },
+    minBars: 8,
+    affinity: (s) => s.warmth * 0.75 * (1 - s.danger) * (1 - s.combat),
+    energy: (s) => c(0.3 + s.company * 0.4),
+  },
+
+} satisfies Record<string, StyleDef>;

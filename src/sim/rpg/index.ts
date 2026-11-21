@@ -1,0 +1,1 @@
+export { rpgSystem } from './rpgSystem';

@@ -1,0 +1,30 @@
+# Realms and the 3D layer (sim/world/volume, realms, underworld; sim/structures)
+
+**Purpose:** buildings with floors, roofs and overhangs, and whole other spaces (the underworld) using the same systems.
+**Never:** write `if (state.realm === 'underworld')` in a system. A realm is only *which* tiles/cells/things are loaded.
+
+## 3D layer (`types/volume.ts`, `types/structures.ts`, `sim/world/volume.ts`)
+- Sparse 1 m cells in 16^3 bricks: shape byte (shape + quarter turn) + material byte (a tile kind).
+- Shapes are data (`content/shapes.ts`, ledger `SHAPE_LEDGER`, add numbers at the end). Faces come from the material tile's
+  `wall`/`floor` surfaces. Ground tile and 3D cell are one "spot" (`GROUND_Z` = ground) in `ctx.matter`.
+- Builder (`sim/structures/builder.ts` + `builder/placer|house|arch.ts`) snaps shapes from recipes
+  (`content/structures.ts`): 3 m storeys, walls, floors, stairs, gable/hip/flat roofs, arches, decay for ruins.
+- Physics asks `floorBelow`, `ceilingAbove`, `solidBetween`; weather asks `openSky`. Changes go out as one
+  `volumeChanged` event per brick. Cheat "Build a building" raises any recipe.
+
+## Realms (`content/realms.ts`, `sim/world/realms.ts`, `underworld.ts`)
+- `state.realm` is active; the others sit in `state.stash`. Travel = `swapRealm`, run by `simLoop.travel()`.
+- `RealmDef.ground`: `'surface'` or `'lattice'` (halls on a 16 m grid 1:1 under the land, roof = 3D cells).
+  Dispatch points: `WorldTiles.chunk()` and `Simulation.regenChunk()`.
+- `sky:false` = no sun/stars/clouds/rain; `ambient`, `fog`, `glow` (lamp carried), `mood` (music).
+- Ways: `ThingDef.portal` (`descent` / `ascent`). Whole party must be within `RealmDef.gather` m. On return the
+  surface catches up (<= 200 interaction passes). `RealmDef.wipe` = where a downed party wakes.
+- `RealmDef.scatter` lines what lies in each hall (`under` limits it to halls under given places); `habitats[].realm`
+  says where a creature lives. There is one dungeon: every way down reaches the same network.
+
+## Add / change
+- New realm: a `REALMS` entry + portals/habitats naming it; new ground kind only if needed (ground generator).
+- New building: `structures` recipe. New shape: append to `shapes.ts` (never renumber).
+
+## Checks
+`scripts/volumeSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`.

@@ -1,0 +1,1 @@
+export { effectsSystem } from './effectsSystem';

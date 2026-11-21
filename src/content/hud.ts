@@ -1,0 +1,45 @@
+import type { HudTheme } from '../types';
+
+/**
+ * Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
+ * CSS colour variable (`--gold`, `--hp-top`…), so a new look is a change here only.
+ */
+export const HUD: HudTheme = {
+  text: '#eadfc3',
+  textSoft: '#cfc4a6',
+  dim: '#a49c86',
+  bright: '#fff2c0',
+  gold: '#f4d77a',
+  brass: '#c9a24a',
+  brassFaint: '#c9a24a88',
+  brassGlow: '#c9a24a55',
+  brassLit: '#e7c45a',
+  ink: '#0d101c',
+  inkGlass: '#0d101ccc',
+  inkSoft: '#0d101caa',
+  inkKbd: '#0d101cb0',
+  inkDeep: '#0d101cee',
+  panel: '#121626ee',
+  button: '#1c2440',
+  buttonOn: '#2a3050',
+  edge: '#3a3424',
+  leather: '#2a1c10',
+  rune: '#9fe8dc',
+  aether: '#9fb8f0',
+  warn: '#f0a090',
+  warnEdge: '#8a3a2a',
+  danger: '#b0563a',
+  go: '#6a8a3a',
+  place: '#9fd8ff',
+  friend: '#8cf08c',
+  hpTop: '#e0574a',
+  hpBottom: '#9a2a22',
+  stTop: '#cfd36a',
+  stBottom: '#7c8a2a',
+  mpTop: '#6aa0f0',
+  mpBottom: '#2a4c9a',
+  mapFound: '#f4d77a',
+  mapUnknown: '#ffffff55',
+  mapFoe: '#ff5050',
+  mapFriend: '#80ff80',
+};

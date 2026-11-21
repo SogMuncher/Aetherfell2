@@ -1,0 +1,1 @@
+export { magicSystem } from './magicSystem';

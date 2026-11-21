@@ -1,0 +1,1 @@
+export { interactionSystem } from './interactionSystem';
