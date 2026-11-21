@@ -9,6 +9,7 @@ import type { Env } from '../lighting';
 import { BLOCK, LEVEL_CELL, TerrainLod } from '../raycaster/terrainLod';
 import { CHUNK_SIZE } from '../../types';
 import type { ReadonlyTiles } from '../../types';
+import type { CloudShadow } from '../raycaster/cloudShadow';
 import { SURFACE_SHADER } from './gpuSurfaces';
 import { LIGHT_SHADER } from './gpuLight';
 import type { GpuLight } from './gpuLight';
@@ -34,7 +35,9 @@ ${SURFACE_SHADER}
 ${LIGHT_SHADER}
 uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist; uniform vec3 uSun; uniform vec3 uSunDir; uniform vec3 uAmb;
 uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade;
+uniform sampler2D uShade; uniform vec4 uShadeO; uniform vec3 uHorizon; uniform float uDay, uTime, uShadeOn;
 in vec3 vPos; in vec4 vCol; out vec4 o;
+float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 void main(){
   if (vPos.x > uHole.x && vPos.x < uHole.z && vPos.y > uHole.y && vPos.y < uHole.w) discard;
@@ -48,7 +51,23 @@ void main(){
   // Grit: per-metre speckle that fades with distance (the near ground never looks flat).
   base *= 1.0 + (hash(floor(vPos.xy)) - 0.5) * uGrit * 2.0 * (1.0 - smoothstep(20.0, 120.0, d));
   float lit = max(0.0, dot(n, uSunDir));
+  if (uShadeOn > 0.5) {
+    vec2 g = vPos.xy / uShadeO.z - uShadeO.xy - 0.5; ivec2 i = ivec2(floor(g)); vec2 t = g - vec2(i);
+    float sh = uShadeO.w;
+    if (i.x >= 0 && i.y >= 0 && i.x < 127 && i.y < 127) {
+      float a = texelFetch(uShade, i, 0).r, b = texelFetch(uShade, i + ivec2(1, 0), 0).r, c2 = texelFetch(uShade, i + ivec2(0, 1), 0).r, d2 = texelFetch(uShade, i + ivec2(1, 1), 0).r;
+      sh = mix(mix(a, b, t.x), mix(c2, d2, t.x), t.y);
+    }
+    lit *= sh;
+  }
   vec3 c = base * (uAmb + uSun * lit + lightAt(vPos.xy));
+  if (vCol.a > 0.99) {
+    float glint = d < 900.0 && h2(floor(vPos.xy * 0.5 + vec2(floor(uTime * 2.0), 0.0))) > 0.992 ? 0.8 * uDay : 0.0;
+    c = (base * 0.6 + uHorizon * 0.4 + glint * 0.47) * (0.5 + uDay * 0.5);
+  } else if (vCol.a > 0.0) {
+    float fl = vCol.a * 2.0 * (0.75 + 0.25 * sin(uTime * 9.0 + vPos.x * 0.7 + vPos.y * 0.3));
+    c += vec3(0.9, 0.38, 0.09) * fl;
+  }
   float f = 1.0 - exp(-d / uFogDist);
   o = vec4(mix(c, uFog, f), 1.0);
 }`;
@@ -74,6 +93,10 @@ export class GpuTerrain {
   private readonly vao: WebGLVertexArrayObject;
   private readonly levels: Level[] = [];
   private frame = 0;
+  private readonly shadeTex: WebGLTexture;
+  private shadeOn = 0;
+  private shadeMean = 1;
+  private shadeO = [0, 0, 48];
 
   constructor(private readonly gl: WebGL2RenderingContext, private readonly lod: TerrainLod, private readonly tiles: ReadonlyTiles, private readonly surf: WebGLTexture, private readonly light: GpuLight) {
     this.prog = compile(gl, VS, FS);
@@ -85,6 +108,7 @@ export class GpuTerrain {
       k += 6;
     }
     this.indexCount = idx.length;
+    this.shadeTex = makeTexture(gl, gl.R32F, 128, 128, gl.RED, gl.FLOAT);
     this.vao = gl.createVertexArray() as WebGLVertexArrayObject;
     gl.bindVertexArray(this.vao);
     const ib = gl.createBuffer();
@@ -107,6 +131,18 @@ export class GpuTerrain {
     const ty = Math.floor(y);
     const ch = this.tiles.peekChunk(Math.floor(tx / CHUNK_SIZE), Math.floor(ty / CHUNK_SIZE));
     return ch ? (ch.kind[(ty - ch.cy * CHUNK_SIZE) * CHUNK_SIZE + (tx - ch.cx * CHUNK_SIZE)] ?? 255) : 255;
+  }
+
+  /** Cloud shadows: copies the shadow grid into a texture (called every few frames), or switches them off for a clear sky. */
+  setShadow(sh: CloudShadow, on: boolean): void {
+    this.shadeOn = on ? 1 : 0;
+    if (!on) return;
+    const st = sh.state;
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, this.shadeTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, st.size, st.size, gl.RED, gl.FLOAT, st.grid);
+    this.shadeO = [st.ox, st.oy, st.cell];
+    this.shadeMean = st.mean;
   }
 
   forget(): void {
@@ -150,7 +186,7 @@ export class GpuTerrain {
         l.c[k * 4] = col & 255;
         l.c[k * 4 + 1] = (col >>> 8) & 255;
         l.c[k * 4 + 2] = (col >>> 16) & 255;
-        l.c[k * 4 + 3] = b.water[q] ? 255 : 0;
+        l.c[k * 4 + 3] = b.water[q] ? 255 : (b.glow[q] ?? 0) >> 1;
         if (textured) l.code[k] = this.tileCode(x, y);
       }
     }
@@ -170,7 +206,7 @@ export class GpuTerrain {
     l.valid = true;
   }
 
-  draw(vp: Float32Array, eye: { x: number; y: number; z: number }, env: Env): void {
+  draw(vp: Float32Array, eye: { x: number; y: number; z: number }, env: Env, time: number): void {
     const gl = this.gl;
     const p = this.prog;
     gl.useProgram(p);
@@ -191,6 +227,14 @@ export class GpuTerrain {
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this.surf);
     this.light.bind(p, 4);
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, this.shadeTex);
+    gl.uniform1i(loc(gl, p, 'uShade'), 5);
+    gl.uniform4f(loc(gl, p, 'uShadeO'), this.shadeO[0] ?? 0, this.shadeO[1] ?? 0, this.shadeO[2] ?? 48, this.shadeMean);
+    gl.uniform1f(loc(gl, p, 'uShadeOn'), this.shadeOn);
+    gl.uniform3f(loc(gl, p, 'uHorizon'), env.horizon[0] / 255, env.horizon[1] / 255, env.horizon[2] / 255);
+    gl.uniform1f(loc(gl, p, 'uDay'), env.day);
+    gl.uniform1f(loc(gl, p, 'uTime'), time);
     for (let L = 0; L < this.levels.length; L++) {
       const l = this.levels[L];
       if (!l || !l.valid) continue;

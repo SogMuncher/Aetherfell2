@@ -58,16 +58,16 @@ Done = works on the GPU path. Sock's rule: procedural textures, lighting and eff
 - [x] Procedural tile textures on near ground (stage 2 fix); far ground colour from LOD
 - [x] 3D structures with shapes, material textures, sun/cover light; air motes
 - [ ] Terrain wet / soot / wear / fire glow shading; puddles and rain wetness
-- [ ] Cloud shadows on land (`cloudShadow.ts`); aurora
+- [x] Cloud shadows on land (`cloudShadow.ts` grid as a texture); [ ] aurora
 - [x] Tile walls, posts, windows, doors as boxes from tile data (village/ruin buildings, `gpuTileBlocks.ts`)
 - [x] Tile billboards (trees, bushes, rocks) near the eye; [ ] canopy shown from far LOD
-- [ ] Water look (level, depth fade, shine, rivers/lakes at own height)
+- [x] Water look (sky-tinted, glints, flat light) and distant fire glow; [ ] depth fade, rivers/lakes at their own height check
 - [x] Structures show correctly from inside (changed bricks re-uploaded, new ones first)
 - [ ] Structure cell state: wet, fire glow, oil sheen, soot, wear; door and open tiles
 - [x] Point lights: the CPU light grid is a texture used by land, tile walls, structures and sprites (torches, fire, spells, lamps)
 - [x] Sprites: creatures, props, items, hit flash, palette fill, dither fade, depth-tested (art still built on the CPU)
 - [x] Particles and spell looks from rune `look` data (CPU simulates, GPU draws); rain streaks, stops under roofs; [ ] rain splashes
 - [x] Held item (painted by `ViewModel` into a buffer, composited on top), swing/bob/shake
-- [ ] Underworld halls and the realm dark/fog look (3D cells + lattice ground)
+- [x] Underworld halls and the realm dark/fog look (checked: flagstones, torch-lit crates)
 - [ ] Guest/net view, saves unaffected (render stays read-only)
 - [ ] Headless smokes (`artSmoke`, `skySmoke`, `frameProfile`) still run

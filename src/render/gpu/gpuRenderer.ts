@@ -10,6 +10,7 @@ import type { TerrainLod } from '../raycaster/terrainLod';
 import type { ReadonlyTiles, ReadonlyVolume, WeatherState } from '../../types';
 import type { Billboard } from '../entities/spriteRenderer';
 import type { LightMap } from '../lighting';
+import type { CloudShadow } from '../raycaster/cloudShadow';
 import type { Particle } from '../vfx/particleKinds';
 import type { Surface } from '../vfx/glow';
 import { GpuAir } from './gpuAir';
@@ -41,6 +42,8 @@ export interface GpuFrame {
   tiles: ReadonlyTiles;
   billboards: readonly Billboard[];
   motes: readonly Particle[];
+  shadow: CloudShadow;
+  shadowOn: boolean;
   /** Wind across your view (for the rain slant). */
   windSide: number;
   /** Paints the held item into the overlay buffer. */
@@ -136,7 +139,8 @@ export class GpuRenderer {
     this.light.upload(f.lightmap);
     this.post.begin(w, h);
     this.sky.draw(cam, f.eye, f.env, f.weather, f.time);
-    this.terrain.draw(vp, f.eye, f.env);
+    if (this.frames % 4 === 0) this.terrain.setShadow(f.shadow, f.shadowOn);
+    this.terrain.draw(vp, f.eye, f.env, f.time);
     this.blocks.draw(vp, f.eye, f.env, f.tiles);
     this.structures.draw(vp, f.eye, f.env, f.volume);
     this.sprites.draw(vp, cam, f.eye, f.env, f.billboards);
