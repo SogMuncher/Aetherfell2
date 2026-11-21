@@ -7,7 +7,7 @@
   Beyond loaded chunks the same seed is sampled (`WorldSampler`), so far land always shows. Only changed chunks save.
 - Biomes/materials/colours are data: `content/biomes.ts`, `tiles.ts`, `surfaces.ts`, `world.ts`.
 - Matter: `matter.ts` is `ctx.matter`, the one answer to "what is at (x,y,z)" for tiles and 3D cells alike.
-- Places: `sites.ts` (villages roll a layout style by weight: ring/scatter/street/cross, own house count and building mix, `styles` rows in `content/sites.ts`), `city.ts` + `cityParts.ts` + `cityWard.ts` + `cityWall.ts` (cities: wards, each with a street pattern from `streetStyles`; ONE wall round the merged outline of all wards, `walls.margin` out, gates in line with ward main streets, no inner walls),
+- Places: `sites.ts` (villages roll a layout style by weight: ring/scatter/street/cross, own house count and building mix, `styles` rows in `content/sites.ts`), `city.ts` + `cityParts.ts` + `cityWard.ts` + `cityWall.ts` (cities: wards, each with a street pattern from `streetStyles`; ONE wall round the merged outline of all wards, `walls.margin` out, gates in line with ward main streets, no inner walls, not even round the keep; street tiles not joined to a ward middle or gate road are painted as plain ground, no stray fragments),
   all pure and seeded. `worldSystem.ts` runs them; `worldPopulate.ts` raises buildings through `ctx.build` a few per
   tick (`Location.built` lets saves resume), then spawns furnishings and people. Layout data: `content/sites.ts`.
 - Ways (roads/paths): `roads.ts` (queries `waysTouching`, `wayHit`), `wayParts.ts` (types, site neighbours),
@@ -30,3 +30,4 @@
 `scripts/worldSmoke.ts` (terrain, far view), `settlementSmoke.ts`, `waysSmoke.ts`, `waterSmoke.ts`, `matterSmoke.ts`.
 
 - Gates and roads agree: ways are routed from the all-gates layout (`rawSiteInRegion`); `siteInRegion` then returns a walled city with gates only where a way leaves (`setGateRule` in roads.ts), so no gate leads nowhere. A route that would run through a city wall is dropped (`crossesWall` in wayRoute.ts). Checked in waysSmoke.
+- Water vs places/rivers: water keeps out of a place and fades out over 60 m beyond its radius (`waterSpotAt`), and water cuts its bed BEFORE the plateau levels the ground (`groundWith`, plateau blend 80 m), so no cliff stands beside a levelled place. A river inside or beside a lake becomes the lake and its surface settles to the lake's level (`waterSpot`). Checked in waterSmoke / settlementSmoke.

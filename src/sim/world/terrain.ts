@@ -11,6 +11,9 @@ import type { WayHit } from './roads';
 import { carve, waterSpot } from './water';
 import type { WaterSpot } from './water';
 
+/** Metres beyond a place's radius over which its plateau blends into the land. */
+const PLATEAU_EDGE = 80;
+
 function smoothstep(a: number, b: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
@@ -75,20 +78,17 @@ export class Terrain implements WorldSampler {
   /** As `ground`, with water widened by `spread` metres (distant samples, so rivers still show). */
   groundWith(x: number, y: number, octaves: number, spread: number): number {
     let g = this.rawGround(x, y, octaves);
-    const sites = this.sitesNear(x, y);
-    for (const s of sites) {
+    // Water cuts its bed first (it keeps out of places, see waterSpotAt), then the places level what is left, so no bed is ever left hanging beside a plateau.
+    const ws = this.waterSpotAt(x, y, spread);
+    if (ws) g = carve(g, ws);
+    for (const s of this.sitesNear(x, y)) {
       const d = Math.hypot(x - s.cx, y - s.cy);
-      const inner = s.radius;
-      const outer = s.radius + 40;
+      const outer = s.radius + PLATEAU_EDGE;
       if (d >= outer) continue;
       // Whole metres, so floors raised on the plateau sit flush with the ground.
       const flat = Math.max(2, Math.round(this.rawGround(s.cx, s.cy, 3)));
-      const t = 1 - smoothstep(inner, outer, d);
-      g = g + (flat - g) * t;
+      g = g + (flat - g) * (1 - smoothstep(s.radius, outer, d));
     }
-    // Water cuts its bed after the places have levelled the ground, but never inside a place.
-    const ws = this.waterSpotAt(x, y, spread);
-    if (ws) g = carve(g, ws);
     return g;
   }
 
@@ -96,7 +96,11 @@ export class Terrain implements WorldSampler {
   waterSpotAt(x: number, y: number, spread = 0): WaterSpot | null {
     const s = waterSpot(this, x, y, spread);
     if (!s) return null;
-    for (const p of this.sitesNear(x, y)) if (Math.hypot(x - p.cx, y - p.cy) < p.radius) return null;
+    // Water keeps out of a place and its levelled margin, shrinking away so no bed ends in a cliff beside the plateau.
+    let k = 1;
+    for (const p of this.sitesNear(x, y)) k = Math.min(k, 1 - Math.min(1, (1 - smoothstep(p.radius, p.radius + PLATEAU_EDGE, Math.hypot(x - p.cx, y - p.cy))) / 0.125));
+    if (k <= 0) return null;
+    if (k < 1) s.edge = s.bank + 1 + (s.edge - s.bank - 1) * k;
     return s;
   }
 

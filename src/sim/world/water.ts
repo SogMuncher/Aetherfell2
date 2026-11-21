@@ -165,7 +165,14 @@ function lakeSpot(land: LandShape, x: number, y: number, spread: number): WaterS
 export function waterSpot(land: LandShape, x: number, y: number, spread = 0): WaterSpot | null {
   const r = riverSpot(land, x, y, spread);
   const l = lakeSpot(land, x, y, spread);
-  if (r && l) return r.edge < l.edge ? r : l;
+  if (r && l) {
+    // A river never runs over a lake: inside the lake it is the lake; near it, the river's surface settles to the lake's, so it ends in (or flows from) the water.
+    const m = W().rivers.width[1] + W().lakes.bank + 8;
+    if (l.edge < 0) return l;
+    const t = smoothstep(0, m, l.edge);
+    r.level = l.level + (r.level - l.level) * t;
+    return r.edge < l.edge ? r : l;
+  }
   return r ?? l;
 }
 

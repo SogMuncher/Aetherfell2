@@ -172,7 +172,7 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
     }
     return false;
   };
-  const paint = (x: number, y: number): TileKind | null => {
+  const rawPaint = (x: number, y: number): TileKind | null => {
     // Water is never paved over.
     if (wet(x, y)) return null;
     for (let i = 0; i < wards.length; i++) {
@@ -181,6 +181,48 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
     }
     if (onLink(x, y) || onStub(x, y)) return l.tiles.street;
     return wards.some((w) => inside(w, x, y, M + 14)) ? l.tiles.ground : null;
+  };
+
+  // A street tile counts only if it runs back to a ward's middle or a gate road: no stray fragments (cut by water or rounded corners).
+  const pad = M + 14;
+  const bx0 = Math.min(...wards.map((w) => w.cx - w.hx)) - pad;
+  const by0 = Math.min(...wards.map((w) => w.cy - w.hy)) - pad;
+  const bx1 = Math.max(...wards.map((w) => w.cx + w.hx)) + pad + OUT;
+  const by1 = Math.max(...wards.map((w) => w.cy + w.hy)) + pad + OUT;
+  const bw = bx1 - bx0 + 1;
+  let linked: Uint8Array | null = null;
+  const isStreet = (x: number, y: number): boolean => {
+    if (x < bx0 || y < by0 || x > bx1 || y > by1) return false;
+    const t = rawPaint(x, y);
+    return t !== null && (t === l.tiles.street || t === l.tiles.main);
+  };
+  const link = (): Uint8Array => {
+    const seen = new Uint8Array(bw * (by1 - by0 + 1));
+    const stack: number[] = [];
+    const add = (x: number, y: number): void => {
+      if (!isStreet(x, y)) return;
+      const k = (y - by0) * bw + (x - bx0);
+      if (seen[k]) return;
+      seen[k] = 1;
+      stack.push(x, y);
+    };
+    for (const w of wards) add(w.cx, w.cy);
+    for (const m of mouths) add(m.x, m.y);
+    while (stack.length > 0) {
+      const y = stack.pop() ?? 0;
+      const x = stack.pop() ?? 0;
+      add(x + 1, y);
+      add(x - 1, y);
+      add(x, y + 1);
+      add(x, y - 1);
+    }
+    return seen;
+  };
+  const paint = (x: number, y: number): TileKind | null => {
+    const t = rawPaint(x, y);
+    if (t === null || (t !== l.tiles.street && t !== l.tiles.main)) return t;
+    linked ??= link();
+    return linked[(y - by0) * bw + (x - bx0)] ? t : l.tiles.ground;
   };
 
   let radius = 0;

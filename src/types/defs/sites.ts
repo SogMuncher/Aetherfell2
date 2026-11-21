@@ -80,8 +80,8 @@ export interface CityLayout {
   half: [number, number];
   /** Wall pieces by structure id: a straight run, a tower (corners and along the wall), a gate (middle of each side). */
   walls: { run: string; tower: string; gate: string; towerEvery: number; margin?: number };
-  /** The heart: a paved plaza, the keep inside a curtain wall (half-size `court`, 0 = no wall), landmarks around it. */
-  centre: { plaza: number; keep: string; court: number; courtTower?: string; courtGate?: string; landmarks: Landmark[] };
+  /** The heart: a paved plaza, the keep, landmarks around it. */
+  centre: { plaza: number; keep: string; landmarks: Landmark[] };
   /** The default street pattern. */
   streets: StreetStyle;
   /** Street patterns to pick from by weight for each ward (the grid spacing and widths); left out = `streets` for all. */

@@ -119,7 +119,7 @@ for (const seed of SEEDS) {
 function gather(seed: number): Span[] {
   const land = landOf(seed);
   const out = new Map<string, Span>();
-  for (let ry = -4; ry < 4; ry++) for (let rx = -4; rx < 4; rx++) for (const w of waysTouching(land, rx, ry)) for (const s of w.spans) out.set(s.key, s);
+  for (let ry = -7; ry < 7; ry++) for (let rx = -7; rx < 7; rx++) for (const w of waysTouching(land, rx, ry)) for (const s of w.spans) out.set(s.key, s);
   return [...out.values()];
 }
 
@@ -379,6 +379,48 @@ function findRiver(seed: number, minLevel: number): { x: number; y: number; leve
     const saved = Simulation.fromSave(sim.save());
     check('a saved world regrows the river height under changed tiles (ice rests on the river, not at sea level)', !!saved && Math.abs(saved.tiles.waterLevel(r.x, r.y) - r.level) < 0.01 && saved.tiles.surface(r.x, r.y) > r.level - 0.01);
   }
+}
+
+{
+  // Water never steps (a river over a lake) and levelled ground never ends in a cliff beside a place or its water.
+  const seed = 1;
+  const land = landOf(seed);
+  let stepW = 0;
+  let steepG = 0;
+  let places = 0;
+  for (let rj = -3; rj <= 3; rj++) {
+    for (let ri = -3; ri <= 3; ri++) {
+      for (const st of land.sitesNear(ri * REGION_SIZE + 128, rj * REGION_SIZE + 128)) {
+        if (st.layout.shape !== 'city' && st.layout.shape !== 'village') continue;
+        places++;
+        for (let a = 0; a < 360; a += 3) {
+          for (let d = st.radius - 10; d < st.radius + 110; d += 3) {
+            const x = st.cx + Math.cos((a * Math.PI) / 180) * d;
+            const y = st.cy + Math.sin((a * Math.PI) / 180) * d;
+            // Banks are steep as the river made them; only the levelling of places is judged here.
+            if (land.waterSpotAt(x, y) || land.waterSpotAt(x + 1, y) || land.waterSpotAt(x, y + 1)) continue;
+            const g = land.ground(x, y);
+            const r0 = land.rawGround(x, y);
+            steepG = Math.max(steepG, Math.abs(land.ground(x + 1, y) - g) - Math.abs(land.rawGround(x + 1, y) - r0), Math.abs(land.ground(x, y + 1) - g) - Math.abs(land.rawGround(x, y + 1) - r0));
+            const w = land.waterLevelAt(x, y);
+            const w2 = land.waterLevelAt(x + 1, y);
+            if (!Number.isNaN(w) && !Number.isNaN(w2)) stepW = Math.max(stepW, Math.abs(w - w2));
+          }
+        }
+      }
+    }
+  }
+  for (const lk of lakesIn(land, -2000, -2000, 2000, 2000).slice(0, 20)) {
+    for (let a = 0; a < 360; a += 2) for (let d = lk.r * 0.5; d < lk.r * 2.5; d += 2) {
+      const x = lk.x + Math.cos((a * Math.PI) / 180) * d;
+      const y = lk.y + Math.sin((a * Math.PI) / 180) * d;
+      const w = land.waterLevelAt(x, y);
+      const w2 = land.waterLevelAt(x + 1, y);
+      if (!Number.isNaN(w) && !Number.isNaN(w2)) stepW = Math.max(stepW, Math.abs(w - w2));
+    }
+  }
+  check('rivers and lakes never step in level', stepW < 0.6, `largest step ${stepW.toFixed(2)} m`);
+  check('levelled ground beside places and their water has no cliffs', steepG < 2.5, `steepest ${steepG.toFixed(2)} m per m beyond the natural slope round ${places} places`);
 }
 
 if (failed) throw new Error(`${failed} water check(s) failed`);

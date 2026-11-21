@@ -184,9 +184,6 @@ export const SITES: Record<SiteId, SiteDef> = {
       centre: {
         plaza: 26,
         keep: 'keep',
-        court: 13,
-        courtTower: 'wallTower',
-        courtGate: 'cityGate',
         landmarks: [
           { structure: 'church', at: [-22, 3] },
           { structure: 'belfry', at: [-22, -14] },
@@ -244,9 +241,6 @@ export const SITES: Record<SiteId, SiteDef> = {
       centre: {
         plaza: 26,
         keep: 'keep',
-        court: 13,
-        courtTower: 'wallTower',
-        courtGate: 'cityGate',
         landmarks: [
           { structure: 'church', at: [-22, 3] },
           { structure: 'belfry', at: [-22, -14] },
