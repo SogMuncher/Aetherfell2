@@ -62,7 +62,7 @@ Done = works on the GPU path. Sock's rule: procedural textures, lighting and eff
 - [x] Tile walls, posts, windows, doors as boxes from tile data (village/ruin buildings, `gpuTileBlocks.ts`)
 - [x] Tile billboards (trees, bushes, rocks) near the eye; [ ] canopy shown from far LOD
 - [x] Water look (sky-tinted, glints, flat light) and distant fire glow; [ ] depth fade, rivers/lakes at their own height check
-- [x] Structures show correctly from inside (changed bricks re-uploaded, new ones first)
+- [x] Structures show correctly from inside (changed bricks re-uploaded, new ones first; a brick whose box holds the eye is drawn as a full-screen cover with rays built from the pixel, because box walls next to the eye got clipped and walls vanished)
 - [ ] Structure cell state: wet, fire glow, oil sheen, soot, wear; door and open tiles
 - [x] Point lights: the CPU light grid is a texture used by land, tile walls, structures and sprites (torches, fire, spells, lamps)
 - [x] Sprites: creatures, props, items, hit flash, palette fill, dither fade, depth-tested (art still built on the CPU)

@@ -7,6 +7,7 @@ import type { ReadonlyVolume, VolumeBrick } from '../../types';
 import { SHAPE_COUNT, SHAPE_PIECES, SHAPE_START } from '../../content/shapes';
 import type { Env } from '../lighting';
 import { compile, loc, makeTexture } from './glUtil';
+import type { CamBasis } from './glUtil';
 import type { GpuLight } from './gpuLight';
 import { GRID, PIECE_FLOATS, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
 
@@ -106,7 +107,7 @@ export class GpuStructures {
     return true;
   }
 
-  draw(vp: Float32Array, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume): void {
+  draw(vp: Float32Array, cam: CamBasis, w: number, h: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume): void {
     this.bricks = 0;
     if (vol.bricks.size === 0) return;
     const gl = this.gl;
@@ -177,6 +178,10 @@ export class GpuStructures {
     bind(0, this.atlas, 'uAtlas'); bind(1, this.page, 'uPage'); bind(2, this.pieces, 'uPieces'); bind(3, this.shapeIdx, 'uShapeIdx'); bind(4, this.surf, 'uSurf');
     this.light.bind(p, 5);
     gl.uniformMatrix4fv(loc(gl, p, 'uVP'), false, vp);
+    gl.uniform3f(loc(gl, p, 'uFwd'), cam.fwd[0], cam.fwd[1], cam.fwd[2]);
+    gl.uniform3f(loc(gl, p, 'uRight'), cam.right[0], cam.right[1], cam.right[2]);
+    gl.uniform3f(loc(gl, p, 'uUp'), cam.up[0], cam.up[1], cam.up[2]);
+    gl.uniform3f(loc(gl, p, 'uRes'), w, h, cam.tanY);
     gl.uniform3f(loc(gl, p, 'uEye'), eye.x, eye.y, eye.z);
     gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.uniform1f(loc(gl, p, 'uFogDist'), env.fogDist);

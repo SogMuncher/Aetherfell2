@@ -7,18 +7,20 @@ export const GRID = { win: 11, zLow: 2, zCount: 14 } as const;
 const GW = GRID.win * 2 + 1;
 
 export const STRUCT_VS = `#version 300 es
-uniform mat4 uVP;
+uniform mat4 uVP; uniform vec3 uEye;
 in vec3 aCorner; in vec4 aB0; in vec4 aB1; in vec4 aB2;
 out vec3 vWorld; flat out vec4 fB0; flat out vec4 fB1; flat out vec4 fB2;
 void main(){
   vec3 p = mix(aB0.xyz, aB1.xyz, aCorner);
   vWorld = p; fB0 = aB0; fB1 = aB1; fB2 = aB2; gl_Position = uVP * vec4(p, 1.0);
+  // Eye inside the brick's box: the box walls would be clipped by the near plane, so cover the whole screen instead.
+  if (all(greaterThan(uEye, aB0.xyz - 0.5)) && all(lessThan(uEye, aB1.xyz + 0.5))) { gl_Position = vec4(aCorner.x * 2.0 - 1.0, aCorner.y * 2.0 - 1.0, 0.0, 1.0); }
 }`;
 
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 uniform mat4 uVP; uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uFogDist;
-uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
+uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; out vec4 o;
 ${SURFACE_SHADER}
 ${LIGHT_SHADER}
@@ -66,7 +68,8 @@ bool covered(ivec3 c){
   return false;
 }
 void main(){
-  vec3 d = normalize(vWorld - uEye); vec3 org = uEye;
+  vec2 nd = gl_FragCoord.xy / uRes.xy * 2.0 - 1.0;
+  vec3 d = normalize(uFwd + uRight * nd.x * uRes.z * (uRes.x / uRes.y) + uUp * nd.y * uRes.z); vec3 org = uEye;
   vec3 bmin = fB0.xyz, bmax = fB1.xyz; int slot = int(fB0.w); ivec3 origin = ivec3(fB2.xyz);
   vec3 inv = 1.0 / d; vec3 ta = (bmin - org) * inv, tb = (bmax - org) * inv;
   float tin = max(max(min(ta.x, tb.x), min(ta.y, tb.y)), max(min(ta.z, tb.z), 0.0));
@@ -82,10 +85,14 @@ void main(){
     uvec2 sm = cellAt(slot, cell - origin);
     if (sm.x != 0u){
       vec3 fn = axis < 0 ? vec3(0.0, 0.0, 1.0) : vec3(0.0); if (axis >= 0) fn[axis] = -float(st[axis]);
-      if ((sm.x & 63u) == 1u){ hit = true; th = tc; n = fn; mat = int(sm.y); break; }
-      vec3 lo = clamp(org + d * tc - vec3(cell), 0.0, 1.0);
-      vec4 r = rayShape(int(sm.x), lo, d);
-      if (r.x >= 0.0){ hit = true; th = tc + r.x; n = (r.y == 0.0 && r.z == 0.0 && r.w == 0.0) ? fn : r.yzw; mat = int(sm.y); break; }
+      // The eye can sit inside a cell (a wall it brushes, a doorpost): look out of it instead of painting it over the whole view.
+      bool within = axis < 0 && all(equal(cell, ivec3(floor(org))));
+      if ((sm.x & 63u) == 1u){ if (!within){ hit = true; th = tc; n = fn; mat = int(sm.y); break; } }
+      else {
+        vec3 lo = clamp(org + d * tc - vec3(cell), 0.0, 1.0);
+        vec4 r = rayShape(int(sm.x), lo, d);
+        if (r.x > (within ? 1e-3 : -1.0)){ hit = true; th = tc + r.x; n = (r.y == 0.0 && r.z == 0.0 && r.w == 0.0) ? fn : r.yzw; mat = int(sm.y); break; }
+      }
     }
     if (tMax.x < tMax.y && tMax.x < tMax.z){ tc = tMax.x; cell.x += st.x; tMax.x += tDelta.x; axis = 0; }
     else if (tMax.y < tMax.z){ tc = tMax.y; cell.y += st.y; tMax.y += tDelta.y; axis = 1; }
@@ -96,7 +103,7 @@ void main(){
   vec3 col;
   if (abs(n.z) > 0.6) col = surf(mat, false, w.xy * 16.0);
   else { float across = abs(n.x) > abs(n.y) ? w.y : w.x; float nh = abs(n.z) > 0.05 ? max(0.35, sqrt(1.0 - n.z * n.z)) : 1.0; col = surf(mat, true, vec2(across * 16.0, -w.z * 10.0 / nh)); }
-  bool open = !covered(ivec3(floor(w + n * 0.7)));
+  bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // same spot as Classic: from the middle of the cell, not the exact pixel, so a wall face is lit evenly
   float lit = open ? max(0.0, dot(n, uSunDir)) : 0.0;
   float tint = 0.93 + 0.14 * h3(vec3(cell));
   vec3 c = col * tint * (uAmb * (open ? 1.0 : 0.9) + (open ? 0.0 : 0.09) + uSun * lit + lightAt((w + n * 0.6).xy));
