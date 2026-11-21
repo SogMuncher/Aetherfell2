@@ -9,6 +9,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `cheatsSmoke.ts` (167) Headless checks for the settings list and the debug cheats (which travel as sim commands).
 - `coopSmoke.ts` (357) check: host/guest inputs, snapshots, prediction, shared record
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
+- `fireBench.ts` (30) Benchmark (manual): lights a big brush field, prints burning count, burn-out time and tick cost.
 - `fireSmoke.ts` (21) Headless check that a grass/brush fire spreads with wind and stops in rain.
 - `gearSmoke.ts` (218) check: armour pieces, regions, wear, paperdoll data
 - `matterSmoke.ts` (263) MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
@@ -261,6 +262,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `state.ts` (131) SimState and queues
 - `structures.ts` (173) StructureDef, planned structures, house geometry
 - `tiles.ts` (212) tile/chunk types, TileInfo, keys
+- `fireEmitter.ts` (46) Feeds flames, smoke and embers for burning spots near the eye from one shared per-view budget.
 - `vfx.ts` (59) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
 - `volume.ts` (131) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.

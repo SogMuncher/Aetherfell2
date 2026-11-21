@@ -1,6 +1,7 @@
-import { type BurstDef, GROUND_Z, type MoteLook, type ParticleKind, type ReadonlyTiles, type SimEvent, type SimState, type SpellLook, unpackKey, unpackSpot } from '../../types';
+import { type BurstDef, GROUND_Z, type MoteLook, type ParticleKind, type ReadonlyTiles, type SimEvent, type SimState, type SpellLook } from '../../types';
 import { CONTENT, heldLight, spellFor, thingDef } from '../../content';
 import type { Env } from '../lighting';
+import { emitFire, type FireSink } from './fireEmitter';
 import { KINDS, type KindMote, MAX, type Particle, TAU, fx } from './particleKinds';
 import type { Projection } from '../raycaster/camera';
 import { TILES } from '../../content/tiles';
@@ -19,8 +20,10 @@ export type { ParticleKind };
  * (content/spellcraft.ts composeLook), and the emitters below turn that look plus the spell's
  * delivery (bolt, cone, nova, ward) and power into motes. A new rune needs no code here.
  */
-export class Particles {
+export class Particles implements FireSink {
   private list: Particle[] = [];
+  /** Dead motes wait here to be reused, so a long fire makes no garbage. */
+  private pool: Particle[] = [];
   private rainSeed = 0;
   private time = 0;
 
@@ -32,7 +35,24 @@ export class Particles {
 
   private push(x: number, y: number, z: number, vx: number, vy: number, vz: number, life: number, size: number, grow: number, r: number, g: number, b: number, r2: number, g2: number, b2: number, glow: number, soft: number, lift: number, drag: number, swirl: number, jitter: number): void {
     if (this.list.length >= MAX || life <= 0) return;
-    this.list.push({ x, y, z, vx, vy, vz, life, max: life, size, grow, r, g, b, r2, g2, b2, glow, soft, lift, drag, swirl, jitter });
+    const q = this.pool.pop();
+    if (q) {
+      Object.assign(q, { x, y, z, vx, vy, vz, life, max: life, size, grow, r, g, b, r2, g2, b2, glow, soft, lift, drag, swirl, jitter, pal: null });
+      this.list.push(q);
+    } else this.list.push({ x, y, z, vx, vy, vz, life, max: life, size, grow, r, g, b, r2, g2, b2, glow, soft, lift, drag, swirl, jitter, pal: null });
+  }
+
+  /** A flame, smoke puff or ember of a blaze: hard pixels stepping through the palette in the fire rules. */
+  fire(kind: 'flame' | 'smoke' | 'ember', x: number, y: number, z: number, vx: number, vy: number, vz: number, heat: number, size: number): void {
+    const v = CONTENT.rules.fire.vfx;
+    const n = this.list.length;
+    if (kind === 'flame') this.push(x, y, z, vx, vy, vz, 0.45 + Math.random() * 0.45 + heat * 0.2, size, -0.9, 255, 160, 60, 255, 60, 20, 1, 0, 0, 0, 0, 0.5);
+    else if (kind === 'smoke') this.push(x, y, z, vx, vy, vz, 2.5 + Math.random() * 1.5, size, 0.5, 90, 84, 80, 60, 56, 54, 0, 0, 0, 0, 0, 0.2);
+    else this.push(x, y, z, vx, vy, vz, 0.9 + Math.random() * 0.8, size, 0, 255, 190, 90, 255, 90, 30, 1, 0, -6, 0, 0, 0);
+    const p = this.list[n];
+    if (p && this.list.length > n) {
+      p.pal = kind === 'smoke' ? v.smoke : kind === 'flame' ? v.palette : null;
+    }
   }
 
   /** A spell mote in the given look, with a random 0.6–1.2 variation of its life. */
@@ -334,41 +354,7 @@ export class Particles {
   /** Feed continuous emitters (burning tiles, burning bodies, torches, projectiles, rain splashes). */
   emit(state: SimState, tiles: ReadonlyTiles, camX: number, camY: number, dt: number, env: Env): void {
     const wind = state.weather.wind;
-    let n = 0;
-    for (const key of state.burning) {
-      const { x, y } = unpackKey(key);
-      const dx = x - camX;
-      const dy = y - camY;
-      if (dx * dx + dy * dy > 90 * 90) continue;
-      if (++n > 500) break;
-      const f = tiles.fire(x, y) / 255;
-      const g = tiles.ground(x + 0.5, y + 0.5);
-      // Flames climb what is burning: up to 4 m on a tree, 2.5 m on a wall, low on open ground.
-      const inf = tiles.info(x, y);
-      const tall = inf.shape === 'block' ? 2.5 : Math.min(4, Math.max(0.6, inf.height));
-      if (Math.random() < dt * 14 * (0.3 + f)) {
-        const d = fx('tileFlame');
-        this.one(d, x + Math.random(), y + Math.random(), Math.max(g, 0) + Math.random() * tall * 0.6, wind.x * 0.15, wind.y * 0.15, 1.2 + Math.random() * 1.5 * (0.5 + f), 0.7 + Math.random() * 0.6, 1 + (f * 0.25 + tall * 0.04) / 0.18);
-      }
-      if (Math.random() < dt * 3) {
-        this.one(fx('tileSmoke'), x + Math.random(), y + Math.random(), Math.max(g, 0) + tall + 0.5, wind.x * 0.4, wind.y * 0.4, 1.2, 0.75 + Math.random() * 0.5);
-      }
-    }
-    // Flames in walls, floors and roofs (3D layer cells) rise and smoke just like ground fires.
-    for (const key of state.volume.burningCells) {
-      const { x, y, z } = unpackSpot(key);
-      const dx = x - camX;
-      const dy = y - camY;
-      if (dx * dx + dy * dy > 90 * 90) continue;
-      if (++n > 700) break;
-      const f = state.volume.cellGet('fire', x, y, z) / 255;
-      if (Math.random() < dt * 14 * (0.3 + f)) {
-        this.one(fx('tileFlame'), x + Math.random(), y + Math.random(), z + Math.random() * 0.9, wind.x * 0.15, wind.y * 0.15, 1.2 + Math.random() * 1.5 * (0.5 + f), 0.7 + Math.random() * 0.6, 1 + f * 0.4);
-      }
-      if (Math.random() < dt * 3) {
-        this.one(fx('tileSmoke'), x + Math.random(), y + Math.random(), z + 1.2, wind.x * 0.4, wind.y * 0.4, 1.2, 0.75 + Math.random() * 0.5);
-      }
-    }
+    emitFire(this, state, tiles, camX, camY, dt);
     for (const e of state.entities.values()) {
       const dx = e.pos.x - camX;
       const dy = e.pos.y - camY;
@@ -428,7 +414,10 @@ export class Particles {
       const p = list[i];
       if (!p) continue;
       p.life -= dt;
-      if (p.life <= 0) continue;
+      if (p.life <= 0) {
+        if (this.pool.length < MAX) this.pool.push(p);
+        continue;
+      }
       if (p.drag > 0) {
         const k = Math.exp(-p.drag * dt);
         p.vx *= k;
@@ -487,11 +476,22 @@ export class Particles {
       const r2 = rad * rad + 0.25;
       // Colour fades from birth to death colour.
       const u = 1 - t;
-      const pr = p.r + (p.r2 - p.r) * u;
-      const pg = p.g + (p.g2 - p.g) * u;
-      const pb = p.b + (p.b2 - p.b) * u;
+      let pr = p.r + (p.r2 - p.r) * u;
+      let pg = p.g + (p.g2 - p.g) * u;
+      let pb = p.b + (p.b2 - p.b) * u;
+      // Blaze motes: a few hard colour steps from the palette, flickering out in a dither.
+      const pal = p.pal;
+      let dither = false;
+      if (pal && pal.length > 0) {
+        const c = pal[Math.min(pal.length - 1, Math.floor(u * pal.length))] ?? 0;
+        pr = (c >> 16) & 255;
+        pg = (c >> 8) & 255;
+        pb = c & 255;
+        dither = t < 0.3;
+      }
+      const flick = dither ? Math.floor(this.time * 14) : 0;
       // Light it adds (glowing part)…
-      const k = t * (1 - fog) * p.glow;
+      const k = (pal ? 1 : t) * (1 - fog) * p.glow;
       const ar = pr * k;
       const ag = pg * k;
       const ab = pb * k;
@@ -506,10 +506,11 @@ export class Particles {
         for (let x = x0; x <= x1; x++) {
           const ddx = x + 0.5 - sx;
           const d2 = ddx * ddx + ddy * ddy;
-          if (d2 > r2) continue;
+          if (!pal && d2 > r2) continue;
+          if (dither && ((x + y + flick) & 1) === 0) continue;
           const o = y * W + x;
           if ((depth[o] ?? 0) < fwd) continue;
-          const fall = 1 - d2 / r2;
+          const fall = pal ? 1 : 1 - d2 / r2;
           const edge = 1 - soft + soft * fall;
           const c = px[o] ?? 0;
           let R = c & 255;

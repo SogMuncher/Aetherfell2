@@ -43,6 +43,8 @@ export interface Particle {
   swirl: number;
   /** Random flutter, m/s. */
   jitter: number;
+  /** Blaze motes: hard square pixels stepping through this palette (hot to cool) instead of a smooth fade. */
+  pal: readonly number[] | null;
 }
 
 /** How the old fixed kinds move. Spells never use these: their motes come from their look. */

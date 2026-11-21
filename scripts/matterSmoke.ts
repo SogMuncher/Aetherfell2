@@ -36,6 +36,8 @@ function world(seed = 4242): { sim: Simulation; me: Entity } {
 function flatten(sim: Simulation, x: number, y: number, r: number, kind: number): void {
   for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) sim.tiles.setKind(x + i, y + j, kind);
   for (const e of [...sim.state.entities.values()]) if (!e.player && Math.hypot(e.pos.x - x, e.pos.y - y) < 60) sim.state.entities.delete(e.id);
+  // Fires far from every player sleep, so keep the tester near the scene.
+  for (const e of sim.state.entities.values()) if (e.player && Math.hypot(e.pos.x - x, e.pos.y - y) > 60) { e.pos.x = x + 30; e.pos.y = y + 30; }
 }
 function run(sim: Simulation, ticks: number, input?: (i: number) => Partial<InputSnapshot>): SimEvent[] {
   const seen: SimEvent[] = [];
