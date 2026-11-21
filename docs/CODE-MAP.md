@@ -128,6 +128,9 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (794) held weapon as small 3D scene (being replaced by sprites)
 
+## src/render/gpu/
+- `gpuSpike.ts` (~170) spike: WebGL2 terrain + billboards + fog on a shared depth buffer (setting 'GPU test view'); plan in docs/GPU-RENDER.md
+
 ## src/render/materials/
 - `textures.ts` (172) tileable procedural textures from surface layers
 
