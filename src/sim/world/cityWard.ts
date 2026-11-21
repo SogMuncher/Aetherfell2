@@ -2,7 +2,6 @@ import { CONTENT } from '../../content';
 import { type CityLayout, type CompassSide, type DistrictDef, type PlannedStructure, type StructureDef, type TileKind, turnToward } from '../../types';
 import type { House, Rect } from './sites';
 import { type Line, RING_AT, ROT_OUT_FACE, houseFor, planned, weighted } from './cityParts';
-import { cityWall } from './cityWall';
 import type { Ward } from './city';
 import { structureSize } from '../../content/structures';
 
@@ -19,15 +18,11 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
 
   // The heart: the keep inside its curtain wall (first ward only), landmarks round the plaza.
   if (w.main) {
-    const C = l.centre.court;
     const keepDef = CONTENT.structures[l.centre.keep];
     if (keepDef) {
       const [kw, kd] = structureSize(keepDef, r(3), r(4));
-      // Door to the south, where the court's gate is.
-      push(planned(l.centre.keep, cx - Math.floor(kw / 2), cy - Math.floor(kd / 2) - (C > 0 ? 1 : 0), 2, kw, kd, Math.floor(r(5) * 2147483647)));
-    }
-    if (C > 0 && l.centre.courtTower && l.centre.courtGate) {
-      cityWall([{ cx, cy, hx: C, hy: C, gates: ['s'] }], 0, { run: l.walls.run, tower: l.centre.courtTower, gate: l.centre.courtGate, towerEvery: 0 }, Math.floor(r(6) * 2147483647)).pieces.forEach(push);
+      // Door to the south.
+      push(planned(l.centre.keep, cx - Math.floor(kw / 2), cy - Math.floor(kd / 2) - 0, 2, kw, kd, Math.floor(r(5) * 2147483647)));
     }
   }
   w.landmarks.forEach((m, i) => {

@@ -137,7 +137,7 @@ export function validateContent(c: Content): string[] {
     else if (l.shape === 'circle') [l.stone, l.floor].forEach((k) => tile(k, w));
     else if (l.shape === 'city') {
       [l.tiles.main, l.tiles.street, l.tiles.ground].forEach((k) => tile(k, w));
-      for (const id of [l.walls.run, l.walls.tower, l.walls.gate, l.centre.keep, ...(l.centre.courtTower ? [l.centre.courtTower] : []), ...(l.centre.courtGate ? [l.centre.courtGate] : []), ...l.centre.landmarks.map((m) => m.structure)]) need(id in c.structures, w, `structure '${id}'`);
+      for (const id of [l.walls.run, l.walls.tower, l.walls.gate, l.centre.keep, ...l.centre.landmarks.map((m) => m.structure)]) need(id in c.structures, w, `structure '${id}'`);
       for (const d of l.districts) {
         for (const id of [...Object.keys(d.lots), ...Object.keys(d.block?.buildings ?? {})]) need(id in c.structures, `${w} district '${d.name}'`, `structure '${id}'`);
       }

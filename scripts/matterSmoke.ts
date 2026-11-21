@@ -89,7 +89,8 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
     sim.tiles.setKind(X + 3, Y + y, Tile.Brush);
     sim.tiles.setKind(X + 2, Y + y, Tile.Brush);
   }
-  sim.state.queues.effects.push({ target: { kind: 'tile', x: X + 2, y: Y + 1 }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
+  // Spread is chancy, so light the whole brush strip: the check is about thatch and timber catching, not about luck.
+  for (let y = 0; y < 3; y++) sim.state.queues.effects.push({ target: { kind: 'tile', x: X + 2, y: Y + y }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
   let peak = 0;
   let ignited = 0;
   let burntOut = 0;

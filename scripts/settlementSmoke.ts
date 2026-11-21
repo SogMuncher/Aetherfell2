@@ -324,4 +324,35 @@ function visit(sim: Simulation, me: Entity, s: SiteLayout): void {
   check('hearths smoke (data)', (CONTENT.things['hearth']?.smoke?.rate ?? 0) > 0);
 }
 
+{
+  // Cities: every paved tile runs back to the heart or a gate road (no stray path fragments), and only the outer wall stands (no keep court wall).
+  let cities = 0;
+  let stray = 0;
+  let inner = 0;
+  for (let rx = -30; rx < 30 && cities < 12; rx++) for (let ry = -3; ry < 3 && cities < 12; ry++) {
+    const c = siteInRegion(4321, rx, ry, () => 10);
+    if (!c || c.layout.shape !== 'city' || !c.paint) continue;
+    cities++;
+    const ground = c.layout.tiles.ground;
+    const r = Math.ceil(c.radius);
+    const key = (x: number, y: number): number => (x + 20000) * 40000 + (y + 20000);
+    const seen = new Set<number>();
+    const stack: [number, number][] = [[c.cx, c.cy], ...(c.mouths ?? []).map((m): [number, number] => [m.x, m.y])];
+    const paved = (x: number, y: number): boolean => {
+      const t = c.paint?.(x, y);
+      return t !== null && t !== undefined && t !== ground;
+    };
+    while (stack.length > 0) {
+      const [x, y] = stack.pop()!;
+      if (seen.has(key(x, y)) || !paved(x, y)) continue;
+      seen.add(key(x, y));
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+    for (let x = c.cx - r; x <= c.cx + r; x++) for (let y = c.cy - r; y <= c.cy + r; y++) if (paved(x, y) && !seen.has(key(x, y))) stray++;
+    inner += c.plan.filter((p) => (p.id === 'wallTower' || p.id === 'cityWall' || p.id === 'cityGate') && Math.abs(p.x - c.cx) < 24 && Math.abs(p.y - c.cy) < 24).length;
+  }
+  check('city streets never leave stray fragments', cities > 0 && stray === 0, `${stray} stray tiles in ${cities} cities`);
+  check('no wall loop inside a city', inner === 0, `${inner} inner wall pieces`);
+}
+
 if (failed > 0) throw new Error(`${failed} settlement check(s) failed`);
