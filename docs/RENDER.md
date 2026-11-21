@@ -24,4 +24,6 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 - New draw pass: read state + content only; keep per-frame work budgeted.
 
 ## Checks
+`npm run check:boot` boots the bundle in a browser (not in CI; run it before reporting renderer or startup changes).
+A new `Renderer` is made on every world swap (join, load): always `dispose()` the old one first.
 `scripts/artSmoke.ts`, `skySmoke.ts`; `npx tsc --noEmit`.

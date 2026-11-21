@@ -18,6 +18,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `runebookSmoke.ts` (275) Headless checks for the runebook: composing spells from runes, preparing them, learning runes
 - `settlementSmoke.ts` (303) Settlements and cities in the 3D layer: villages raise real buildings with furniture inside,
 - `simSmoke.ts` (26) Headless smoke test: run the sim for a while and report what happened.
+- `bootSmoke.mjs` (~50) Boots the bundled game in a real browser (`npm run check:boot`, needs Playwright): no load errors, journey starts, a world swap keeps one view canvas
 - `skySmoke.ts` (163) Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
 - `torchSmoke.ts` (94) Headless checks for torches: the wall-mounted kind in buildings and halls, and the one you hold
 - `viewmodelShot.ts` (151) renders held-weapon PNGs (owned by the viewmodel thread)

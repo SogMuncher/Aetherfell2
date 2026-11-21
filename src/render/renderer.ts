@@ -60,6 +60,12 @@ export class Renderer {
     this.sampler = sampler;
   }
 
+  /** Lets go of the graphics card canvas (a world swap makes a fresh Renderer; the old one must not stay on top, frozen). */
+  dispose(): void {
+    this.gpu?.dispose();
+    this.gpu = null;
+  }
+
   onEvent(e: SimEvent, state: SimState, localId: number | null): void {
     this.particles.onEvent(e, state);
     this.viewModel.onEvent(e, state, localId);

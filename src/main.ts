@@ -82,6 +82,7 @@ function hasSave(): boolean {
 
 function replaceSim(next: Simulation): void {
   sim = next;
+  renderer.dispose();
   renderer = new Renderer(canvas as HTMLCanvasElement, sim.sampler, sim.tiles);
   applySettings();
 }
