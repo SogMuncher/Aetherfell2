@@ -7,14 +7,19 @@ out vec2 vUv;
 void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); vUv = vec2(p.x, 1.0 - p.y); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
 const FS = `#version 300 es
 precision highp float; uniform sampler2D uTex; in vec2 vUv; out vec4 o;
-void main(){ vec4 c = texture(uTex, vUv); if (c.a < 0.5 || (c.r + c.g + c.b) == 0.0) discard; o = vec4(c.rgb, 1.0); }`;
+void main(){
+  vec4 c = texture(uTex, vUv);
+  // alpha 1: the item (replaces). alpha 0 with colour: light added on top. In between: a speck covering what is behind.
+  if (c.a == 0.0) { if (c.r + c.g + c.b == 0.0) discard; o = vec4(c.rgb, 0.0); }
+  else o = vec4(c.rgb * c.a, c.a);
+}`;
 
 export class GpuOverlay {
   private readonly prog: WebGLProgram;
   private readonly vao: WebGLVertexArrayObject;
   private tex: WebGLTexture;
   /** Pixels the held item paints into (transparent = 0). Same size as the frame. */
-  readonly surface: Surface = { width: 0, height: 0, pixels: new Uint32Array(0) };
+  readonly surface: Surface = { width: 0, height: 0, pixels: new Uint32Array(0), clear: true };
 
   constructor(private readonly gl: WebGL2RenderingContext) {
     this.prog = compile(gl, VS, FS);
@@ -47,7 +52,10 @@ export class GpuOverlay {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, s.width, s.height, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(s.pixels.buffer));
     gl.uniform1i(loc(gl, this.prog, 'uTex'), 0);
     gl.disable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.disable(gl.BLEND);
     gl.enable(gl.DEPTH_TEST);
   }
 }

@@ -16,8 +16,8 @@ export interface StateLevel {
   codeTex: WebGLTexture;
 }
 
-/** Reads the loaded chunks under a level's cells and uploads them (nothing is sent while the ground is clean and stays clean). */
-export function refreshGroundState(gl: WebGL2RenderingContext, tiles: ReadonlyTiles, l: StateLevel, V: number): void {
+/** Reads the loaded chunks under a level's cells and uploads them (nothing is sent while the ground is clean and stays clean). Says whether a tile kind changed. */
+export function refreshGroundState(gl: WebGL2RenderingContext, tiles: ReadonlyTiles, l: StateLevel, V: number): boolean {
   let any = false;
   let codeChanged = false;
   for (let j = 0; j < V; j++) {
@@ -52,9 +52,10 @@ export function refreshGroundState(gl: WebGL2RenderingContext, tiles: ReadonlyTi
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RED_INTEGER, gl.UNSIGNED_BYTE, l.code);
   }
-  if (!any && !l.stDirty) return;
+  if (!any && !l.stDirty) return codeChanged;
   l.stDirty = any;
   gl.bindTexture(gl.TEXTURE_2D, l.stTex);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
   gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RGBA, gl.UNSIGNED_BYTE, l.st);
+  return codeChanged;
 }

@@ -18,7 +18,7 @@ import { LIGHT_SHADER } from './gpuLight';
 import type { GpuLight } from './gpuLight';
 
 /** All numbers live here. */
-export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, texLevels: 2, texFade: [30, 90], sink: 0.03, grit: 0.09 } as const;
+export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, recolourEvery: 15, texLevels: 2, texFade: [30, 90], sink: 0.03, grit: 0.09 } as const;
 const N = GPU_TERRAIN.cells;
 const V = N + 1;
 
@@ -106,6 +106,8 @@ interface Level {
   frame: number;
   coarse: boolean;
   valid: boolean;
+  /** A tile kind changed under this level: its far colours (the base the detail fades into) need refilling from the LOD. */
+  recolour: boolean;
 }
 
 export class GpuTerrain {
@@ -137,7 +139,7 @@ export class GpuTerrain {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
     for (let L = 0; L < GPU_TERRAIN.levels; L++) {
       this.levels.push({
-        cs: LEVEL_CELL[L] ?? 1, ox: NaN, oy: NaN, frame: 0, coarse: true, valid: false,
+        cs: LEVEL_CELL[L] ?? 1, ox: NaN, oy: NaN, frame: 0, coarse: true, valid: false, recolour: false,
         hTex: makeTexture(gl, gl.RGB32F, V, V, gl.RGB, gl.FLOAT),
         cTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
         h: new Float32Array(V * V * 3), c: new Uint8Array(V * V * 4), code: new Uint8Array(V * V).fill(255), st: new Uint8Array(V * V * 4), stDirty: true,
@@ -174,13 +176,13 @@ export class GpuTerrain {
   /** Refills at most two levels a frame, finest first (a level moves when the eye passes its snap step, or retries while it used coarse stand-ins). */
   update(ex: number, ey: number): void {
     this.frame++;
-    if (this.frame % 4 === 0) for (let L = 0; L < GPU_TERRAIN.texLevels; L++) { const l = this.levels[L]; if (l && l.valid) refreshGroundState(this.gl, this.tiles, l, V); }
+    if (this.frame % 4 === 0) for (let L = 0; L < GPU_TERRAIN.texLevels; L++) { const l = this.levels[L]; if (l && l.valid && refreshGroundState(this.gl, this.tiles, l, V)) l.recolour = true; }
     let budget = 2;
     for (const l of this.levels) {
       const snap = GPU_TERRAIN.snapCells * l.cs;
       const ox = Math.round(ex / snap) * snap - (N / 2) * l.cs;
       const oy = Math.round(ey / snap) * snap - (N / 2) * l.cs;
-      const stale = !l.valid || ox !== l.ox || oy !== l.oy || (l.coarse && this.frame - l.frame > GPU_TERRAIN.refillEvery);
+      const stale = !l.valid || ox !== l.ox || oy !== l.oy || ((l.coarse || l.recolour) && this.frame - l.frame > (l.recolour ? GPU_TERRAIN.recolourEvery : GPU_TERRAIN.refillEvery));
       if (!stale || budget <= 0) continue;
       budget--;
       this.fill(l, ox, oy);
@@ -230,6 +232,7 @@ export class GpuTerrain {
     l.frame = this.frame;
     l.coarse = coarse;
     l.valid = true;
+    l.recolour = false;
   }
 
   draw(vp: Float32Array, eye: { x: number; y: number; z: number }, env: Env, time: number): void {

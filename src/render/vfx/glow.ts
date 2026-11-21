@@ -5,11 +5,13 @@ export interface Surface {
   width: number;
   height: number;
   pixels: Uint32Array;
+  /** True for an overlay buffer whose untouched pixels are clear (alpha 0) and stay see-through where only light is added. */
+  clear?: boolean;
 }
 
 const clamp255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v | 0);
 
-/** Adds light to one pixel (r, g, b in 0..255 at strength k). */
+/** Adds light to one pixel (r, g, b in 0..255 at strength k). The pixel keeps its own alpha: light added to a clear pixel of an overlay buffer stays light (alpha 0), it never turns into a dark cover. */
 export function addPixel(s: Surface, x: number, y: number, r: number, g: number, b: number, k: number): void {
   const xi = Math.round(x);
   const yi = Math.round(y);
@@ -19,16 +21,20 @@ export function addPixel(s: Surface, x: number, y: number, r: number, g: number,
   const R = clamp255((c & 255) + r * k);
   const G = clamp255(((c >>> 8) & 255) + g * k);
   const B = clamp255(((c >>> 16) & 255) + b * k);
-  s.pixels[i] = (0xff000000 | (B << 16) | (G << 8) | R) >>> 0;
+  s.pixels[i] = ((c & 0xff000000) | (B << 16) | (G << 8) | R) >>> 0;
 }
 
-/** Mixes a colour over one pixel (an opaque-ish speck: blood, dust). */
+/** Mixes a colour over one pixel (an opaque-ish speck: blood, dust). Over a clear overlay pixel it becomes a speck of that colour with alpha k. */
 export function blendPixel(s: Surface, x: number, y: number, r: number, g: number, b: number, k: number): void {
   const xi = Math.round(x);
   const yi = Math.round(y);
   if (xi < 0 || yi < 0 || xi >= s.width || yi >= s.height) return;
   const i = yi * s.width + xi;
   const c = s.pixels[i] ?? 0;
+  if (c >>> 24 === 0 && s.clear) {
+    s.pixels[i] = ((clamp255(k * 255) << 24) | (clamp255(b) << 16) | (clamp255(g) << 8) | clamp255(r)) >>> 0;
+    return;
+  }
   const R = clamp255((c & 255) * (1 - k) + r * k);
   const G = clamp255(((c >>> 8) & 255) * (1 - k) + g * k);
   const B = clamp255(((c >>> 16) & 255) * (1 - k) + b * k);

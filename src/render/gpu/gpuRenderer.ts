@@ -108,6 +108,7 @@ export class GpuRenderer {
   }
 
   dispose(): void {
+    this.gl.getExtension('WEBGL_lose_context')?.loseContext();
     this.canvas.remove();
     this.host.style.opacity = '';
   }
