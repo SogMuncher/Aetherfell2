@@ -20,7 +20,7 @@ void main(){
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 uniform mat4 uVP; uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uFogDist;
-uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform sampler2D uState; uniform float uTime; uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
+uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform sampler2D uState; uniform float uTime; uniform vec2 uFade; uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; out vec4 o;
 ${SURFACE_SHADER}
 ${LIGHT_SHADER}
@@ -104,6 +104,9 @@ void main(){
   }
   if (!hit) discard;
   vec3 w = org + d * th;
+  // Far buildings dissolve into the ground's own raised blocks (the terrain pass ramps those in over the same band), so a town never pops.
+  float away = smoothstep(uFade.x, uFade.y, length(w.xy - uEye.xy));
+  if (away > fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;
   vec3 col;
   if (abs(n.z) > 0.6) col = surf(mat, false, w.xy * 16.0);
   else { float across = abs(n.x) > abs(n.y) ? w.y : w.x; float nh = abs(n.z) > 0.05 ? max(0.35, sqrt(1.0 - n.z * n.z)) : 1.0; col = surf(mat, true, vec2(across * 16.0, -w.z * 10.0 / nh)); }

@@ -11,6 +11,7 @@ import { CHUNK_SIZE } from '../../types';
 import type { ReadonlyTiles } from '../../types';
 import { refreshGroundState } from './gpuTerrainState';
 import { CANOPY_FULL, FLORA_FADE } from '../raycaster/tileBillboards';
+import { GPU_STRUCT } from './gpuStructures';
 import type { CloudShadow } from '../raycaster/cloudShadow';
 import { SURFACE_SHADER } from './gpuSurfaces';
 import { LIGHT_SHADER } from './gpuLight';
@@ -22,14 +23,16 @@ const N = GPU_TERRAIN.cells;
 const V = N + 1;
 
 const VS = `#version 300 es
-uniform mat4 uVP; uniform sampler2D uH; uniform sampler2D uC; uniform vec3 uEye; uniform vec2 uCanopy; uniform vec2 uOrigin; uniform float uCell; uniform float uSink;
+uniform mat4 uVP; uniform sampler2D uH; uniform sampler2D uC; uniform vec3 uEye; uniform vec2 uCanopy; uniform vec2 uLift; uniform vec2 uOrigin; uniform float uCell; uniform float uSink;
 out vec3 vPos; out vec3 vCol; flat out float vA;
 void main(){
   int i = gl_VertexID % ${V}; int j = gl_VertexID / ${V};
-  vec2 hc = texelFetch(uH, ivec2(i, j), 0).rg;
+  vec3 hc = texelFetch(uH, ivec2(i, j), 0).rgb;
   vec2 xy = uOrigin + vec2(i, j) * uCell;
   // Treetops rise in with distance while the tree pictures fade out, so forests never pop.
-  float h = hc.r + hc.g * smoothstep(uCanopy.x, uCanopy.y, length(xy - uEye.xy)) - uSink;
+  float dd = length(xy - uEye.xy);
+  // Building and wall blocks rise exactly where the real structures dissolve (gpuStructures fade).
+  float h = hc.r + hc.g * smoothstep(uCanopy.x, uCanopy.y, dd) + hc.b * smoothstep(uLift.x, uLift.y, dd) - uSink;
   vec3 p = vec3(xy, h);
   vec4 cc = texelFetch(uC, ivec2(i, j), 0); vCol = cc.rgb; vA = cc.a; // alpha (water, fire glow) is per triangle: it must never blend, or water edges glow like fire
   vPos = p; gl_Position = uVP * vec4(p, 1.0);
@@ -135,9 +138,9 @@ export class GpuTerrain {
     for (let L = 0; L < GPU_TERRAIN.levels; L++) {
       this.levels.push({
         cs: LEVEL_CELL[L] ?? 1, ox: NaN, oy: NaN, frame: 0, coarse: true, valid: false,
-        hTex: makeTexture(gl, gl.RG32F, V, V, gl.RG, gl.FLOAT),
+        hTex: makeTexture(gl, gl.RGB32F, V, V, gl.RGB, gl.FLOAT),
         cTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
-        h: new Float32Array(V * V * 2), c: new Uint8Array(V * V * 4), code: new Uint8Array(V * V).fill(255), st: new Uint8Array(V * V * 4), stDirty: true,
+        h: new Float32Array(V * V * 3), c: new Uint8Array(V * V * 4), code: new Uint8Array(V * V).fill(255), st: new Uint8Array(V * V * 4), stDirty: true,
         stTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
         codeTex: makeTexture(gl, gl.R8UI, V, V, gl.RED_INTEGER, gl.UNSIGNED_BYTE),
       });
@@ -202,8 +205,9 @@ export class GpuTerrain {
         const k = j * V + i;
         const q = Math.min(BLOCK - 1, iy) * BLOCK + Math.min(BLOCK - 1, ix);
         // Far away, buildings and walls (lift) and treetops (canopy) stand up from the ground; near the eye real tiles and billboards do that.
-        l.h[k * 2] = (b.h[iy * (BLOCK + 1) + ix] ?? 0) + (L >= GPU_TERRAIN.texLevels ? (b.lift[q] ?? 0) * 0.1 : 0);
-        l.h[k * 2 + 1] = (b.canopy[q] ?? 0) * 0.1;
+        l.h[k * 3] = b.h[iy * (BLOCK + 1) + ix] ?? 0;
+        l.h[k * 3 + 1] = (b.canopy[q] ?? 0) * 0.1;
+        l.h[k * 3 + 2] = L >= GPU_TERRAIN.texLevels ? (b.lift[q] ?? 0) * 0.1 : 0;
         const col = b.col[q] ?? 0;
         l.c[k * 4] = col & 255;
         l.c[k * 4 + 1] = (col >>> 8) & 255;
@@ -213,7 +217,7 @@ export class GpuTerrain {
       }
     }
     gl.bindTexture(gl.TEXTURE_2D, l.hTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RG, gl.FLOAT, l.h);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RGB, gl.FLOAT, l.h);
     gl.bindTexture(gl.TEXTURE_2D, l.cTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RGBA, gl.UNSIGNED_BYTE, l.c);
     if (textured) {
@@ -256,6 +260,7 @@ export class GpuTerrain {
     gl.uniform1f(loc(gl, p, 'uShadeOn'), this.shadeOn);
     gl.uniform3f(loc(gl, p, 'uHorizon'), env.horizon[0] / 255, env.horizon[1] / 255, env.horizon[2] / 255);
     gl.uniform2f(loc(gl, p, 'uCanopy'), FLORA_FADE, CANOPY_FULL);
+    gl.uniform2f(loc(gl, p, 'uLift'), GPU_STRUCT.range - GPU_STRUCT.fade, GPU_STRUCT.range);
     gl.uniform1f(loc(gl, p, 'uDay'), env.day);
     gl.uniform1i(loc(gl, p, 'uState'), 6);
     gl.uniform1f(loc(gl, p, 'uRainWet'), env.rain > 0 ? 0.5 : 0);

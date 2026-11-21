@@ -12,7 +12,7 @@ import type { GpuLight } from './gpuLight';
 import { GRID, PIECE_FLOATS, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
 
 /** All numbers live here. */
-export const GPU_STRUCT = { range: 170, slots: 1024, uploadsPerFrame: 24, freshPerFrame: 64, tile: 64 } as const;
+export const GPU_STRUCT = { range: 170, fade: 36, slots: 1024, uploadsPerFrame: 24, freshPerFrame: 64, tile: 64 } as const;
 const GW = GRID.win * 2 + 1;
 const ATLAS = 32 * GPU_STRUCT.tile;
 const CORNERS = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1]);
@@ -211,6 +211,7 @@ export class GpuStructures {
     gl.uniform3f(loc(gl, p, 'uEye'), eye.x, eye.y, eye.z);
     gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.uniform1f(loc(gl, p, 'uFogDist'), env.fogDist);
+    gl.uniform2f(loc(gl, p, 'uFade'), GPU_STRUCT.range - GPU_STRUCT.fade, GPU_STRUCT.range);
     gl.uniform3f(loc(gl, p, 'uSun'), env.sunR, env.sunG, env.sunB);
     gl.uniform3f(loc(gl, p, 'uAmb'), env.ambR, env.ambG, env.ambB);
     gl.uniform3f(loc(gl, p, 'uSunDir'), env.lx, env.ly, env.lz);
