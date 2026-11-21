@@ -18,11 +18,11 @@ traits, never ids. No theme packs, no per-feature special cases. Free to change 
    Never read whole big files or whole data tables.
 4. Files stay under ~300 lines, one purpose each. New file -> add a line to CODE-MAP. Touching a file over 300: split it first.
 5. Keep this file and `docs/ARCHITECTURE.md` short. Changed an area -> update its doc in a few lines.
-6. Run only the checks for the area you changed; `npx tsc --noEmit` before finishing; full `npm run check:sim` once at the end.
-7. No `play.html` rebuild unless Sock asks (or once after a major change Sock needs to see). Several threads share this
-   folder: stay in your area. Two threads at most; one task per thread.
-8. Finish with a short plain-language report (what you can now do in the game), not jargon.
-9. A new feature that exposes a design flaw: fix the shared system properly, don't patch around it.
+6. Run only the checks for the area you changed; `npx tsc --noEmit` before finishing; the full `check:sim` is CI's job (PR).
+7. Several threads share this folder: stay in your area. Two threads at most; one task per thread.
+8. Open a PR; CI runs the full check and builds `play.html` on merge (`docs/PIPELINE.md`). Never rebuild or commit `play.html`.
+9. Finish with a short plain-language report (what you can now do in the game), not jargon.
+10. A new feature that exposes a design flaw: fix the shared system properly, don't patch around it.
 
 ## Hard code rules
 Strict TS, no `any`. Flow `input -> sim (20 Hz fixed, Commands) -> render (read-only)`; audio/net react to events.

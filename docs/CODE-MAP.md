@@ -4,6 +4,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 (D) = pure data table, grep by id; (C) = one big class, split by extracting methods when next touched.
 
 ## scripts/
+- `buildPlay.mjs` - `npm run build`: typecheck + one-file play.html (CI also runs it; see docs/PIPELINE.md)
 - `artSmoke.ts` (79) check: every picture is built from parts, none hand-drawn
 - `cheatsSmoke.ts` (167) Headless checks for the settings list and the debug cheats (which travel as sim commands).
 - `coopSmoke.ts` (357) check: host/guest inputs, snapshots, prediction, shared record

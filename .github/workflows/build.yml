@@ -1,0 +1,24 @@
+name: build
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with: { name: play.html, path: play.html, retention-days: 30 }
+      - name: Publish to build branch
+        run: |
+          mkdir ../out && cp play.html ../out/ && cd ../out
+          git init -q -b build && git add play.html
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "play.html from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" build
