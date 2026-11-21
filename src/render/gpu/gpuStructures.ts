@@ -3,11 +3,9 @@
  * into one atlas texture (shape + material per cell); each brick's box is rasterised and every pixel walks the cells inside it,
  * paints the hit from the material's surface textures, and writes its own depth. Shapes come from `content/shapes.ts` as textures.
  */
-import type { ReadonlyVolume, TileInfo, VolumeBrick } from '../../types';
-import { TILES } from '../../content/tiles';
+import type { ReadonlyVolume, VolumeBrick } from '../../types';
 import { SHAPE_COUNT, SHAPE_PIECES, SHAPE_START } from '../../content/shapes';
 import type { Env } from '../lighting';
-import { surfaceTexture, TEX } from '../materials';
 import { compile, loc, makeTexture } from './glUtil';
 import { GRID, PIECE_FLOATS, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
 
@@ -31,7 +29,6 @@ export class GpuStructures {
   private readonly page: WebGLTexture;
   private readonly pieces: WebGLTexture;
   private readonly shapeIdx: WebGLTexture;
-  private readonly surf: WebGLTexture;
   private readonly resident = new Map<number, Resident>();
   private readonly free: number[] = [];
   private readonly pageData = new Uint16Array(GW * GW * GRID.zCount);
@@ -41,7 +38,7 @@ export class GpuStructures {
   /** Bricks drawn in the last frame. */
   bricks = 0;
 
-  constructor(private readonly gl: WebGL2RenderingContext) {
+  constructor(private readonly gl: WebGL2RenderingContext, private readonly surf: WebGLTexture) {
     this.prog = compile(gl, STRUCT_VS, STRUCT_FS);
     for (let i = GPU_STRUCT.slots - 1; i >= 0; i--) this.free.push(i);
     this.vao = gl.createVertexArray() as WebGLVertexArrayObject;
@@ -76,22 +73,6 @@ export class GpuStructures {
       idx[256 + i] = SHAPE_COUNT[i] ?? 0;
     }
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 2, gl.RED, gl.FLOAT, idx);
-    this.surf = makeTexture(gl, gl.RGBA8, 16 * TEX, 32 * TEX, gl.RGBA, gl.UNSIGNED_BYTE);
-    this.fillSurfaces();
-  }
-
-  /** Floor and wall surface of every tile code, painted once from material data (the same textures the classic renderer uses). */
-  private fillSurfaces(): void {
-    const gl = this.gl;
-    const fallback = surfaceTexture('grass');
-    for (let code = 0; code < 256; code++) {
-      const info: TileInfo | undefined = TILES[code];
-      for (let wall = 0; wall < 2; wall++) {
-        const tex = info ? surfaceTexture(wall ? info.wall : info.floor) : fallback;
-        const i = code * 2 + wall;
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, (i % 16) * TEX, Math.floor(i / 16) * TEX, TEX, TEX, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(tex.px.buffer, tex.px.byteOffset, tex.px.byteLength));
-      }
-    }
   }
 
   forget(): void {

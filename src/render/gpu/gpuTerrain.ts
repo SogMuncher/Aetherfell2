@@ -7,9 +7,12 @@
 import { compile, loc, makeTexture } from './glUtil';
 import type { Env } from '../lighting';
 import { BLOCK, LEVEL_CELL, TerrainLod } from '../raycaster/terrainLod';
+import { CHUNK_SIZE } from '../../types';
+import type { ReadonlyTiles } from '../../types';
+import { SURFACE_SHADER } from './gpuSurfaces';
 
 /** All numbers live here. */
-export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, sink: 0.03, grit: 0.09 } as const;
+export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, texLevels: 2, texFade: [30, 90], sink: 0.03, grit: 0.09 } as const;
 const N = GPU_TERRAIN.cells;
 const V = N + 1;
 
@@ -24,9 +27,10 @@ void main(){
   vPos = p; gl_Position = uVP * vec4(p, 1.0);
 }`;
 const FS = `#version 300 es
-precision highp float;
+precision highp float; precision highp usampler2D;
+${SURFACE_SHADER}
 uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist; uniform vec3 uSun; uniform vec3 uSunDir; uniform vec3 uAmb;
-uniform vec4 uHole; uniform float uGrit;
+uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade;
 in vec3 vPos; in vec4 vCol; out vec4 o;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 void main(){
@@ -34,6 +38,10 @@ void main(){
   vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos))); if (n.z < 0.0) n = -n;
   float d = length(vPos - uEye);
   vec3 base = vCol.rgb;
+  if (uTexOn > 0.5) {
+    uint code = texelFetch(uCode, ivec2(floor((vPos.xy - uOrigin) / uCell)), 0).r;
+    if (code != 255u) base = mix(surf(int(code), false, vPos.xy * 16.0), base, smoothstep(uTexFade.x, uTexFade.y, d));
+  }
   // Grit: per-metre speckle that fades with distance (the near ground never looks flat).
   base *= 1.0 + (hash(floor(vPos.xy)) - 0.5) * uGrit * 2.0 * (1.0 - smoothstep(20.0, 120.0, d));
   float lit = max(0.0, dot(n, uSunDir));
@@ -50,6 +58,8 @@ interface Level {
   cTex: WebGLTexture;
   h: Float32Array;
   c: Uint8Array;
+  code: Uint8Array;
+  codeTex: WebGLTexture;
   frame: number;
   coarse: boolean;
   valid: boolean;
@@ -62,7 +72,7 @@ export class GpuTerrain {
   private readonly levels: Level[] = [];
   private frame = 0;
 
-  constructor(private readonly gl: WebGL2RenderingContext, private readonly lod: TerrainLod) {
+  constructor(private readonly gl: WebGL2RenderingContext, private readonly lod: TerrainLod, private readonly tiles: ReadonlyTiles, private readonly surf: WebGLTexture) {
     this.prog = compile(gl, VS, FS);
     const idx = new Uint32Array(N * N * 6);
     let k = 0;
@@ -82,9 +92,18 @@ export class GpuTerrain {
         cs: LEVEL_CELL[L] ?? 1, ox: NaN, oy: NaN, frame: 0, coarse: true, valid: false,
         hTex: makeTexture(gl, gl.R32F, V, V, gl.RED, gl.FLOAT),
         cTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
-        h: new Float32Array(V * V), c: new Uint8Array(V * V * 4),
+        h: new Float32Array(V * V), c: new Uint8Array(V * V * 4), code: new Uint8Array(V * V).fill(255),
+        codeTex: makeTexture(gl, gl.R8UI, V, V, gl.RED_INTEGER, gl.UNSIGNED_BYTE),
       });
     }
+  }
+
+  /** Tile code at a point if its chunk is loaded (live tiles carry the real material), else 255 (colour only). */
+  private tileCode(x: number, y: number): number {
+    const tx = Math.floor(x);
+    const ty = Math.floor(y);
+    const ch = this.tiles.peekChunk(Math.floor(tx / CHUNK_SIZE), Math.floor(ty / CHUNK_SIZE));
+    return ch ? (ch.kind[(ty - ch.cy * CHUNK_SIZE) * CHUNK_SIZE + (tx - ch.cx * CHUNK_SIZE)] ?? 255) : 255;
   }
 
   forget(): void {
@@ -110,6 +129,7 @@ export class GpuTerrain {
     const gl = this.gl;
     const L = this.levels.indexOf(l);
     let coarse = false;
+    const textured = L < GPU_TERRAIN.texLevels;
     for (let j = 0; j < V; j++) {
       for (let i = 0; i < V; i++) {
         const x = ox + i * l.cs;
@@ -128,12 +148,18 @@ export class GpuTerrain {
         l.c[k * 4 + 1] = (col >>> 8) & 255;
         l.c[k * 4 + 2] = (col >>> 16) & 255;
         l.c[k * 4 + 3] = b.water[q] ? 255 : 0;
+        if (textured) l.code[k] = this.tileCode(x, y);
       }
     }
     gl.bindTexture(gl.TEXTURE_2D, l.hTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RED, gl.FLOAT, l.h);
     gl.bindTexture(gl.TEXTURE_2D, l.cTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RGBA, gl.UNSIGNED_BYTE, l.c);
+    if (textured) {
+      gl.bindTexture(gl.TEXTURE_2D, l.codeTex);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RED_INTEGER, gl.UNSIGNED_BYTE, l.code);
+    }
     l.ox = ox;
     l.oy = oy;
     l.frame = this.frame;
@@ -156,6 +182,11 @@ export class GpuTerrain {
     gl.uniform1f(loc(gl, p, 'uGrit'), GPU_TERRAIN.grit);
     gl.uniform1i(loc(gl, p, 'uH'), 0);
     gl.uniform1i(loc(gl, p, 'uC'), 1);
+    gl.uniform1i(loc(gl, p, 'uCode'), 2);
+    gl.uniform1i(loc(gl, p, 'uSurf'), 3);
+    gl.uniform2f(loc(gl, p, 'uTexFade'), GPU_TERRAIN.texFade[0], GPU_TERRAIN.texFade[1]);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this.surf);
     for (let L = 0; L < this.levels.length; L++) {
       const l = this.levels[L];
       if (!l || !l.valid) continue;
@@ -172,6 +203,9 @@ export class GpuTerrain {
       gl.bindTexture(gl.TEXTURE_2D, l.hTex);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, l.cTex);
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, l.codeTex);
+      gl.uniform1f(loc(gl, p, 'uTexOn'), L < GPU_TERRAIN.texLevels ? 1 : 0);
       gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_INT, 0);
     }
     gl.activeTexture(gl.TEXTURE0);

@@ -1,3 +1,5 @@
+import { SURFACE_SHADER } from './gpuSurfaces';
+
 /** Shader text for GPU structures (docs/GPU-RENDER.md stage 2): each brick's box is rasterised, the pixel walks the cells inside it. */
 export const PIECE_FLOATS = 23;
 export const GRID = { win: 11, zLow: 2, zCount: 14 } as const;
@@ -15,8 +17,9 @@ void main(){
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 uniform mat4 uVP; uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uFogDist;
-uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx, uSurf; uniform ivec2 uGrid0;
+uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; out vec4 o;
+${SURFACE_SHADER}
 float P(int pc, int k){ return texelFetch(uPieces, ivec2(k, pc), 0).r; }
 float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
 vec4 rayShape(int byte, vec3 o, vec3 d){
@@ -59,10 +62,6 @@ bool covered(ivec3 c){
     if (slot > 0 && cellAt(slot - 1, ivec3(q.x & 15, q.y & 15, q.z & 15)).r != 0u) return true;
   }
   return false;
-}
-vec3 surf(int mat, bool wall, vec2 uv){
-  int idx = mat * 2 + (wall ? 1 : 0); ivec2 t = ivec2(idx % 16, idx / 16) * 32;
-  return texelFetch(uSurf, t + (ivec2(floor(uv)) & 31), 0).rgb;
 }
 void main(){
   vec3 d = normalize(vWorld - uEye); vec3 org = uEye;

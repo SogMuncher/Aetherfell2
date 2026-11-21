@@ -49,3 +49,23 @@ If WebGL2 is missing or context creation fails (headless checks, old browsers): 
 3. Sprites, particles, rain, held item: atlas, instanced quads, lighting uniforms.
 4. Water + final fog/polish; make GPU the default, delete CPU raycasters, update docs/CODE-MAP.
 Each stage: `tsc`, `artSmoke`/`skySmoke` equivalents, `frameProfile` ms before/after in the PR.
+
+## Parity checklist (every Classic visual; all must be ticked before stage 4 deletes the CPU renderer)
+Done = works on the GPU path. Sock's rule: procedural textures, lighting and effects must all carry over.
+- [x] Low-res target, adaptive pixel size, colour levels, dither, vignette, hurt/underwater/downed tints
+- [x] Depth fog; sky gradient, sun, moon, stars, cloud layers (shader noise, shapes differ), lightning flash
+- [x] Terrain from LOD pyramid out to 7 km, changes (burns, frozen lakes) via LOD overlays
+- [x] Procedural tile textures on near ground (stage 2 fix); far ground colour from LOD
+- [x] 3D structures with shapes, material textures, sun/cover light; air motes
+- [ ] Terrain wet / soot / wear / fire glow shading; puddles and rain wetness
+- [ ] Cloud shadows on land (`cloudShadow.ts`); aurora
+- [ ] Tile billboards (trees, bushes, rocks) and canopy from far LOD
+- [ ] Water look (level, depth fade, shine, rivers/lakes at own height)
+- [ ] Structure cell state: wet, fire glow, oil sheen, soot, wear; door and open tiles
+- [ ] Point lights: torches, fire, spell glow, lamps in the underworld (lightmap) on land, structures and sprites
+- [ ] Sprites: creatures, props, items, hit flash, palette fill, dithered billboards, depth-tested
+- [ ] Particles and spell looks from rune `look` data; rain streaks, splashes; stops under roofs
+- [ ] Held item sprite (always on top, lit), swing/bob/shake
+- [ ] Underworld halls and the realm dark/fog look (3D cells + lattice ground)
+- [ ] Guest/net view, saves unaffected (render stays read-only)
+- [ ] Headless smokes (`artSmoke`, `skySmoke`, `frameProfile`) still run
