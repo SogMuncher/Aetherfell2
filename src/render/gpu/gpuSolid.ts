@@ -14,9 +14,12 @@ export const GPU_SOLID = { size: 96, height: 48, step: 8, rebuildEvery: 12 } as 
 const S = GPU_SOLID.size;
 const H = GPU_SOLID.height;
 
-/** GLSL: `solidAt(cell)`, `groundAt(xy)` and `shadowRay(from, dir, length)` (1 = reaches, 0 = blocked). */
+/** GLSL uniforms of the field; put them before CASTER_SHADER (gpuCasters.ts) and SOLID_SHADER. */
+export const SOLID_UNIFORMS = `
+uniform highp sampler3D uSolid; uniform highp sampler2D uGround; uniform ivec3 uSolid0;`;
+
+/** GLSL: `solidAt(cell)`, `groundAt(xy)` and `shadowRay(from, dir, length, steps, sprites)` (1 = reaches, 0 = blocked). */
 export const SOLID_SHADER = `
-uniform highp sampler3D uSolid; uniform sampler2D uGround; uniform ivec3 uSolid0;
 bool solidAt(ivec3 c){ ivec3 q = c - uSolid0; if (any(lessThan(q, ivec3(0))) || any(greaterThanEqual(q, ivec3(${S}, ${S}, ${H})))) return false; return texelFetch(uSolid, q, 0).r > 0.5; }
 float groundAt(vec2 p){
   vec2 g = p - vec2(uSolid0.xy); ivec2 i = ivec2(floor(g)); vec2 t = g - vec2(i);
@@ -24,15 +27,20 @@ float groundAt(vec2 p){
   float a = texelFetch(uGround, i, 0).r, b = texelFetch(uGround, i + ivec2(1, 0), 0).r, c = texelFetch(uGround, i + ivec2(0, 1), 0).r, d = texelFetch(uGround, i + ivec2(1, 1), 0).r;
   return mix(mix(a, b, t.x), mix(c, d, t.x), t.y);
 }
-float shadowRay(vec3 o, vec3 d, float len, int steps){
+float shadowRay(vec3 o, vec3 d, float len, int steps, bool sprites){
   ivec3 cell = ivec3(floor(o)); vec3 st = sign(d); vec3 ad = max(abs(d), vec3(1e-5));
-  vec3 tMax = (st * (vec3(cell) + 0.5 - o) + 0.5) / ad; vec3 tDelta = 1.0 / ad; float t = 0.0;
+  vec3 tMax = (st * (vec3(cell) + 0.5 - o) + 0.5) / ad; vec3 tDelta = 1.0 / ad; float t = 0.0; vec3 e = o + d * len;
+  bool newCol = true;
   for (int i = 0; i < steps; i++){
     if (t >= len) return 1.0;
+    ivec3 q = cell - uSolid0;
+    if (q.x < 0 || q.y < 0 || q.x >= ${S} || q.y >= ${S} || (q.z >= ${H} && d.z >= 0.0)) return 1.0; // left the field: the far land takes over
     float tn = min(min(tMax.x, tMax.y), tMax.z);
     vec3 m = o + d * min((t + tn) * 0.5, len);
     if (t > 0.5 && m.z < groundAt(m.xy) - 0.3) return 0.0; // the drawn land is a mesh over the same heights: allow it a little slack
     if (i > 0 && solidAt(cell)) return 0.0; // the first cell holds the surface itself (slopes, slabs)
+    if (sprites && newCol && castersAt(cell.xy, o, d, len, e)) return 0.0;
+    newCol = tMax.z != tn;
     if (tMax.x == tn){ cell.x += int(st.x); tMax.x += tDelta.x; } else if (tMax.y == tn){ cell.y += int(st.y); tMax.y += tDelta.y; } else { cell.z += int(st.z); tMax.z += tDelta.z; }
     t = tn;
   }
@@ -124,7 +132,12 @@ export class GpuSolid {
     }
   }
 
-  /** Binds the field on two texture units for a program that includes SOLID_SHADER. */
+  /** Corner of the field (whole metres). */
+  get origin(): { x: number; y: number } {
+    return { x: this.ox, y: this.oy };
+  }
+
+  /** Binds the field on two texture units for a program that includes SOLID_UNIFORMS. */
   bind(p: WebGLProgram, unit: number): void {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0 + unit);

@@ -1,6 +1,6 @@
 /**
  * Tile walls on the GPU: every solid tile near the eye (walls, posts, windows, closed doors; `shape: 'block' | 'door'`) is a
- * box rising from the ground to the tile's `height`, painted from the tile's wall surface (floor surface on top), lit by sun and
+ * box rising from the ground to the tile's `height`, painted from the tile's wall surface (floor surface on top), lit by the light pass and
  * the light grid, fogged, in the shared depth buffer, with its matter states (soot, frost…) blended over it. Tile data only:
  * a new wall tile needs no render code.
  */
@@ -37,7 +37,7 @@ precision highp float; precision highp int;
 ${SURFACE_SHADER}
 ${SURFACE_OUT}
 ${STATE_SHADER}
-uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uFogDist, uRainWet, uTime;
+uniform vec3 uEye, uFog; uniform float uFogDist, uRainWet, uTime;
 in vec3 vPos; flat in float fMat; flat in int vInst; layout(location = 0) out vec4 o;
 void main(){
   vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos)));
@@ -46,12 +46,9 @@ void main(){
   else { float across = abs(n.x) > abs(n.y) ? vPos.y : vPos.x; suv = vec2(across * 16.0, -vPos.z * 10.0); col = surf(int(fMat), true, suv); }
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2(vInst % ${ST_W}, vInst / ${ST_W}), suv, uRainWet, 0.75 + 0.25 * sin(uTime * 40.0 + vPos.x * 1.7 + vPos.y * 2.3), glow);
-  float lit = max(0.0, dot(n, uSunDir));
-  vec3 lv = uAmb + uSun * lit;
-  vec3 c = col * lv + glow;
-  surfaceOut(col, dot(n, uEye - vPos) < 0.0 ? -n : n, sunShare(uSun * lit, lv), 1.0);
-  float f = 1.0 - exp(-length(vPos - uEye) / uFogDist);
-  o = vec4(mix(c, uFog, f), 1.0);
+  surfaceOut(col, dot(n, uEye - vPos) < 0.0 ? -n : n, 1.0);
+  float f = min(0.97, 1.0 - exp(-length(vPos - uEye) / uFogDist));
+  o = vec4(col * glow * (1.0 - f) + uFog * f, 1.0);
 }`;
 
 export class GpuTileBlocks {
@@ -152,9 +149,6 @@ export class GpuTileBlocks {
     gl.uniform3f(loc(gl, p, 'uEye'), eye.x, eye.y, eye.z);
     gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.uniform1f(loc(gl, p, 'uFogDist'), env.fogDist);
-    gl.uniform3f(loc(gl, p, 'uSun'), env.sunR, env.sunG, env.sunB);
-    gl.uniform3f(loc(gl, p, 'uAmb'), env.ambR, env.ambG, env.ambB);
-    gl.uniform3f(loc(gl, p, 'uSunDir'), env.lx, env.ly, env.lz);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
     gl.drawElementsInstanced(gl.TRIANGLES, INDICES.length, gl.UNSIGNED_BYTE, 0, this.count);

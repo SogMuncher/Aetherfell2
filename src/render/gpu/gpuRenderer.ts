@@ -19,6 +19,8 @@ import { GpuOverlay } from './gpuOverlay';
 import { GpuParticles } from './gpuParticles';
 import { GpuLight } from './gpuLight';
 import { GpuSolid } from './gpuSolid';
+import { GpuCasters } from './gpuCasters';
+import { GpuFarShade } from './gpuFarShade';
 import { GpuSprites } from './gpuSprites';
 import { GpuPost } from './gpuPost';
 import type { PostParams } from './gpuPost';
@@ -70,6 +72,8 @@ export class GpuRenderer {
   private readonly blocks: GpuTileBlocks;
   private readonly light: GpuLight;
   private readonly solid: GpuSolid;
+  private readonly casters: GpuCasters;
+  private readonly farShade: GpuFarShade;
   private readonly sprites: GpuSprites;
   private readonly fx: GpuParticles;
   private readonly overlay: GpuOverlay;
@@ -93,6 +97,8 @@ export class GpuRenderer {
     this.light = new GpuLight(gl);
     this.solid = new GpuSolid(gl);
     this.terrain = new GpuTerrain(gl, lod, tiles, surf);
+    this.casters = new GpuCasters(gl);
+    this.farShade = new GpuFarShade(gl, this.terrain);
     this.structures = new GpuStructures(gl, surf);
     this.blocks = new GpuTileBlocks(gl, surf);
     this.sprites = new GpuSprites(gl);
@@ -149,17 +155,18 @@ export class GpuRenderer {
     this.solid.update(f.eye, f.tiles, f.volume);
     this.post.begin(w, h);
     this.sky.draw(cam, f.eye, f.env, f.time);
-    if (this.frames % 4 === 0) this.terrain.setShadow(f.shadow, f.shadowOn);
+    if (this.frames % 4 === 0) this.farShade.setClouds(f.shadow, f.shadowOn);
     this.post.surfaces(true);
     this.terrain.draw(vp, f.eye, f.env, f.time);
     this.blocks.draw(vp, f.eye, f.env, f.tiles, f.time);
     this.structures.draw(vp, cam, w, h, f.time, f.eye, f.env, f.volume);
     this.sprites.draw(vp, cam, f.eye, f.env, f.billboards);
     this.post.surfaces(false);
-    // Every pixel's surface is known now: light it from the nearest lights, with a shadow ray to each.
+    this.casters.update(this.sprites.casters, this.solid.origin.x, this.solid.origin.y);
+    // Every pixel's surface is known now: light all of them in one pass (sky, sun, lights, each with its shadow rays).
     const s = this.post.surfaceTextures;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.litTarget);
-    this.light.draw(cam, f.eye, f.env, f.lightsPerPixel, s.alb, s.nrm, this.post.depthTexture, this.solid, w, h, NEAR, FAR);
+    this.light.draw(cam, f.eye, f.env, f.lightsPerPixel, s.alb, s.nrm, this.post.depthTexture, this.solid, this.casters, this.farShade, w, h, NEAR, FAR);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.sceneTarget);
     this.clouds.draw(cam, f.eye, f.env, f.weather, f.time, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR);
     gl.viewport(0, 0, w, h);

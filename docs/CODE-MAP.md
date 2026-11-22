@@ -136,14 +136,16 @@ Search this first, then open only the file you need. Update the entry (and line 
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (123) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
-- `gpuTerrain.ts` (290) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, far lift + canopy, depth fog
+- `gpuTerrain.ts` (260) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (~45) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (~70) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
 - `gpuStructures.ts` (~165) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
 - `gpuStructShader.ts` (~110) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (~165) tile walls/doors/windows as boxes from tile data, with their matter states
 - `gpuSprites.ts` (~165) billboards: sprite atlas + instanced quads
-- `gpuLight.ts` (~150) per-pixel light pass: nearest lights per pixel from 4 m squares, shadow rays, sun shadows near the eye
+- `gpuLight.ts` (~190) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
+- `gpuCasters.ts` (~110) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
+- `gpuFarShade.ts` (~85) cloud shade + sun rays over terrain height levels far from the eye
 - `gpuSolid.ts` (~140) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
 - `gpuSurfaces.ts` (~50) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
 - `gpuParticles.ts` (~140) motes as point sprites and rain streaks
