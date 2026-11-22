@@ -210,9 +210,6 @@ export class GpuStructures {
     gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.uniform1f(loc(gl, p, 'uFogDist'), env.fogDist);
     gl.uniform2f(loc(gl, p, 'uFade'), GPU_STRUCT.range - GPU_STRUCT.fade, GPU_STRUCT.range);
-    gl.uniform3f(loc(gl, p, 'uSun'), env.sunR, env.sunG, env.sunB);
-    gl.uniform3f(loc(gl, p, 'uAmb'), env.ambR, env.ambG, env.ambB);
-    gl.uniform3f(loc(gl, p, 'uSunDir'), env.lx, env.ly, env.lz);
     gl.uniform2i(loc(gl, p, 'uGrid0'), gx0, gy0);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.FRONT);

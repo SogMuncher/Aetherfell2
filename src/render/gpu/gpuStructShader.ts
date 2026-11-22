@@ -19,7 +19,7 @@ void main(){
 
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
-uniform mat4 uVP; uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uFogDist;
+uniform mat4 uVP; uniform vec3 uEye, uFog; uniform float uFogDist;
 uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform float uTime; uniform float uRainWet; uniform vec2 uFade; uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; layout(location = 0) out vec4 o;
 ${SURFACE_SHADER}
@@ -112,15 +112,12 @@ void main(){
   if (abs(n.z) > 0.6) { suv = w.xy * 16.0; col = surf(mat, false, suv); }
   else { float across = abs(n.x) > abs(n.y) ? w.y : w.x; float nh = abs(n.z) > 0.05 ? max(0.35, sqrt(1.0 - n.z * n.z)) : 1.0; suv = vec2(across * 16.0, -w.z * 10.0 / nh); col = surf(mat, true, suv); }
   bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // same spot as Classic: from the middle of the cell, not the exact pixel, so a wall face is lit evenly
-  float lit = open ? max(0.0, dot(n, uSunDir)) : 0.0;
   float tint = 0.93 + 0.14 * h3(vec3(cell));
   // What has happened to this cell (the same matter states the sim's rules use), blended over its own surface.
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2((slot % 32) * 64 + (cell.z - origin.z & 3) * 16 + (cell.x - origin.x), (slot / 32) * 64 + ((cell.z - origin.z) >> 2) * 16 + (cell.y - origin.y)), suv, open ? uRainWet : 0.0, 0.75 + 0.25 * sin(uTime * 40.0 + float(cell.x) * 1.7 + float(cell.y) * 2.3 + float(cell.z)), glow);
-  vec3 lv = uAmb * (open ? 1.0 : 0.9) + (open ? 0.0 : 0.09) + uSun * lit;
-  vec3 c = col * tint * lv + glow;
-  surfaceOut(col * tint, n, sunShare(uSun * lit, lv), 1.0);
-  float f = 1.0 - exp(-length(w - uEye) / uFogDist);
-  o = vec4(mix(c, uFog, f), 1.0);
+  surfaceOut(col * tint, n, 1.0);
+  float f = min(0.97, 1.0 - exp(-length(w - uEye) / uFogDist));
+  o = vec4(col * tint * glow * (1.0 - f) + uFog * f, 1.0);
   vec4 cp = uVP * vec4(w, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;
 }`;

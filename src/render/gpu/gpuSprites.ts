@@ -1,7 +1,7 @@
 /**
  * GPU billboards: trees, props, creatures, items. `SpriteRenderer.collect` still decides WHAT is drawn (and the sprite art
  * stays procedural, cached on the CPU); here each picture (with its individual's colour regions filled in) lives in one atlas
- * texture and every billboard is an instanced quad, depth-tested in the shared depth buffer, lit by the light grid, fogged.
+ * texture and every billboard is an instanced quad, depth-tested in the shared depth buffer, lit by the light pass, fogged.
  */
 import { SHADE_ONE } from '../palette';
 import type { Billboard } from '../entities/spriteRenderer';
@@ -27,7 +27,7 @@ void main(){
 }`;
 const FS = `#version 300 es
 precision highp float;
-uniform sampler2D uAtlas; uniform vec3 uEye, uFog, uSun, uAmb; uniform float uFogDist, uSunK;
+uniform sampler2D uAtlas; uniform vec3 uEye, uFog; uniform float uFogDist;
 ${SURFACE_OUT}
 in vec2 vUv; flat in vec4 fRect; flat in vec4 fTint; flat in vec4 fFx; flat in vec3 fBase; in vec3 vWorld; layout(location = 0) out vec4 o;
 const float BAYER[16] = float[16](0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.);
@@ -37,10 +37,12 @@ void main(){
   ivec2 t = ivec2(fRect.xy) + clamp(ivec2(vUv * fRect.zw), ivec2(0), ivec2(fRect.zw) - 1);
   vec4 c = texelFetch(uAtlas, t, 0);
   if (c.a < 0.5) discard;
-  vec3 L = uAmb + uSun * uSunK + vec3(fFx.x, fFx.x * 0.45, fFx.x * 0.1) + vec3(fFx.y * 2.0, fFx.y * 0.4, fFx.y * 0.4);
-  surfaceOut(c.rgb * fTint.rgb, vec3(0.0, 0.0, 1.0), sunShare(uSun * uSunK, L), 0.5);
+  // Burning and hit flashes glow on their own; the light pass lights the rest.
+  vec3 alb = c.rgb * fTint.rgb;
+  vec3 emit = alb * (vec3(fFx.x, fFx.x * 0.45, fFx.x * 0.1) + vec3(fFx.y * 2.0, fFx.y * 0.4, fFx.y * 0.4));
+  surfaceOut(alb, vec3(0.0, 0.0, 1.0), 0.5);
   float f = min(0.97, 1.0 - exp(-length(vWorld - uEye) / uFogDist));
-  o = vec4(c.rgb * L * fTint.rgb * (1.0 - f) + uFog * f, 1.0);
+  o = vec4(emit * (1.0 - f) + uFog * f, 1.0);
 }`;
 
 interface Slot {
@@ -62,6 +64,10 @@ export class GpuSprites {
   private data = new Float32Array(STRIDE * 256);
   /** Billboards drawn in the last frame. */
   drawn = 0;
+  /** Last frame's billboards as shadow casters: per billboard x,y,z, atlas rect, size, flip (see `draw`), and the atlas. */
+  get casters(): { data: Float32Array; count: number; stride: number; atlas: WebGLTexture } {
+    return { data: this.data, count: this.drawn, stride: STRIDE, atlas: this.atlas };
+  }
 
   constructor(private readonly gl: WebGL2RenderingContext) {
     this.prog = compile(gl, VS, FS);
@@ -152,9 +158,6 @@ export class GpuSprites {
     gl.uniform3f(loc(gl, p, 'uEye'), eye.x, eye.y, eye.z);
     gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.uniform1f(loc(gl, p, 'uFogDist'), env.fogDist);
-    gl.uniform3f(loc(gl, p, 'uSun'), env.sunR, env.sunG, env.sunB);
-    gl.uniform3f(loc(gl, p, 'uAmb'), env.ambR, env.ambG, env.ambB);
-    gl.uniform1f(loc(gl, p, 'uSunK'), 0.25 + Math.max(0, env.lz) * 0.55);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
   }
 }

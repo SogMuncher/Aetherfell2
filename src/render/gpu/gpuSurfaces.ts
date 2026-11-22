@@ -36,8 +36,11 @@ export function makeSurfaceAtlas(gl: WebGL2RenderingContext): WebGLTexture {
   return atlas;
 }
 
-/** GLSL for solid passes (read by the per-pixel light pass, `gpuLight.ts`): `surfaceOut(albedo, normal, sunShare, kind)` (kind 1 = surface, 0.5 = sprite, lit from all sides). */
+/**
+ * GLSL for solid passes. They do no lighting: each writes what its pixel is (`surfaceOut(albedo, normal, kind)`; kind 1 =
+ * surface, 0.5 = sprite, lit from all sides) and puts only what glows plus the fog in the colour. The one light pass
+ * (`gpuLight.ts`) lights every pixel.
+ */
 export const SURFACE_OUT = `
 layout(location = 1) out vec4 oAlb; layout(location = 2) out vec4 oNrm;
-void surfaceOut(vec3 albedo, vec3 n, float sun, float kind){ oAlb = vec4(clamp(albedo, 0.0, 1.0), kind); oNrm = vec4(n * 0.5 + 0.5, clamp(sun, 0.0, 1.0)); }
-float sunShare(vec3 sun, vec3 all){ return dot(sun, vec3(0.3, 0.59, 0.11)) / max(1e-3, dot(all, vec3(0.3, 0.59, 0.11))); }`;
+void surfaceOut(vec3 albedo, vec3 n, float kind){ oAlb = vec4(clamp(albedo, 0.0, 1.0), kind); oNrm = vec4(n * 0.5 + 0.5, 1.0); }`;
