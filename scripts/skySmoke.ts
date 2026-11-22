@@ -1,9 +1,9 @@
 // Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
 // cloud shadows, and the sim soaking only what stands under a storm.
 import { Simulation, createState } from '../src/sim';
-import { CONTENT, airMoisture, cloudDensity3, setAirMoisture, layerCover, layerDensity, rainAt, sunThrough, validateContent } from '../src/content';
+import { CONTENT, airAt, airColumn, airMoisture, cloudDensity3, setAirMoisture, layerCover, layerDensity, rainAt, sunThrough, validateContent } from '../src/content';
 import type { WeatherState } from '../src/types';
-import { CloudCells } from '../src/render/cloudCells';
+import { AirCells } from '../src/render/airCells';
 import { computeEnv } from '../src/render/env';
 import { emptyInput } from '../src/types';
 
@@ -128,7 +128,7 @@ for (const l of SKY.layers) {
 {
   const w = weather(0.8, 0.5);
   const cu = SKY.layers.find((l) => l.name === 'cumulus');
-  check('the heaps and storms are thick slabs of cloud', !!cu && (cu.thickness ?? 0) > 500 && SKY.layers.some((l) => l.rain && (l.thickness ?? 0) > 1000));
+  check('the heaps and storms are thick slabs of cloud, heaps a few hundred metres across', !!cu && (cu.thickness ?? 0) > 200 && cu.scale < 600 && SKY.layers.some((l) => l.rain && (l.thickness ?? 0) > 800));
   if (cu) {
     const cv = layerCover(cu, w);
     // Find a spot where the cloud is thick and one where it is thin but present.
@@ -185,39 +185,56 @@ for (const l of SKY.layers) {
   }
 }
 
-// Clouds as 3D cells around the eye: the same density rule, fine near, coarse far, reaching the far horizon; moving
-// with the wind without a refill; and standing in a low cloud fogs the view in the cloud's colour.
+// The air as one grid of cells every layer writes into: the same density rule, fine near, coarse far, reaching the far
+// horizon; drifting with the wind without a refill; moving the eye fills only the cells that came into reach; storms
+// rain only where the air overhead holds their cloud; standing in a low cloud fogs the view in the cloud's colour.
 {
   const w = weather(0.7, 0.3);
-  const cells = new CloudCells();
-  cells.fillAll(w, 5000, 3000);
-  check('every cloud layer is kept as cells', cells.layers.length === SKY.layers.length);
-  check('the coarsest level of every layer reaches the far clouds', cells.layers.every((L) => (cells.levels[L.first + L.count - 1]?.cell ?? 0) * cells.n * 0.35 >= SKY.cloudRange));
+  const air = new AirCells();
+  air.fillAll(w, 5000, 3000, 300);
+  const lv0 = air.levels[0];
   let worst = 0;
-  let filled = 0;
-  cells.layers.forEach((L, li) => {
-    const cv = layerCover(L.def, w);
-    const lv = cells.levels[L.first];
-    if (!lv) return;
-    for (let k = 0; k < 40; k++) {
-      // Cell centres of the finest level near the eye.
-      const x = lv.ox + (20 + ((k * 7) % 24) + 0.5) * lv.cell + (w.drift?.x ?? 0) * L.def.speed;
-      const y = lv.oy + (20 + ((k * 11) % 24) + 0.5) * lv.cell + (w.drift?.y ?? 0) * L.def.speed;
-      const hf = ((k % lv.slices) + 0.5) / lv.slices;
-      const want = (L.def.thickness ?? 0) > 0 ? cloudDensity3(L.def, w, cv, x, y, hf) : layerDensity(L.def, w, cv, x, y);
-      const got = cells.sample(li, w, x, y, hf);
-      worst = Math.max(worst, Math.abs(want - got));
-      if (got > 0) filled++;
-    }
-  });
-  check('cloud cells hold the same clouds as the density rule', worst < 0.01 && filled > 10, `worst ${worst.toFixed(3)}, ${filled} cloudy cells`);
-  const moved = { ...w, drift: { x: 400, y: 150 } };
-  const L0 = cells.layers[0];
-  const sp = L0?.def.speed ?? 0;
-  check('cloud cells drift with the wind without refilling', !!L0 && Math.abs(cells.sample(0, w, 5100, 3100, 0.5) - cells.sample(0, moved, 5100 + 400 * sp, 3100 + 150 * sp, 0.5)) < 1e-6);
+  let cloudy = 0;
+  for (let k = 0; k < 400 && lv0; k++) {
+    // Cell centres of the finest level near the eye (cells there are narrower than any shape, so one spot each).
+    const gx = lv0.ox + 16 + ((k * 7) % 32);
+    const gy = lv0.oy + 16 + ((k * 11) % 32);
+    const gz = lv0.oz + (k % air.tall);
+    const cz = lv0.cellZ;
+    const x = (gx + 0.5) * lv0.cell + (w.drift?.x ?? 0);
+    const y = (gy + 0.5) * lv0.cell + (w.drift?.y ?? 0);
+    const z = (gz + 0.5) * cz;
+    const want = Math.min(1, airColumnAt(x, y, gz * cz, cz, lv0.cell));
+    const got = air.sample(w, x, y, z);
+    worst = Math.max(worst, Math.abs(want - got));
+    if (got > 0) cloudy++;
+  }
+  check('air cells hold the clouds of every layer by the one density rule', worst < 0.01 && cloudy > 10, `worst ${worst.toFixed(3)}, ${cloudy} cloudy cells`);
+  const top = air.levels[air.levels.length - 1];
+  check('the coarsest air cells reach the far clouds', !!top && top.cell * SKY.air.lod >= SKY.cloudRange);
+  const moved = { ...w, drift: { x: (w.drift?.x ?? 0) + 400, y: (w.drift?.y ?? 0) + 150 } };
+  check('air cells drift with the wind without refilling', Math.abs(air.sample(w, 5100, 3100, 320) - air.sample(moved, 5500, 3250, 320)) < 1e-6);
   let farCloud = 0;
-  for (let a = 0; a < 72; a++) cells.layers.forEach((_, li) => { if (cells.sample(li, w, 5000 + Math.cos(a / 11.46) * SKY.cloudRange * 0.9, 3000 + Math.sin(a / 11.46) * SKY.cloudRange * 0.9, 0.5) > 0) farCloud++; });
+  for (let a = 0; a < 144; a++) for (const z of [300, 450, 1550]) if (air.sample(w, 5000 + Math.cos(a / 22.9) * SKY.cloudRange * 0.9, 3000 + Math.sin(a / 22.9) * SKY.cloudRange * 0.9, z) > 0) farCloud++;
   check('far clouds come from coarse cells (no hole toward the horizon)', farCloud > 5, `${farCloud} cloudy spots 36 km out`);
+  const before = air.filled;
+  air.update(w, 5000 + SKY.air.cell * 10, 3000, 300, 0.1, 1e9);
+  const step = air.filled - before;
+  check('a short walk fills only the cells that came into reach', step > 0 && step <= air.n * air.n * air.tall / 4, `${step} cells`);
+  // Weather: rain falls only under storm cloud, and the air above holds that cloud.
+  const storm = weather(0.9, 0.9);
+  let rainy = 0;
+  let overhead = 0;
+  for (let i = 0; i < 400; i++) {
+    const x = i * 97;
+    const y = i * 61;
+    if (rainAt(SKY, storm, x, y) <= 0.05) continue;
+    rainy++;
+    let any = 0;
+    for (let z = 250; z < 1340; z += 40) any = Math.max(any, airAt(SKY, storm, x, y, z).dens);
+    if (any > 0.05) overhead++;
+  }
+  check('where it rains, the air overhead holds the storm cloud', rainy > 10 && overhead / rainy > 0.9, `${overhead} of ${rainy}`);
   const state = createState(77);
   const low = SKY.layers.find((l) => (l.wet ?? 0) >= 0.9 && (l.thickness ?? 0) > 0);
   check('a low layer reaches up the slopes of a 500 m peak', !!low && low.height < 500 && low.height + (low.thickness ?? 0) > 500);
@@ -238,3 +255,10 @@ for (const l of SKY.layers) {
 
 if (failed) throw new Error(`${failed} sky check(s) failed`);
 console.log('all sky checks passed');
+
+function airColumnAt(x: number, y: number, z0: number, cell: number, wide: number): number {
+  const d = new Float32Array(1);
+  const l = new Float32Array(1);
+  airColumn(SKY, weather(0.7, 0.3), SKY.layers.map((ly) => layerCover(ly, weather(0.7, 0.3))), x, y, z0, cell, 1, d, l, wide);
+  return d[0] ?? 0;
+}
