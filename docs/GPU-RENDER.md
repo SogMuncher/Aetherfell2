@@ -61,7 +61,7 @@ Done = works on the GPU path. Sock's rule: procedural textures, lighting and eff
 - [x] Cloud shadows on land (`cloudShadow.ts` grid as a texture); [x] aurora
 - [x] Tile walls, posts, windows, doors as boxes from tile data (village/ruin buildings, `gpuTileBlocks.ts`)
 - [x] Tile billboards (trees, bushes, rocks) near the eye; [x] canopy and far buildings raised from LOD (`lift`, `canopy`; treetops rise in with distance)
-- [x] Clouds: five layers (low stratus at hill height up to thin cirrus), wet-loving layers gather over damp land (coarse moisture texture), thin away within 90 m of the eye; thick layers from the sky data, marched per pixel and cut at the nearest surface (`gpuClouds.ts`); you can fly above, around and through them
+- [x] Clouds: every sky layer as 3D cloud cells with LOD levels out to 40 km (`render/cloudCells.ts`, filled on the CPU from the one density rule, uploaded to a texture array), marched per pixel one cell per step and cut at the nearest surface (`gpuClouds.ts`); low stratus wraps high slopes; standing in a cloud fogs the view (`env.ts`)
 - [x] No pop-in at the edge of the real structures: buildings dissolve (dither) over the last 36 m of `GPU_STRUCT.range` while the ground raises the same buildings from `lift` over that band
 - [x] Water look (sky-tinted, glints, flat light) and distant fire glow; [x] depth fade and river/lake heights come from the LOD block (same data as Classic), water colour matched
 - [x] Structures show correctly from inside (changed bricks re-uploaded, new ones first; a brick whose box holds the eye is drawn as a full-screen cover with rays built from the pixel, because box walls next to the eye got clipped and walls vanished)

@@ -30,6 +30,8 @@ export function validateContent(c: Content): string[] {
     if (l.opacity < 0 || l.opacity > 1 || l.shadow < 0 || l.shadow > 1) out.push(`${w}: opacity and shadow are shares between 0 and 1`);
     if (!(l.detail >= 1 && l.detail <= 6)) out.push(`${w}: detail runs from 1 to 6`);
   }
+  const cl = c.sky.cells;
+  if (!(cl.perShape >= 4 && cl.count >= 16 && cl.count % 8 === 0 && cl.slices >= 2 && cl.slices <= 64 && cl.budget > 0)) out.push('sky cells: perShape >= 4, count a multiple of 8 (>= 16), 2..64 slices, a positive budget');
   out.push(...validateShapes());
   out.push(...gearProblems(c));
   for (const [id, s] of Object.entries(c.structures)) {

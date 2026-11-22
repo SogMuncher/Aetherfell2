@@ -114,27 +114,27 @@ export function layerCover(layer: CloudLayerDef, w: WeatherState): number {
 /** Cloud thickness of one layer over a map spot, 0 (clear) .. 1 (thick). `cover` from layerCover. */
 export function layerDensity(layer: CloudLayerDef, w: WeatherState, cover: number, x: number, y: number): number {
   if (cover <= 0) return 0;
-  const p = cloudPattern(layer);
-  const dx = w.drift?.x ?? 0;
-  const dy = w.drift?.y ?? 0;
-  const s = layer.stretch ?? 1;
-  // Stretch along the wind: turn into the wind's frame (fixed direction east-west is fine for wisps).
-  const u = ((x - dx * layer.speed) / (layer.scale * s)) * (N / 4);
-  const v = ((y - dy * layer.speed) / layer.scale) * (N / 4);
-  // Two looks at the pattern at unrelated sizes, so its repeat never shows across the sky.
-  const n = mixed(p, u, v);
-  // Threshold from the measured spread of the mixed value, so `cover` really is the share of sky.
-  // Centred on the soft edge: half-thick cloud covers `cover` of the sky.
-  const soft = Math.max(0.01, layer.softness);
-  const wet = layer.wet ?? 0;
-  const t = levelFor(layer, 1 - cover) - soft / 2 - (wet > 0 ? wet * (airMoisture(x, y) - 0.5) * MOIST_SHIFT : 0);
-  const k = (n - t) / soft;
-  return k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
+  return colDens(layer, w, edgeAt(layer, cover, x, y), x, y);
 }
 
-/** The pattern value a layer's cloud edge sits at for this cover (before the moisture shift: `wet` × (moisture − 0.5) × 0.5): what a GPU drawer needs to match `layerDensity`. */
-export function layerThreshold(layer: CloudLayerDef, cover: number): number {
-  return levelFor(layer, 1 - cover);
+/** Where a layer's cloud edge sits over a spot (pattern units): set by the cover, shifted by the land's moisture for wet-loving layers. */
+function edgeAt(layer: CloudLayerDef, cover: number, x: number, y: number): number {
+  // Threshold from the measured spread of the mixed value, so `cover` really is the share of sky.
+  // Centred on the soft edge: half-thick cloud covers `cover` of the sky.
+  const wet = layer.wet ?? 0;
+  return levelFor(layer, 1 - cover) - Math.max(0.01, layer.softness) / 2 - (wet > 0 ? wet * (airMoisture(x, y) - 0.5) * MOIST_SHIFT : 0);
+}
+
+/** Column density for a known edge `t`. */
+function colDens(layer: CloudLayerDef, w: WeatherState, t: number, x: number, y: number): number {
+  const p = cloudPattern(layer);
+  const s = layer.stretch ?? 1;
+  // Stretch along the wind: turn into the wind's frame (fixed direction east-west is fine for wisps).
+  const u = ((x - (w.drift?.x ?? 0) * layer.speed) / (layer.scale * s)) * (N / 4);
+  const v = ((y - (w.drift?.y ?? 0) * layer.speed) / layer.scale) * (N / 4);
+  // Two looks at the pattern at unrelated sizes, so its repeat never shows across the sky.
+  const k = (mixed(p, u, v) - t) / Math.max(0.01, layer.softness);
+  return k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
 }
 
 function mixed(p: Float32Array, u: number, v: number): number {
@@ -188,18 +188,33 @@ function sample(p: Float32Array, u: number, v: number): number {
  * the column, so what you see overhead and what falls on you agree.
  */
 export function cloudDensity3(layer: CloudLayerDef, w: WeatherState, cover: number, x: number, y: number, hf: number): number {
+  if (cover <= 0) return 0;
+  const t = edgeAt(layer, cover, x, y);
   const th = layer.thickness ?? 0;
-  if (th <= 0) return layerDensity(layer, w, cover, x, y);
+  return th <= 0 ? colDens(layer, w, t, x, y) : shape(layer, w, t, x, y, hf, th);
+}
+
+/**
+ * cloudDensity3 for a whole column of `n` cells (centres at heights (k + 0.5) / n through the slab), written as 0..255
+ * into out[o + k × stride]. The same rule; the work that depends only on the spot is done once. The cloud cells
+ * around the eye (render/cloudCells.ts) are filled from this.
+ */
+export function cloudColumn(layer: CloudLayerDef, w: WeatherState, cover: number, x: number, y: number, n: number, out: Uint8Array, o: number, stride: number): void {
+  const th = layer.thickness ?? 0;
+  const t = cover > 0 ? edgeAt(layer, cover, x, y) : 0;
+  const flat = cover > 0 && th <= 0 ? colDens(layer, w, t, x, y) : 0;
+  for (let k = 0; k < n; k++) out[o + k * stride] = cover <= 0 ? 0 : Math.round((th <= 0 ? flat : shape(layer, w, t, x, y, (k + 0.5) / n, th)) * 255);
+}
+
+function shape(layer: CloudLayerDef, w: WeatherState, t: number, x: number, y: number, hf: number, th: number): number {
   // Tops lean a little with height, so heaps are not straight pillars.
-  const d = layerDensity(layer, w, cover, x + hf * th * 0.12, y);
+  const d = colDens(layer, w, t, x + hf * th * 0.12, y);
   if (d <= 0) return 0;
   const tower = layer.tower ?? 0;
   const p = cloudPattern(layer);
-  const dx = w.drift?.x ?? 0;
-  const dy = w.drift?.y ?? 0;
   const s = layer.stretch ?? 1;
-  const u = ((x - dx * layer.speed) / (layer.scale * s)) * (N / 4) * 2.7 + hf * 31;
-  const v = ((y - dy * layer.speed) / layer.scale) * (N / 4) * 2.7 - hf * 17;
+  const u = ((x - (w.drift?.x ?? 0) * layer.speed) / (layer.scale * s)) * (N / 4) * 2.7 + hf * 31;
+  const v = ((y - (w.drift?.y ?? 0) * layer.speed) / layer.scale) * (N / 4) * 2.7 - hf * 17;
   const bump = (sample(p, u, v) - 0.5) * (layer.billow ?? 0.6);
   // The height this spot rises to: all the way where the cloud is thick, only a little at its edge.
   const top = 1 - tower + tower * d;

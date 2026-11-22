@@ -8,7 +8,9 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 - `viewport.ts` low-res buffer scaled cleanly. `post/` palette quantise, dither, vignette. `lighting.ts` ambient + point lights.
 - `raycaster/`: `terrainRenderer.ts` column marcher (near live tiles, far cached LOD blocks: `terrainLod.ts`,
   `lodLooks.ts`, ~7 km), `volumeRenderer.ts` ray casts 3D-layer bricks, `tileBillboards.ts`, `sky.ts` (ray-marched clouds,
-  sun, stars), `cloudShadow.ts`, `camera.ts`. Clouds and ground mist follow the world's moisture (`airMoisture` in `content/skyField.ts`, set by `Simulation`; layer `wet`); both renderers share the density rules.
+  sun, stars), `cloudShadow.ts`, `camera.ts`. Clouds and ground mist follow the world's moisture (`airMoisture` in `content/skyField.ts`, set by `Simulation`; layer `wet`).
+- Clouds are 3D cells (`cloudCells.ts`, sizes in `SkyDef.cells`): every layer, fine near and coarser far, filled from `cloudColumn`; the GPU marches them. A new cloud kind is a new layer in `content/sky.ts`, nothing else.
+- Fog (`env.ts`): the fog colour is the sky's horizon colour, or the cloud you stand in (shorter sight, cloud colour); clouds use `Env.cloudLit` (same light as the overcast sky) and haze over `fogDist × sky.haze`. Classic is no longer maintained.
 - LOD blocks of every level (incl. the 1 m one the GPU textured levels fade into) get changed tiles painted over them (`terrainLodPaint.paintChunk`); the GPU refills its fine levels when `lod.painted` moves.
 - `materials/` paints surfaces into textures.
 - Matter states (soot, wet, oil, frost, fire) are never drawn by swapping materials: `content/matterStates.ts` says how each blends (shade, cover colour or surface, glint, glow, rain), `gpu/gpuStates.ts` `blendStates` draws them on ground, tile walls and 3D cells; far land gets `stateLooks.tintFar`. Classic is unsupported and does not show new states.

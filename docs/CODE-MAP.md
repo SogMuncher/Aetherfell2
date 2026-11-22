@@ -83,7 +83,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `sites.ts` (341) named places: odds, layout, population (D)
 - `gateRule.ts` (12) where roads tell sites which city gates to open (own file so the start-up order never breaks)
 - `sky.ts` (30) The sky. Each cloud layer is a sheet of drifting shapes at its own height, size and speed, and
-- `skyField.ts` (187) Where the clouds are. One pure function of the sky data, the weather (cover, storminess, how far
+- `skyField.ts` (250) Where the clouds are. One pure function of the sky data, the weather (cover, storminess, how far
 - `spellcraft.ts` (286) composes a spell from up to 3 runes; spell descriptions
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (34) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
@@ -112,8 +112,10 @@ Search this first, then open only the file you need. Update the entry (and line 
 
 ## src/render/
 - `color.ts` (50) packed pixel colour helpers
+- `env.ts` (147) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
+- `lighting.ts` (163) ambient and point lights (LightMap); re-exports Env
+- `cloudCells.ts` (184) cloud layers as 3D cells around the eye, a level per doubling of cell size out to `cloudRange`, refilled a few rows per frame
 - `stateLooks.ts` (~70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
-- `lighting.ts` (281) sun path, sky/fog colours, ambient and point lights
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (60) adaptive pixel size from frame time
 - `renderer.ts` (149) frame orchestration: terrain, volume, sky, sprites, vfx, post
@@ -146,7 +148,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `gpuParticles.ts` (~140) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (~55) held item buffer composited on top
 - `gpuSky.ts` (~70) full-screen sky: gradient, sun, moon, stars, aurora
-- `gpuClouds.ts` (~190) clouds as thick layers marched per pixel from the scene depth (same pattern and density rules as Classic); fly above, around, through
+- `gpuClouds.ts` (245) cloud cells in a texture array, marched per pixel (finest level that holds each step), cut at the scene depth
 - `gpuPost.ts` (98) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (71) shader/texture helpers, camera basis and view-projection

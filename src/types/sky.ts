@@ -59,8 +59,17 @@ export interface SkyDef {
   /** Share of sky points that hold a star (0.0035 ≈ a clear country night). */
   stars: { density: number };
   aurora: { colour: Rgb; edge: Rgb };
-  /** Beyond this distance clouds fade into the haze (metres). */
+  /** Beyond this distance clouds fade out (metres). */
   cloudRange: number;
+  /** How much clearer the air is up at cloud height than the ground haze: clouds fade into the horizon over `haze` × the fog distance. */
+  haze: number;
+  /**
+   * Clouds are kept as 3D cells around the eye, fine near and coarser with distance (each level twice the cell size,
+   * like the land's far detail), so even far clouds are cheap. `perShape`: cells across one cloud shape (a layer's `scale`)
+   * at the finest level; `count`: cells along each side of a level; `slices`: most cells through a layer's thickness;
+   * `budget`: cells refilled per frame; `refresh`: seconds before a level is refilled for a change of weather.
+   */
+  cells: { perShape: number; count: number; slices: number; budget: number; refresh: number };
 }
 
 /** Floating motes in the air (dust, pollen, ash): a cheap way to make depth felt. Ambient per biome and realm. */
