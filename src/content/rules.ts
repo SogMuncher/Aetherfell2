@@ -12,7 +12,8 @@ export const RULES: RulesDef = {
     soak: { status: 'wet', ticks: 300 },
     chill: { status: 'chilled', ticks: 100, longerWhile: { status: 'wet', factor: 2 }, freezes: { while: 'wet', status: 'frozen', ticks: 60 } },
   },
-  frost: { wetNeeded: 60, lasts: 1000, fade: 8 },
+  temperature: { perHeat: 150, perChill: 60, jitter: 15, meltPerDegree: 4, dryPerDegree: 1.5, burns: 80, freezes: -30, thaws: -5, relax: 1, every: 15, limit: 400 },
+  frost: { wetNeeded: 60, fade: 12 },
   combat: {
     parry: { status: 'staggered', ticks: 26, shove: 4 },
     block: { status: 'staggered', ticks: 3, damage: 0.25, stamina: 10 },

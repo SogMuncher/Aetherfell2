@@ -57,11 +57,15 @@ export interface RulesDef {
   currency: ItemId;
   reactions: { heat: ReactionDef; soak: ReactionDef; chill: ReactionDef };
   /**
-   * Cold freezes the wetness in ground and cells into frost (an overlay: the stuff stays what it is). Only spots at least
-   * `wetNeeded` wet (0..255, rain on open ground counts) freeze; dry ones are just cold. Frost holds `lasts` ticks per unit of
-   * chill, then gives back `fade` of its ice as wet every 10 ticks until it is gone. Heat thaws it at once.
+   * Temperature of ground and cells, in degrees above (or below) their surroundings. A `heat` effect adds `perHeat` per
+   * unit, a `chill` takes `perChill` (and up to `jitter` more). Heat first lifts a cold spot back to 0, then melts frost (`meltPerDegree` of it per degree), then
+   * boils off damp (`dryPerDegree`); only what is left warms the spot. At `burns` or more fuel catches fire; at `freezes` or
+   * less water turns to ice and damp to frost. Every `every` ticks each spot moves `relax` degrees back toward 0; from
+   * `thaws` up, frost fades back into wet and ice melts. Spots at 0 are not kept, so only warm or cold spots cost anything.
    */
-  frost: { wetNeeded: number; lasts: number; fade: number };
+  temperature: { perHeat: number; perChill: number; jitter: number; meltPerDegree: number; dryPerDegree: number; burns: number; freezes: number; thaws: number; relax: number; every: number; limit: number };
+  /** Only spots at least `wetNeeded` wet (0..255, rain on open ground counts) freeze; frost gives back `fade` as wet per step while thawing. */
+  frost: { wetNeeded: number; fade: number };
   combat: {
     /** Guarding just before a blow lands staggers the attacker and shoves them back. */
     parry: { status: StatusId; ticks: number; shove: number };

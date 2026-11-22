@@ -12,7 +12,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `fireBench.ts` (30) Benchmark (manual): lights a big brush field, prints burning count, burn-out time and tick cost.
 - `fireSmoke.ts` (21) Headless check that a grass/brush fire spreads with wind and stops in rain.
 - `gearSmoke.ts` (218) check: armour pieces, regions, wear, paperdoll data
-- `matterSmoke.ts` (263) MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
+- `matterSmoke.ts` (338) MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
 - `mechanicsSmoke.ts` (519) check: core mechanics (combat, items, fire, traps, statuses) on ground and cells
 - `realmSmoke.ts` (159) REALMS: the underworld is a second set of tiles, cells and things swapped in for the surface; every
 - `runebookSmoke.ts` (275) Headless checks for the runebook: composing spells from runes, preparing them, learning runes
@@ -198,7 +198,8 @@ Search this first, then open only the file you need. Update the entry (and line 
 ## src/sim/effects/
 - `effectsSystem.ts` (77) effect queue loop
 - `entityEffects.ts` (261) effects on bodies: guard, armour, reactions, death
-- `spotEffects.ts` (156) effects on tiles/cells: ignite, melt, strike
+- `spotEffects.ts` (124) effects on tiles/cells: ignite, strike, soak, coat
+- `temperature.ts` (107) temperature of tiles/cells: heat dries then burns, cold freezes wet, spots settle back
 
 ## src/sim/
 - `inputQueue.ts` (44) queueing/folding of guest inputs

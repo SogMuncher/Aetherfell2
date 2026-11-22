@@ -16,7 +16,7 @@ function emptyRealm(tick: number): RealmWorld {
     entities: [],
     burning: [],
     damp: [],
-    thaw: [],
+    temp: [],
     later: [],
     tileWear: [],
     regions: [],
@@ -39,7 +39,7 @@ export function swapRealm(state: SimState, to: RealmId): number {
     entities: [],
     burning: [...state.burning],
     damp: [...state.damp],
-    thaw: [...state.thaw],
+    temp: [...state.temp],
     later: [...state.later],
     tileWear: [...state.tileWear],
     regions: [...state.regions],
@@ -60,7 +60,7 @@ export function swapRealm(state: SimState, to: RealmId): number {
   state.volume = next.volume;
   state.burning = new Set(next.burning);
   state.damp = new Set(next.damp);
-  state.thaw = new Map(next.thaw);
+  state.temp = new Map(next.temp);
   state.later = new Map(next.later);
   state.tileWear = new Map(next.tileWear);
   state.regions = new Set(next.regions);

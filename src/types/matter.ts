@@ -15,7 +15,8 @@ import type { TileInfo, TileKind } from './tiles';
 export const GROUND_Z = -2048;
 
 /** Which state a spot carries. */
-export type MatterField = 'wet' | 'fire' | 'oil' | 'soot' | 'frost' | 'fuel' | 'wear';
+/** `temp` is degrees above (+) or below (-) the surroundings, for ground and cells alike (rules.temperature). */
+export type MatterField = 'wet' | 'fire' | 'oil' | 'soot' | 'frost' | 'fuel' | 'wear' | 'temp';
 
 /**
  * The states that show ON stuff as a blend over its own unchanged material, in blending order. Each has a look row in
@@ -77,6 +78,8 @@ export interface MatterAccess {
   burning(): number[];
   /** Every spot with local dampness that is drying. */
   damp(): number[];
+  /** Every spot warmer or colder than its surroundings (it settles back over time). */
+  warm(): number[];
   /** Every spot carrying wear from blows (it mends over time). */
   worn(): number[];
   /** Registers a spot as burning / damp / not (state changes do this by themselves; used when fire is set directly). */

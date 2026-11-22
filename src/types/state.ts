@@ -35,7 +35,7 @@ export interface RealmWorld {
   entities: Entity[];
   burning: number[];
   damp: number[];
-  thaw: [number, number][];
+  temp: [number, number][];
   later: [number, number][];
   tileWear: [number, number][];
   regions: number[];
@@ -66,8 +66,8 @@ export interface SimState {
   burning: Set<number>;
   /** Tile keys with local wetness that is drying out. */
   damp: Set<number>;
-  /** Frozen water tiles: tile key → tick when the ice thaws. */
-  thaw: Map<number, number>;
+  /** Temperature of spots warmer or colder than their surroundings (spot key -> degrees, 0 = surroundings; absent = 0). */
+  temp: Map<number, number>;
   /** Tiles that change by themselves (ash greening over): tile key → tick when it turns. */
   later: Map<number, number>;
   /** Damage on breakable tiles (doors, fences…): tile key → wear taken so far. It mends over time. */
