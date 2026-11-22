@@ -5,14 +5,11 @@ import { surfaceTexture, TEX } from '../materials';
 import { makeTexture } from './glUtil';
 import { STATE_SURFACES } from '../stateLooks';
 
-/** Atlas slot of a tile code's surface: code*2 (floor) or code*2+1 (wall); 16 per row, TEX pixels each. */
-export const SURFACE_SHADER = `
-uniform sampler2D uSurf;
-vec3 surfIdx(int idx, vec2 uv){
-  ivec2 t = ivec2(idx % 16, idx / 16) * ${TEX};
-  return texelFetch(uSurf, t + (ivec2(floor(uv)) & ${TEX - 1}), 0).rgb;
-}
-vec3 surf(int mat, bool wall, vec2 uv){ return surfIdx(mat * 2 + (wall ? 1 : 0), uv); }`;
+/**
+ * How surfaces mix: `blend` texels to either side of any cell edge (ground and 3D cells, same and different kinds alike),
+ * soft `patchSize` m patches of `patchShade` brightness and `patchWarm` warmth, gone by `patchFade` m.
+ */
+export const SURFACE_MIX = { blend: 5, patchSize: 6, patchShade: 0.12, patchWarm: 0.06, patchFade: [60, 260] } as const;
 
 /** Atlas slot of the first surface matter states cover things with (render/stateLooks.ts STATE_SURFACES), after every tile's two. */
 export const STATE_SURFACE_BASE = 512;
@@ -45,3 +42,24 @@ export const SURFACE_OUT = `
 layout(location = 1) out vec4 oAlb; layout(location = 2) out vec4 oNrm;
 void surfaceOut(vec3 albedo, vec3 n, float kind){ oAlb = vec4(clamp(albedo, 0.0, 1.0), kind); oNrm = vec4(n * 0.5 + 0.5, 1.0); }
 void spriteOut(vec3 albedo, int id){ oAlb = vec4(clamp(albedo, 0.0, 1.0), 0.5); oNrm = vec4(float((id + 1) & 255) / 255.0, float((id + 1) >> 8) / 255.0, 0.0, 1.0); }`;
+
+/** Atlas slot of a tile code's surface: code*2 (floor) or code*2+1 (wall); 16 per row, TEX pixels each. */
+export const SURFACE_SHADER = `
+uniform sampler2D uSurf;
+vec3 surfIdx(int idx, vec2 uv){
+  ivec2 t = ivec2(idx % 16, idx / 16) * ${TEX};
+  return texelFetch(uSurf, t + (ivec2(floor(uv)) & ${TEX - 1}), 0).rgb;
+}
+vec3 surf(int mat, bool wall, vec2 uv){ return surfIdx(mat * 2 + (wall ? 1 : 0), uv); }
+float surfHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// The one edge rule (ground tiles and 3D cells): at fraction f of a cell that is 'texels' texels across on each axis, how much this
+// texel leans to its x and y neighbour. Half and half on the edge, ${SURFACE_MIX.blend} texels to either side, centres stay pure.
+vec2 edgeLean(vec2 f, vec2 texels){ return max(vec2(0.0), 0.5 - 0.5 * min(f, 1.0 - f) * texels / ${SURFACE_MIX.blend.toFixed(1)}); }
+float surfNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(surfHash(i), surfHash(i + vec2(1.0, 0.0)), f.x), mix(surfHash(i + vec2(0.0, 1.0)), surfHash(i + 1.0), f.x), f.y); }
+// Soft patches across the world (lighter/darker, warmer/cooler) so one surface never repeats the same; fades out far away.
+vec3 surfPatches(vec3 col, vec2 p, float dist){
+  float k = 1.0 - smoothstep(${SURFACE_MIX.patchFade[0].toFixed(1)}, ${SURFACE_MIX.patchFade[1].toFixed(1)}, dist); p /= ${SURFACE_MIX.patchSize.toFixed(1)};
+  float s = surfNoise(p) * 0.65 + surfNoise(p * 2.7 + 17.0) * 0.35, w = surfNoise(p * 0.6 + 41.0);
+  return col * (1.0 + (s - 0.5) * ${(2 * SURFACE_MIX.patchShade).toFixed(3)} * k) * (1.0 + (w - 0.5) * ${(2 * SURFACE_MIX.patchWarm).toFixed(3)} * k * vec3(1.0, 0.3, -1.0));
+}`;
