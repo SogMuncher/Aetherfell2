@@ -43,8 +43,6 @@ export interface CloudLayerDef {
   rain?: boolean;
   /** Pattern seed, so layers never line up with each other. */
   seed: number;
-  /** Width of one air cell (metres) at the finest level: the size of the blocks the layer is drawn as. Default `scale / cells.perShape`. */
-  cell?: number;
 }
 
 /** The sky as data: cloud layers, sky colours by time of day, sun, moon, stars and aurora. */
@@ -66,13 +64,14 @@ export interface SkyDef {
   /** How much clearer the air is up at cloud height than the ground haze: clouds fade into the horizon over `haze` × the fog distance. */
   haze: number;
   /**
-   * Clouds are kept as 3D cells around the eye, fine near and coarser with distance (each level twice the cell size,
-   * like the land's far detail), so even far clouds are cheap. `perShape`: cells across one cloud shape (a layer's `scale`)
-   * at the finest level; `count`: cells along each side of a level; `slices`: most cells through a layer's thickness;
-   * `budget`: cells refilled per frame; `refresh`: seconds before the finest level is refilled for a change of weather
-   * (level k waits (k + 1) times as long); `lod`: cells along a view before they merge into blocks twice as wide.
+   * The air is one grid of cubic cells around the eye that every layer writes its cloud into (render/airCells.ts), so
+   * all clouds and mist draw in one pass, nearest first. `cell`: width of the finest cells (metres); `count`: cells along
+   * each side of a level; `tall`: cells from bottom to top of a level; `lod`: cells along a view before they merge into
+   * cells twice as wide (the next level); `ext`: how much a metre of full-density air hides (per metre); `budget`: cells
+   * filled per frame; `refresh`: seconds before the finest level is refilled for a change of weather (level k waits
+   * (k + 1) times as long). Moving only fills the cells that came into reach.
    */
-  cells: { perShape: number; count: number; slices: number; budget: number; refresh: number; lod: number };
+  air: { cell: number; count: number; tall: number; lod: number; ext: number; budget: number; refresh: number };
 }
 
 /** Floating motes in the air (dust, pollen, ash): a cheap way to make depth felt. Ambient per biome and realm. */

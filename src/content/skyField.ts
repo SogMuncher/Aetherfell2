@@ -191,24 +191,67 @@ export function cloudDensity3(layer: CloudLayerDef, w: WeatherState, cover: numb
   if (cover <= 0) return 0;
   const t = edgeAt(layer, cover, x, y);
   const th = layer.thickness ?? 0;
-  return th <= 0 ? colDens(layer, w, t, x, y) : shape(layer, w, t, x, y, hf, th);
+  return th <= 0 ? colDens(layer, w, t, x, y) : shape(layer, w, t, x, y, hf);
 }
 
 /**
- * cloudDensity3 for a whole column of `n` cells (centres at heights (k + 0.5) / n through the slab), written as 0..255
- * into out[o + k × stride]. The same rule; the work that depends only on the spot is done once. The cloud cells
- * around the eye (render/cloudCells.ts) are filled from this.
+ * The air over a spot as a column of `nz` cells `cell` tall (and `wide` across), the lowest starting at height `z0`: every layer that
+ * passes through a cell adds its cloud (cloudDensity3 × opacity × the share of the cell the layer fills), so all layers
+ * live in one grid of air cells (render/airCells.ts) and draw in one pass, nearest first. A cell wider than a quarter of
+ * a layer's shapes averages 2 × 2 spots, so far clouds thin out instead of flickering. Writes into `dens` the density
+ * (0..1+) and into `lite` the density × brightness (tint, storm bellies). `covers` = layerCover of each layer.
  */
-export function cloudColumn(layer: CloudLayerDef, w: WeatherState, cover: number, x: number, y: number, n: number, out: Uint8Array, o: number, stride: number): void {
-  const th = layer.thickness ?? 0;
-  const t = cover > 0 ? edgeAt(layer, cover, x, y) : 0;
-  const flat = cover > 0 && th <= 0 ? colDens(layer, w, t, x, y) : 0;
-  for (let k = 0; k < n; k++) out[o + k * stride] = cover <= 0 ? 0 : Math.round((th <= 0 ? flat : shape(layer, w, t, x, y, (k + 0.5) / n, th)) * 255);
+export function airColumn(sky: SkyDef, w: WeatherState, covers: readonly number[], x: number, y: number, z0: number, cell: number, nz: number, dens: Float32Array, lite: Float32Array, wide = cell): void {
+  dens.fill(0, 0, nz);
+  lite.fill(0, 0, nz);
+  const z1 = z0 + nz * cell;
+  sky.layers.forEach((L, li) => {
+    const cover = covers[li] ?? 0;
+    const flat = (L.thickness ?? 0) <= 0;
+    const th = flat ? FLAT : L.thickness ?? 0;
+    const lo = L.height;
+    const hi = lo + th;
+    if (cover <= 0 || hi <= z0 || lo >= z1) return;
+    const sub = wide * 4 > L.scale ? 2 : 1;
+    const k0 = Math.max(0, Math.floor((lo - z0) / cell));
+    const k1 = Math.min(nz, Math.ceil((hi - z0) / cell));
+    const bright = (L.tint[0] + L.tint[1] + L.tint[2]) / 765;
+    const storm = L.belly * (0.55 + 0.45 * w.rain);
+    for (let sy = 0; sy < sub; sy++) {
+      for (let sx = 0; sx < sub; sx++) {
+        const px = x + ((sx + 0.5) / sub - 0.5) * wide;
+        const py = y + ((sy + 0.5) / sub - 0.5) * wide;
+        const t = edgeAt(L, cover, px, py);
+        const col = flat ? colDens(L, w, t, px, py) : 0;
+        for (let k = k0; k < k1; k++) {
+          const a = Math.max(lo, z0 + k * cell);
+          const b = Math.min(hi, z0 + (k + 1) * cell);
+          if (b <= a) continue;
+          const hf = ((a + b) / 2 - lo) / th;
+          const d = (flat ? col : shape(L, w, t, px, py, hf)) * L.opacity * ((b - a) / cell) / (sub * sub);
+          if (d <= 0) continue;
+          dens[k] = (dens[k] ?? 0) + d;
+          lite[k] = (lite[k] ?? 0) + d * bright * (1 - storm * (1 - hf));
+        }
+      }
+    }
+  });
 }
 
-function shape(layer: CloudLayerDef, w: WeatherState, t: number, x: number, y: number, hf: number, th: number): number {
+/** Cloud density of the air at one point (0..1+) and its brightness: the same rule as the air cells, for a single spot. */
+export function airAt(sky: SkyDef, w: WeatherState, x: number, y: number, z: number): { dens: number; lite: number } {
+  airColumn(sky, w, sky.layers.map((l) => layerCover(l, w)), x, y, z - 0.5, 1, 1, ONE_D, ONE_L);
+  const d = ONE_D[0] ?? 0;
+  return { dens: d, lite: d > 0 ? (ONE_L[0] ?? 0) / d : 1 };
+}
+const ONE_D = new Float32Array(1);
+const ONE_L = new Float32Array(1);
+/** A flat sheet (no thickness) is kept as a slab this tall (metres). */
+const FLAT = 30;
+
+function shape(layer: CloudLayerDef, w: WeatherState, t: number, x: number, y: number, hf: number): number {
   // Tops lean a little with height, so heaps are not straight pillars.
-  const d = colDens(layer, w, t, x + hf * th * 0.12, y);
+  const d = colDens(layer, w, t, x + hf * layer.scale * 0.05, y);
   if (d <= 0) return 0;
   const tower = layer.tower ?? 0;
   const p = cloudPattern(layer);
