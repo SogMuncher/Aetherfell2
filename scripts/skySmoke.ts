@@ -224,6 +224,11 @@ for (const l of SKY.layers) {
   air.update(w, 5000 + SKY.air.cell * (air.n / 8 + 1), 3000, 300, 0.1, 1e9);
   const step = air.filled - before;
   check('a short walk fills only the cells that came into reach', step > 0 && step <= air.n * air.n * air.tall / 4, `${step} cells`);
+  const calm = air.filled;
+  air.update(w, 5000 + SKY.air.cell * (air.n / 8 + 1), 3000, 300, 500, 1e9);
+  check('old air cells are not rebuilt while the weather holds', air.filled === calm, `${air.filled - calm} cells`);
+  air.update({ ...w, cloud: (w.cloud ?? 0) + 0.2 }, 5000 + SKY.air.cell * (air.n / 8 + 1), 3000, 300, 500, 2e5);
+  check('they are rebuilt when the weather changes', air.filled > calm);
   // Weather: rain falls only under storm cloud, and the air above holds that cloud.
   const storm = weather(0.9, 0.9);
   let rainy = 0;
