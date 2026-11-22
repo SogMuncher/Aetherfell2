@@ -151,7 +151,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `gpuParticles.ts` (~140) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (~55) held item buffer composited on top
 - `gpuSky.ts` (~70) full-screen sky: gradient, sun, moon, stars, aurora
-- `gpuClouds.ts` (~215) air cells in a texture array, walked nearest first per pixel, outside faces shaded, cut at the scene depth
+- `gpuClouds.ts` (~215) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
 - `gpuPost.ts` (98) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (71) shader/texture helpers, camera basis and view-projection

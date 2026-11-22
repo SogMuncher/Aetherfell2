@@ -2,8 +2,8 @@
  * GPU clouds and mist: the air cells (render/airCells.ts: ONE grid of cubic cells around the eye that every layer of
  * content/sky.ts writes into, fine near and merged into bigger cells far) in one texture, walked cell by cell per pixel,
  * nearest first, and cut off at the nearest surface, so you can fly above, around and through them and they always
- * overlap in the right order. Light: a cloud's outer faces are shaded by which way they look (lit tops, dark bases,
- * sides by the sun); inside a cloud there are no faces, so no seams; a cell under thick air is darker. Clouds are lit
+ * overlap in the right order. Each clump of cloud cells is one solid shape: the face the ray enters by sets its look
+ * (lit top, dark base, sides by the sun, darker under thick air) and that look holds right through it, so no inside faces. Clouds are lit
  * by the same light as the overcast sky (`Env.cloudLit`) and fade into the horizon colour over the land's fog
  * distance × `sky.haze` (the clearer air up high).
  */
@@ -26,7 +26,7 @@ uniform sampler2D uDepth; uniform sampler2DArray uAir;
 uniform vec3 uFwd, uRight, uUp, uEye, uHaze, uLit; uniform vec2 uTan, uSize, uDrift;
 uniform float uRange, uHazeDist, uNear, uFar, uRain, uSunAz, uFlash, uCell, uCapZ, uLod, uExt, uLo, uHi;
 uniform vec4 uW[${nl}]; // window corner of each level in whole cells (x, y, z), filled (w)
-const int N = ${n}; const int T = ${tall};
+const int N = ${n}; const int T = ${tall}; const float CUT = 0.08;
 // Density and brightness of the cell holding p (drifting frame) at level k, or at the first coarser level holding it.
 vec2 airAt(vec3 p, int k, out vec3 c){
   for (; k < ${nl}; k++){
@@ -55,7 +55,8 @@ void main(){
   vec3 q0 = vec3(uEye.xy - uDrift, cz);
   vec2 sun = vec2(cos(uSunAz), sin(uSunAz));
   float silver = pow(max(0.0, dot(normalize(d.xy + 1e-6), sun)), 6.0);
-  float trans = 1.0; vec3 acc = vec3(0.0); float t = t0; int face = t0 > 0.0 ? 2 : 3; float pd = 0.0;
+  float trans = 1.0; vec3 acc = vec3(0.0); float t = t0; int face = t0 > 0.0 ? 2 : 3;
+  bool inC = false; float cd = 0.0; float cs = 0.0;
   for (int i = 0; i < ${MAXS}; i++){
     if (t >= t1) break;
     int k = int(max(0.0, ceil(log2(max(1.0, t) / (uCell * uLod)))));
@@ -69,15 +70,18 @@ void main(){
     int ax = tt.x <= tt.y && tt.x <= tt.z ? 0 : (tt.y <= tt.z ? 1 : 2);
     float tn = min(tp + min(tt.x, min(tt.y, tt.z)), t1);
     float seg = tn - t; int f = face; t = tn; face = ax;
-    if (a.r < 0.01){ pd = 0.0; continue; }
-    float al = (1.0 - exp(-uExt * a.r * seg)) * smoothstep(0.0, 24.0, t) * (1.0 - smoothstep(uRange * 0.7, uRange, t));
-    // A face only where the ray comes out of clearer air into this cell: the cloud's outside, never its inside.
-    float edge = clamp((a.r - pd) * 3.0, 0.0, 1.0); pd = a.r;
+    // A clump is one solid shape: its look (face shade, light, thickness) is fixed where the ray enters it from clear
+    // air, and stays the same right through it, so cells inside a clump never show as faces or seams.
+    if (a.r < CUT){ inC = false; continue; }
+    if (!inC){
+      inC = true; cd = clamp(a.r * 2.5, 0.3, 1.0);
+      float fs = f == 2 ? (d.z < 0.0 ? 1.06 + 0.2 * silver : 0.62) : f == 0 ? 0.8 - 0.16 * sign(d.x) * sun.x : f == 1 ? 0.8 - 0.16 * sign(d.y) * sun.y : 0.86;
+      vec3 cu; float above = airAt(p + vec3(0.0, 0.0, c.z), k, cu).r;
+      cs = a.g * fs * (1.0 - 0.3 * above) * (1.0 - 0.2 * uRain);
+    }
+    float al = (1.0 - exp(-uExt * cd * seg)) * smoothstep(0.0, 24.0, t) * (1.0 - smoothstep(uRange * 0.7, uRange, t));
     if (al < 0.002) continue;
-    float fs = f == 2 ? (d.z < 0.0 ? 1.06 + 0.2 * silver : 0.62) : f == 0 ? 0.8 - 0.16 * sign(d.x) * sun.x : f == 1 ? 0.8 - 0.16 * sign(d.y) * sun.y : 0.86;
-    vec3 cu; float above = airAt(p + vec3(0.0, 0.0, c.z), k, cu).r;
-    float shade = a.g * mix(0.86, fs, edge) * (1.0 - 0.3 * above) * (1.0 - 0.2 * uRain);
-    vec3 col = mix(uLit * shade + vec3(uFlash), uHaze, 1.0 - exp(-t / uHazeDist));
+    vec3 col = mix(uLit * cs + vec3(uFlash), uHaze, 1.0 - exp(-t / uHazeDist));
     acc += col * trans * al; trans *= 1.0 - al; if (trans < 0.03) break;
   }
   o = vec4(acc, 1.0 - trans);
