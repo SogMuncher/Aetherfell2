@@ -45,6 +45,9 @@ const BASE: Record<string, TileEntry> = {
   pine: { name: 'pine', floor: 'snow', material: 'wood', shape: 'billboard', solid: true, sprite: 'pine', leafy: 1, height: 8.5, flammability: 0.4, fuel: 140, burnsInto: 'burntTree', far: [34, 58, 44], crown: 1 },
   water: { name: 'water', floor: 'water', material: 'water', liquid: true, level: true, freezesInto: 'ice' },
   ice: { name: 'ice', floor: 'ice', material: 'ice', level: true, meltsInto: 'water', slide: 0.6 },
+  // Wet ground or a wet wall that was chilled (rules.frozen); it thaws back into soggy ground.
+  frost: { name: 'frozen ground', floor: 'frost', material: 'ice', meltsInto: 'peat', slide: 0.3 },
+  iceBlock: { name: 'frozen wall', floor: 'ice', material: 'ice', shape: 'block', solid: true, wall: 'ice', height: 3, meltsInto: 'peat' },
   sand: { name: 'sand', floor: 'sand', material: 'sand' },
   road: { name: 'road', floor: 'road', material: 'earth' },
   trail: { name: 'footpath', floor: 'trail', material: 'earth' },

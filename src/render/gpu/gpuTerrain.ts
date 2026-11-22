@@ -116,6 +116,7 @@ export class GpuTerrain {
   private readonly vao: WebGLVertexArrayObject;
   private readonly levels: Level[] = [];
   private frame = 0;
+  private paintedSeen = 0;
   private readonly shadeTex: WebGLTexture;
   private shadeOn = 0;
   private shadeMean = 1;
@@ -177,6 +178,10 @@ export class GpuTerrain {
   update(ex: number, ey: number): void {
     this.frame++;
     if (this.frame % 4 === 0) for (let L = 0; L < GPU_TERRAIN.texLevels; L++) { const l = this.levels[L]; if (l && l.valid && refreshGroundState(this.gl, this.tiles, l, V)) l.recolour = true; }
+    if (this.lod.painted !== this.paintedSeen) {
+      this.paintedSeen = this.lod.painted;
+      for (let L = 0; L < GPU_TERRAIN.texLevels; L++) { const l = this.levels[L]; if (l) l.recolour = true; }
+    }
     let budget = 2;
     for (const l of this.levels) {
       const snap = GPU_TERRAIN.snapCells * l.cs;

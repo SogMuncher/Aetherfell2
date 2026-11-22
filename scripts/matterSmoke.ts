@@ -262,5 +262,40 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   check('and when the fire is out', !friend.burningCells.has(spotKey(X, Y, z)));
 }
 
+// ---- Cold freezes only what is wet: ground and cells, bodies too -------------------------------
+{
+  const { sim, me } = world();
+  const X = 6100;
+  const Y = 6100;
+  flatten(sim, X, Y, 6, Tile.Grass);
+  const chill = (x: number, y: number, z: number): void => {
+    sim.state.queues.effects.push({ target: z === GROUND_Z ? { kind: 'tile', x: x + 0.5, y: y + 0.5 } : { kind: 'cell', x, y, z }, effects: [{ type: 'chill', amount: 1 }], source: null, from: null });
+    run(sim, 1);
+  };
+  chill(X, Y, GROUND_Z);
+  check('dry ground is only cold, not frozen', sim.matter.info(X, Y, GROUND_Z)?.id === 'grass');
+  sim.matter.set('wet', X + 1, Y, GROUND_Z, 255);
+  chill(X + 1, Y, GROUND_Z);
+  check('wet ground freezes', sim.matter.info(X + 1, Y, GROUND_Z)?.id === 'frost');
+  const z = gz(sim, X, Y) + 1;
+  sim.state.volume.set(X + 3, Y, z, CUBE, STONE);
+  chill(X + 3, Y, z);
+  check('a dry wall is not frozen', sim.matter.info(X + 3, Y, z)?.id === 'stoneWall');
+  sim.matter.set('wet', X + 3, Y, z, 255);
+  chill(X + 3, Y, z);
+  check('a wet wall freezes', sim.matter.info(X + 3, Y, z)?.id === 'iceBlock');
+  sim.state.queues.effects.push({ target: { kind: 'cell', x: X + 3, y: Y, z }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
+  run(sim, 1);
+  check('and heat thaws it', sim.matter.info(X + 3, Y, z) === null || sim.matter.info(X + 3, Y, z)?.id !== 'iceBlock');
+  me.status = {};
+  sim.state.queues.effects.push({ target: { kind: 'entity', id: me.id }, effects: [{ type: 'chill', amount: 1 }], source: null, from: null });
+  run(sim, 1);
+  check('a dry body is only chilled', (me.status.chilled ?? 0) > 0 && !(me.status.frozen ?? 0));
+  me.status = { wet: 100 };
+  sim.state.queues.effects.push({ target: { kind: 'entity', id: me.id }, effects: [{ type: 'chill', amount: 1 }], source: null, from: null });
+  run(sim, 1);
+  check('a wet body freezes', (me.status.frozen ?? 0) > 0 && !(me.status.wet ?? 0));
+}
+
 console.log(failed === 0 ? 'matter checks passed' : `${failed} matter checks FAILED`);
 if (failed > 0) throw new Error('matter checks failed');

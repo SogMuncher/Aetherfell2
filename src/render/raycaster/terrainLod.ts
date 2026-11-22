@@ -65,6 +65,8 @@ export class TerrainLod {
   private changed = new Map<number, ChangedChunk>();
   private pending: Chunk[] = [];
   built = 0;
+  /** Counts chunks painted over the blocks, so a drawer can refill from them once changes landed. */
+  painted = 0;
 
   constructor(
     private readonly sampler: WorldSampler,
@@ -140,7 +142,8 @@ export class TerrainLod {
       const natural = prev?.natural ?? this.sampler.naturalKinds(c.cx, c.cy);
       const entry: ChangedChunk = { chunk: c, version: c.version, natural };
       this.changed.set(k, entry);
-      for (let L = 1; L <= TOP_LEVEL; L++) {
+      this.painted++;
+      for (let L = 0; L <= TOP_LEVEL; L++) {
         const cs = LEVEL_CELL[L] ?? 128;
         if (cs > OVERLAY_MAX_CELL) break;
         const span = cs * BLOCK;

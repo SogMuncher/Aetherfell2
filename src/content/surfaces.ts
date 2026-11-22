@@ -125,6 +125,13 @@ export const SURFACES: Record<string, SurfaceDef> = {
     base: [222, 228, 238],
     layers: [{ kind: 'grain', salt: 21, amount: [26, 22, 16] }],
   },
+  frost: {
+    base: [196, 214, 226],
+    layers: [
+      { kind: 'grain', salt: 26, amount: [30, 26, 20] },
+      { kind: 'speckle', salt: 27, chance: 0.05, add: [40, 40, 30] },
+    ],
+  },
   ice: {
     base: [150, 196, 222],
     layers: [

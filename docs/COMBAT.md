@@ -17,6 +17,7 @@
 - Fire (`interactionSystem`, numbers in `rules.fire`): spread chance/beat, fuel-left damping, max fires, `sleep` (fires far from players burn out but
   stop spreading), sparks. Sound: `rules.fire.audio` + the audio engine's shared voice budget. Look: palette + budget in `rules.fire.vfx`,
   drawn by `render/vfx/fireEmitter.ts` as pooled hard-pixel motes. Measure with `scripts/fireBench.ts` (not in CI).
+- Cold (`chill`) freezes only what is wet: water to ice (`freezesInto`), wet ground/walls to `rules.frozen` tiles (thaw by timer / heat), wet bodies get `frozen` (`reactions.chill.freezes`); dry things are only chilled.
 - Factions decide who may hurt whom (`friendlyFire`).
 
 ## Add / change

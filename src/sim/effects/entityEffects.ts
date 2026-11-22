@@ -187,6 +187,8 @@ export function react(ctx: SimContext, e: Entity, r: ReactionDef, amount: number
   }
   const longer = r.longerWhile && e.status[r.longerWhile.status] ? r.longerWhile.factor : 1;
   addStatus(ctx, e, r.status, Math.round(r.ticks * amount * scale * longer));
+  const f = r.freezes;
+  if (f && (e.status[f.while] ?? 0) > 0) addStatus(ctx, e, f.status, Math.round(f.ticks * amount * scale));
 }
 
 /** Applies a status, honouring what it cancels and what blocks it. */
