@@ -26,10 +26,15 @@ export type SurfaceLayer =
   /** Patches where noise is above `above` get another colour (moss, pools); `keep` carries over that much of the shading so far. */
   | { kind: 'patches'; salt: number; cells: number; above: number; colour: RGB; keep?: number | RGB };
 
-/** A procedural surface: a base colour and layers. Painted once into a small tiling texture. */
+/**
+ * A procedural surface: a base colour and layers (the components any surface can reuse). Painted once into a small
+ * tiling texture; each placed cell then drifts every component's colour on its own by up to `drift` (hue in degrees,
+ * sat and light as fractions; content/surfaces.ts SURFACE_DRIFT when unset), so like cells vary but stay one kind.
+ */
 export interface SurfaceDef {
   readonly base: RGB;
   readonly layers: readonly SurfaceLayer[];
+  readonly drift?: { readonly hue?: number; readonly sat?: number; readonly light?: number };
 }
 
 /** When a biome applies: first matching biome (in registry order) wins. Bounds are exclusive. */
