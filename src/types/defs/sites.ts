@@ -139,7 +139,8 @@ export interface SiteDef {
   /**
    * What lies beneath, in a lattice realm (the underworld is laid 1:1 under the land): a great hall of half-size `hall`
    * under the place's middle (at most 7), and within `reach` metres of it the tunnels are `density` (0..1) likely to be open.
-   * Scatter entries with `under` naming this site appear only in its hall.
+   * Scatter entries with `under` naming this site appear only in its hall. `cavern`: an open cave round it, its radius a share
+   * of the place's own, clear height at the rim and the middle. `ruin`: the place's own buildings stand in it, this far fallen (0..1).
    */
-  under?: { hall: number; reach: number; density: number };
+  under?: { hall: number; reach: number; density: number; cavern?: { size: number; height: readonly [number, number] }; ruin?: number };
 }

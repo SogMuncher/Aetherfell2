@@ -15,6 +15,7 @@ export function createWorldSystem(terrain: Terrain, tiles: WorldTiles): SimSyste
   /** Regions that already hold a registered place (rebuilt from state.locations, so loads need nothing extra). */
   const placed = new Set<number>();
   let placedCount = 0;
+  let realmSeen = '';
   const probe = (x: number, y: number): number => terrain.rawGround(x, y, 3);
 
   return (ctx: SimContext) => {
@@ -23,15 +24,25 @@ export function createWorldSystem(terrain: Terrain, tiles: WorldTiles): SimSyste
       .map((id) => state.entities.get(id))
       .filter((e): e is Entity => !!e);
 
+    // Each realm keeps its own places (they travel with it): start the bookkeeping over when the party changes realm.
+    if (state.realm !== realmSeen) {
+      realmSeen = state.realm;
+      layouts.clear();
+      placed.clear();
+      placedCount = 0;
+    }
     for (; placedCount < state.locations.length; placedCount++) {
       const l = state.locations[placedCount];
       if (l) placed.add(packKey(Math.floor(l.pos.x / REGION_SIZE), Math.floor(l.pos.y / REGION_SIZE)));
     }
     // A realm of halls is furnished chunk by chunk as the party comes near (its own data says with what).
     if (ctx.content.realms[state.realm]?.ground === 'lattice') furnishHalls(ctx, players);
-    // Villages, ruins and the rest are places of the land; other realms have none of their own.
-    const landed = ctx.content.realms[state.realm]?.ground === 'surface';
-    for (const p of landed ? players : []) {
+    // Villages, ruins and the rest are places of the land. A realm under it shows those that have a cavern beneath them,
+    // by its own name pattern; it has no places of its own.
+    const realm = ctx.content.realms[state.realm];
+    const below = realm?.places;
+    const landed = realm?.ground === 'surface';
+    for (const p of landed || below ? players : []) {
       const rx = Math.floor(p.pos.x / REGION_SIZE);
       const ry = Math.floor(p.pos.y / REGION_SIZE);
       for (let j = -2; j <= 2; j++) {
@@ -42,7 +53,7 @@ export function createWorldSystem(terrain: Terrain, tiles: WorldTiles): SimSyste
           // A region forgotten after a long journey may already hold a place: never register it twice.
           if (placed.has(key)) continue;
           const site = siteInRegion(state.seed, rx + i, ry + j, probe);
-          if (!site) continue;
+          if (!site || (!landed && !ctx.content.sites[site.kind]?.under?.cavern)) continue;
           const siteKey = packKey(Math.floor(site.cx / REGION_SIZE), Math.floor(site.cy / REGION_SIZE));
           if (placed.has(siteKey)) continue;
           placed.add(key);
@@ -50,7 +61,7 @@ export function createWorldSystem(terrain: Terrain, tiles: WorldTiles): SimSyste
           const loc: Location = {
             id: state.locations.length,
             kind: site.kind,
-            name: site.name,
+            name: landed || !below ? site.name : below.name.replace('{name}', site.name),
             pos: { x: site.cx, y: site.cy },
             radius: site.radius,
             discovered: false,
@@ -76,8 +87,10 @@ export function createWorldSystem(terrain: Terrain, tiles: WorldTiles): SimSyste
       if (!loc.populated && nearest - loc.radius < ctx.content.rules.sites.fill) {
         const site = layouts.get(loc.id) ?? siteInRegion(state.seed, Math.floor(loc.pos.x / REGION_SIZE), Math.floor(loc.pos.y / REGION_SIZE), probe);
         // Buildings go up first, a few every tick; people and things move in once they stand.
-        if (!site || raise(ctx, loc, site)) {
-          if (site) populate(ctx, loc, site);
+        // Below the land a place is only its own buildings, fallen (`under.ruin`), with nobody living there.
+        const ruin = landed ? 0 : (ctx.content.sites[loc.kind]?.under?.ruin ?? 0);
+        if (!site || (!landed && ruin <= 0) || raise(ctx, loc, site, ruin)) {
+          if (site && landed) populate(ctx, loc, site);
           loc.populated = true;
         }
       }

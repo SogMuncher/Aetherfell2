@@ -271,7 +271,9 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `roads.ts` (90) ways per region: waysTouching, wayHit
 - `sites.ts` (266) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
 - `terrain.ts` (216) The shape of the land: continents, rolling hills, ridged mountains, a moisture field for biomes,
-- `underworld.ts` (256) The ground of the underworld: a lattice of halls joined by corridors, laid on a 16 m grid exactly
+- `underworld.ts` (~155) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
+- `underSpot.ts` (~130) `underAt`: what the underworld is at a tile (river, deck, cave, ruin street, hall, corridor, way artery, rock), read from the land
+- `underPlan.ts` (~110) per-region plan of what the places above ask of the rock: caves, great halls, denser tunnels
 - `volume.ts` (282) VolumeStore: sparse 3D brick store (C)
 - `brickData.ts` (87) a brick as data: run-packing for saves/network, fresh cell-state arrays
 - `water.ts` (217) Rivers and lakes: a pure function of the seed that reads no places (cities and roads read it, never the other way).

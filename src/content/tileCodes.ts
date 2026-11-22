@@ -13,5 +13,5 @@ export const TILE_LEDGER: readonly string[] = [
   'peat', 'sedge', 'birch', 'willow', 'deadTree', 'log', 'stump', 'fern', 'mushrooms', 'flowers',
   'reeds', 'cairn', 'crystals', 'haystack', 'woodpile', 'well', 'rubble', 'fence', 'hedge', 'window',
   'post', 'towerWall', 'stoneSill', 'thatch', 'roofTile', 'slate', 'plaster', 'caveRock',
-  'trail', 'cobble',
+  'trail', 'cobble', 'caveFloor',
 ];

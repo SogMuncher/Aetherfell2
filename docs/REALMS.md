@@ -15,8 +15,15 @@
 
 ## Realms (`content/realms.ts`, `sim/world/realms.ts`, `underworld.ts`)
 - `state.realm` is active; the others sit in `state.stash`. Travel = `swapRealm`, run by `simLoop.travel()`.
-- `RealmDef.ground`: `'surface'` or `'lattice'` (halls on a 16 m grid 1:1 under the land, roof = 3D cells).
+- `RealmDef.ground`: `'surface'` or `'lattice'` (the underworld, 1:1 under the land, roof = 3D cells).
   Dispatch points: `WorldTiles.chunk()` and `Simulation.regenChunk()`.
+- The underworld is the land read again (`underSpot.ts` `underAt`, data `RealmDef.lattice` + `SiteDef.under`):
+  rivers/lakes run on below with shores (a way crossing them = a deck of its bridge tile); places with `under.cavern`
+  get a big open cave (`under.ruin` > 0: the place's own buildings stand in it, decayed); every road/path/trail is an
+  artery on its exact line, taller for greater ways; the rest is tight halls + corridors on a 16 m grid (`underPlan.ts`).
+  Improve the land and the underworld follows. Roof: every open tile is capped from its ceiling to its tallest
+  neighbour's + `shell`, so there is no gap to climb through (realmSmoke floods it to prove it).
+  `RealmDef.places.name` names the caves on the compass ("the depths beneath {name}").
 - `sky:false` = no sun/stars/clouds/rain; `ambient`, `fog`, `glow` (lamp carried), `mood` (music).
 - Ways: `ThingDef.portal` (`descent` / `ascent`). Whole party must be within `RealmDef.gather` m. On return the
   surface catches up (<= 200 interaction passes). `RealmDef.wipe` = where a downed party wakes.

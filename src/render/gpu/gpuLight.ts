@@ -22,7 +22,7 @@ import type { GpuFarShade } from './gpuFarShade';
  * rays walk `sunSteps` cells of the solid field; `ao` rays of `aoLen` m; the sky ray `skyLen` m up; `indoor` = ambient
  * where the sky ray is blocked (x times ambient + y).
  */
-export const GPU_LIGHT = { bin: 4, span: 96, perBin: 16, maxPerPixel: 8, steps: 24, sunSteps: 48, ao: 4, aoLen: 1.2, aoDark: 0.16, skyLen: 10, indoor: [0.9, 0.09] } as const;
+export const GPU_LIGHT = { bin: 4, span: 96, perBin: 16, maxPerPixel: 8, steps: 24, sunSteps: 48, pick: 0.15, ao: 4, aoLen: 1.2, aoDark: 0.16, skyLen: 10, indoor: [0.9, 0.09] } as const;
 const BINS = GPU_LIGHT.span / GPU_LIGHT.bin;
 const K = GPU_LIGHT.perBin;
 
@@ -50,15 +50,17 @@ void main(){
   vec3 from = p + (sprite ? -normalize(r) * 0.2 : n * 0.08);
   // The nearest lights whose radius reaches this point, from its square's short list.
   ivec2 b = ivec2(floor((p.xy - uBin0) / ${GPU_LIGHT.bin.toFixed(1)}));
-  int idx[${GPU_LIGHT.maxPerPixel}]; float dd[${GPU_LIGHT.maxPerPixel}]; int got = 0; int row = 0;
+  // Ranked by reach (distance over radius). The ones that only just made the cut fade out against the first one left out,
+  // so where the chosen set changes across a wall there is no hard edge (that drew wedges over walls lit by many torches).
+  int idx[${GPU_LIGHT.maxPerPixel}]; float dd[${GPU_LIGHT.maxPerPixel}]; int got = 0; int row = 0; float cut = 2.0;
   if (b.x >= 0 && b.y >= 0 && b.x < ${BINS} && b.y < ${BINS}) {
     row = b.y * ${BINS} + b.x;
     for (int k = 0; k < ${K}; k++){
       vec4 L = texelFetch(uLights, ivec2(k * 2, row), 0);
       if (L.w <= 0.0) break;
-      float d = length(L.xyz - p); if (d >= L.w) continue;
+      float d = length(L.xyz - p) / L.w; if (d >= 1.0) continue;
       int at = got;
-      if (got < uCount) got++; else { if (d >= dd[uCount - 1]) continue; at = uCount - 1; }
+      if (got < uCount) got++; else { if (d >= dd[uCount - 1]) { cut = min(cut, d); continue; } cut = min(cut, dd[uCount - 1]); at = uCount - 1; }
       while (at > 0 && dd[at - 1] > d){ idx[at] = idx[at - 1]; dd[at] = dd[at - 1]; at--; }
       idx[at] = k; dd[at] = d;
     }
@@ -68,7 +70,7 @@ void main(){
     vec4 L = texelFetch(uLights, ivec2(idx[i] * 2, row), 0); vec3 c = texelFetch(uLights, ivec2(idx[i] * 2 + 1, row), 0).rgb;
     vec3 to = L.xyz - from; float d = length(to); vec3 dir = to / max(d, 1e-4);
     float ndl = sprite ? 1.0 : max(0.0, dot(n, dir)); if (ndl <= 0.0) continue;
-    float f = 1.0 - dd[i] / L.w; float k = f * f * (sprite ? 1.0 : 0.35 + 0.65 * ndl);
+    float f = 1.0 - dd[i]; float k = f * f * (sprite ? 1.0 : 0.35 + 0.65 * ndl) * clamp((cut - dd[i]) / ${GPU_LIGHT.pick.toFixed(2)}, 0.0, 1.0);
     if (d > 0.7) k *= shadowRay(from, dir, d - 0.6, ${GPU_LIGHT.steps}, true, self);
     lit += c * k;
   }
