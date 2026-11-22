@@ -1,6 +1,6 @@
 import type { Entity, ReadonlyTiles, SimState } from '../types';
 import { unpackKey, unpackSpot } from '../types';
-import { CONTENT, heldLight, rainAt, sunAngle, thingDef, spellFor } from '../content';
+import { CONTENT, airMoisture, heldLight, rainAt, sunAngle, thingDef, spellFor } from '../content';
 
 export interface Env {
   /** Direction towards the main light (sun by day, moon by night), z up. */
@@ -107,7 +107,8 @@ export function computeEnv(state: SimState, flash: number, x = 0, y = 0): Env {
     zenith,
     horizon,
     fog,
-    fogDist: 2600 * (1 - rain * 0.72) * (1 - night * 0.45),
+    // Ground mist: thick over damp land and after rain, mostly at night and dusk (the same moisture the clouds follow).
+    fogDist: 2600 * (1 - rain * 0.72) * (1 - night * 0.45) * (1 - 0.55 * Math.min(1, Math.max(0, (airMoisture(x, y) - 0.45) * 2.5) + state.weather.wetness * 0.5) * (0.3 + 0.7 * Math.max(night, dusk))),
     day,
     dusk,
     night,

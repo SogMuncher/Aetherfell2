@@ -63,6 +63,48 @@ export function cloudPattern(layer: CloudLayerDef): Float32Array {
   return p;
 }
 
+/** How much a fully wet or dry spot moves a layer's cloud edge (pattern units), at `wet` 1. */
+const MOIST_SHIFT = 0.5;
+/** Size of one cell of the coarse moisture map clouds read (metres). */
+export const MOIST_CELL = 600;
+let moistureFn: ((x: number, y: number) => number) | null = null;
+const moistCells = new Map<number, number>();
+
+/** The world's moisture (0..1 at a point) for clouds and fog to follow; `null` = neutral. Set by whoever owns the world. */
+export function setAirMoisture(fn: ((x: number, y: number) => number) | null): void {
+  moistureFn = fn;
+  moistCells.clear();
+}
+
+/** Moisture of one coarse cell (cached). */
+export function moistCell(ix: number, iy: number): number {
+  if (!moistureFn) return 0.5;
+  const k = ix * 65536 + iy;
+  let v = moistCells.get(k);
+  if (v === undefined) {
+    if (moistCells.size > 30000) moistCells.clear();
+    v = moistureFn((ix + 0.5) * MOIST_CELL, (iy + 0.5) * MOIST_CELL);
+    moistCells.set(k, v);
+  }
+  return v;
+}
+
+/** Smooth moisture of the air over a map spot (0..1; 0.5 where the world gives none). */
+export function airMoisture(x: number, y: number): number {
+  if (!moistureFn) return 0.5;
+  const gx = x / MOIST_CELL - 0.5;
+  const gy = y / MOIST_CELL - 0.5;
+  const ix = Math.floor(gx);
+  const iy = Math.floor(gy);
+  const fx = gx - ix;
+  const fy = gy - iy;
+  const a = moistCell(ix, iy);
+  const b = moistCell(ix + 1, iy);
+  const c = moistCell(ix, iy + 1);
+  const d = moistCell(ix + 1, iy + 1);
+  return a + (b - a) * fx + (c - a + (d - c - b + a) * fx) * fy;
+}
+
 /** Share of the sky this layer covers right now (0..1). */
 export function layerCover(layer: CloudLayerDef, w: WeatherState): number {
   const c = layer.cover;
@@ -84,12 +126,13 @@ export function layerDensity(layer: CloudLayerDef, w: WeatherState, cover: numbe
   // Threshold from the measured spread of the mixed value, so `cover` really is the share of sky.
   // Centred on the soft edge: half-thick cloud covers `cover` of the sky.
   const soft = Math.max(0.01, layer.softness);
-  const t = levelFor(layer, 1 - cover) - soft / 2;
+  const wet = layer.wet ?? 0;
+  const t = levelFor(layer, 1 - cover) - soft / 2 - (wet > 0 ? wet * (airMoisture(x, y) - 0.5) * MOIST_SHIFT : 0);
   const k = (n - t) / soft;
   return k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
 }
 
-/** The pattern value a layer's cloud edge sits at for this cover: what a GPU drawer needs to match `layerDensity`. */
+/** The pattern value a layer's cloud edge sits at for this cover (before the moisture shift: `wet` × (moisture − 0.5) × 0.5): what a GPU drawer needs to match `layerDensity`. */
 export function layerThreshold(layer: CloudLayerDef, cover: number): number {
   return levelFor(layer, 1 - cover);
 }

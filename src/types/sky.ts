@@ -37,6 +37,8 @@ export interface CloudLayerDef {
   tower?: number;
   /** 0..1: how lumpy the sides and top are. */
   billow?: number;
+  /** 0..1: how much the land's moisture matters to this layer: more cloud over wet land, less over dry (0 = none). */
+  wet?: number;
   /** Rain falls only under this layer (storm cells). */
   rain?: boolean;
   /** Pattern seed, so layers never line up with each other. */

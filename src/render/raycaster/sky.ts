@@ -262,7 +262,9 @@ function slab(l: CloudLayerDef, w: WeatherState, cv: number, cx: number, cy: num
     if (hf < 0 || hf > 1) continue;
     const dens = cloudDensity3(l, w, cv, cx + dxs * s, cy + dys * s, hf);
     if (dens <= 0) continue;
-    const a = 1 - Math.exp(-kappa * dens * len);
+    // Right round the eye the cloud thins away, so flying through one never fills the view.
+    const near = Math.min(1, s / 90);
+    const a = (1 - Math.exp(-kappa * dens * len)) * near * near * (3 - 2 * near);
     if (a < 0.002) continue;
     // Brightness: dark flat base (heavier in storms), bright top; thin edges are lit through; the sun side glows.
     const up = hf * hf * (3 - 2 * hf);

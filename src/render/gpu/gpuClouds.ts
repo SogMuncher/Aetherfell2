@@ -4,13 +4,15 @@
  * target from the scene's depth, then laid over the scene. Inside a cloud the march starts in the cloud, so the view turns
  * to cloud-coloured fog and nothing clips.
  */
-import { CONTENT, cloudPattern, layerCover, layerThreshold } from '../../content';
+import { CONTENT, MOIST_CELL, cloudPattern, layerCover, layerThreshold, moistCell } from '../../content';
 import type { WeatherState } from '../../types';
 import type { Env } from '../lighting';
 import { compile, loc, makeTexture } from './glUtil';
 import type { CamBasis } from './glUtil';
 
-const NL = 4;
+const NL = 5;
+const MC = MOIST_CELL;
+const MN = 96;
 const N = 256;
 /** Layers high to low: lower ones are drawn over higher ones. */
 const LAYERS = [...CONTENT.sky.layers].sort((a, b) => b.height - a.height).slice(0, NL);
@@ -27,6 +29,13 @@ uniform vec4 uA[${NL}]; // height, thickness, tower, billow
 uniform vec4 uB[${NL}]; // scale, stretch, speed, opacity
 uniform vec4 uC[${NL}]; // tint, belly
 uniform vec4 uD[${NL}]; // softness, edge threshold, cover, on
+uniform float uWet[${NL}]; uniform sampler2D uMoist; uniform vec2 uMoistO;
+float moist(vec2 p){
+  vec2 g = (p - uMoistO) / ${MC}.0 - 0.5; ivec2 i = ivec2(floor(g)); vec2 f = g - vec2(i); int m = ${MN - 1};
+  float a = texelFetch(uMoist, clamp(i, 0, m), 0).r, b = texelFetch(uMoist, clamp(i + ivec2(1, 0), 0, m), 0).r;
+  float c = texelFetch(uMoist, clamp(i + ivec2(0, 1), 0, m), 0).r, d = texelFetch(uMoist, clamp(i + ivec2(1, 1), 0, m), 0).r;
+  return a + (b - a) * f.x + (c - a + (d - c - b + a) * f.x) * f.y;
+}
 float pat(int li, vec2 uv){
   vec2 fl = floor(uv); vec2 f = uv - fl; ivec2 i0 = ivec2(fl) & 255; ivec2 i1 = (i0 + 1) & 255; int r = li * ${N};
   float a = texelFetch(uPat, ivec2(i0.x, i0.y + r), 0).r, b = texelFetch(uPat, ivec2(i1.x, i0.y + r), 0).r;
@@ -38,7 +47,7 @@ float colDens(int li, vec2 p){
   vec4 D = uD[li]; if (D.z <= 0.0) return 0.0;
   vec2 q = gridOf(li, p);
   float n = pat(li, q) * 0.62 + pat(li, q * 0.577 + vec2(17.3, 5.1)) * 0.38;
-  float soft = max(0.01, D.x); float k = clamp((n - (D.y - soft * 0.5)) / soft, 0.0, 1.0);
+  float soft = max(0.01, D.x); float t = D.y - soft * 0.5 - (uWet[li] > 0.0 ? uWet[li] * (moist(p) - 0.5) * 0.5 : 0.0); float k = clamp((n - t) / soft, 0.0, 1.0);
   return k * k * (3.0 - 2.0 * k);
 }
 float dens3(int li, vec2 p, float hf){
@@ -74,7 +83,7 @@ vec4 slab(int li, vec2 dir, float e, float sh, float az){
     float s = s0 + ds * (float(k) + 0.5);
     float hf = (cz + e * s - zb) / th; if (hf < 0.0 || hf > 1.0) continue;
     float dn = dens3(li, uEye.xy + dir * s, hf); if (dn <= 0.0) continue;
-    float a = 1.0 - exp(-kappa * dn * len); if (a < 0.002) continue;
+    float a = (1.0 - exp(-kappa * dn * len)) * smoothstep(0.0, 90.0, s); if (a < 0.002) continue;
     float up = hf * hf * (3.0 - 2.0 * hf);
     float dark = C.w * (0.55 + uRain * 0.45);
     float shade = (1.0 - dark * (1.0 - up) * (0.5 + 0.5 * dn)) * (1.0 + 0.25 * silver * (1.0 - dn * 0.6));
@@ -117,6 +126,10 @@ export class GpuClouds {
   private readonly b = new Float32Array(NL * 4);
   private readonly c = new Float32Array(NL * 4);
   private readonly d = new Float32Array(NL * 4);
+  private readonly wet = new Float32Array(NL);
+  private readonly moistTex: WebGLTexture;
+  private readonly moistData = new Float32Array(MN * MN);
+  private moistKey = '';
 
   constructor(private readonly gl: WebGL2RenderingContext) {
     this.prog = compile(gl, VS, FS);
@@ -125,6 +138,7 @@ export class GpuClouds {
     this.fbo = gl.createFramebuffer() as WebGLFramebuffer;
     this.tex = makeTexture(gl, gl.RGBA8, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE);
     this.pat = makeTexture(gl, gl.R32F, N, N * NL, gl.RED, gl.FLOAT);
+    this.moistTex = makeTexture(gl, gl.R32F, MN, MN, gl.RED, gl.FLOAT);
     const all = new Float32Array(N * N * NL);
     LAYERS.forEach((l, i) => all.set(cloudPattern(l), i * N * N));
     gl.bindTexture(gl.TEXTURE_2D, this.pat);
@@ -148,6 +162,7 @@ export class GpuClouds {
       this.b.set([l.scale, l.stretch ?? 1, l.speed, l.opacity], o);
       this.c.set([l.tint[0] / 255, l.tint[1] / 255, l.tint[2] / 255, l.belly], o);
       this.d.set([l.softness, layerThreshold(l, cov), cov, 1], o);
+      this.wet[i] = l.wet ?? 0;
     }
     if (!any) return;
     const gl = this.gl;
@@ -158,6 +173,16 @@ export class GpuClouds {
       this.tex = makeTexture(gl, gl.RGBA8, w, h, gl.RGBA, gl.UNSIGNED_BYTE);
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
+    }
+    // Moisture of the land around the eye (coarse cells), so wet-loving layers gather over damp ground.
+    const mx = Math.floor(eye.x / MC) - MN / 2;
+    const my = Math.floor(eye.y / MC) - MN / 2;
+    const key = `${mx},${my}`;
+    if (key !== this.moistKey) {
+      this.moistKey = key;
+      for (let j = 0; j < MN; j++) for (let i = 0; i < MN; i++) this.moistData[j * MN + i] = moistCell(mx + i, my + j);
+      gl.bindTexture(gl.TEXTURE_2D, this.moistTex);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, MN, MN, gl.RED, gl.FLOAT, this.moistData);
     }
     const p = this.prog;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
@@ -172,6 +197,12 @@ export class GpuClouds {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, depth);
     gl.uniform1i(loc(gl, p, 'uDepth'), 1);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.moistTex);
+    gl.uniform1i(loc(gl, p, 'uMoist'), 2);
+    gl.uniform2f(loc(gl, p, 'uMoistO'), mx * MC, my * MC);
+    gl.uniform1fv(loc(gl, p, 'uWet'), this.wet);
+    gl.activeTexture(gl.TEXTURE0);
     const v3 = (n: string, a: ArrayLike<number>, k = 1): void => gl.uniform3f(loc(gl, p, n), (a[0] ?? 0) * k, (a[1] ?? 0) * k, (a[2] ?? 0) * k);
     v3('uFwd', cam.fwd); v3('uRight', cam.right); v3('uUp', cam.up); v3('uEye', [eye.x, eye.y, eye.z]);
     v3('uHaze', env.horizon, 1 / 255);

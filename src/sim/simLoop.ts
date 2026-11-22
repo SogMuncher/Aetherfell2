@@ -1,4 +1,4 @@
-import { CONTENT, itemDef, rollOutfit } from '../content';
+import { CONTENT, itemDef, rollOutfit, setAirMoisture } from '../content';
 import { type Command, type Entity, type InputSnapshot, type ItemStack, type SimContext, type SimEvent, type SimState, type SimSystem, type SpawnInit, TICK_DT, type ThingId, type WorldSampler, emptyInput, emptyQueues, unpackKey } from '../types';
 import { LatticeSampler, generateLatticeChunk } from './world/underworld';
 import { MAX_QUEUED_INPUTS, MAX_WAITING_INPUTS, canFold, foldInputs, hasPress, holdInput } from './inputQueue';
@@ -67,6 +67,8 @@ export class Simulation {
   constructor(state: SimState) {
     this.state = state;
     this.terrain = new Terrain(state.seed);
+    // Clouds gather over damp land: the sky reads this world's moisture (render and rain agree).
+    setAirMoisture((x, y) => this.terrain.moisture(x, y));
     this.tiles = new WorldTiles(state, this.terrain);
     this.matter = new Matter(state, this.tiles);
     this.sampler = new RealmSampler(() => (CONTENT.realms[this.state.realm]?.ground === 'lattice' ? this.lattice : this.terrain));
