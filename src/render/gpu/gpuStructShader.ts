@@ -57,7 +57,7 @@ uvec2 cellAt(int slot, ivec3 l){
   return texelFetch(uAtlas, ivec2((slot % 32) * 64 + (l.z & 3) * 16 + l.x, (slot / 32) * 64 + (l.z >> 2) * 16 + l.y), 0).rg;
 }
 int fdiv(int a, int b){ return (a - (((a % b) + b) % b)) / b; }
-/** Is there anything solid in this cell or straight above it (Classic: the column top reaches past the point), so the sun cannot reach? */
+/** Is there anything solid in this cell or straight above it, so the sun cannot reach? */
 bool covered(ivec3 c){
   for (int k = 0; k <= 24; k++){
     ivec3 q = c + ivec3(0, 0, k);
@@ -111,7 +111,7 @@ void main(){
   vec3 col; vec2 suv;
   if (abs(n.z) > 0.6) { suv = w.xy * 16.0; col = surf(mat, false, suv); }
   else { float across = abs(n.x) > abs(n.y) ? w.y : w.x; float nh = abs(n.z) > 0.05 ? max(0.35, sqrt(1.0 - n.z * n.z)) : 1.0; suv = vec2(across * 16.0, -w.z * 10.0 / nh); col = surf(mat, true, suv); }
-  bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // same spot as Classic: from the middle of the cell, not the exact pixel, so a wall face is lit evenly
+  bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // from the middle of the cell, not the exact pixel, so a wall face is lit evenly
   float tint = 0.93 + 0.14 * h3(vec3(cell));
   // What has happened to this cell (the same matter states the sim's rules use), blended over its own surface.
   vec3 glow = vec3(0.0);

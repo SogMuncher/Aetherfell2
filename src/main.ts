@@ -103,10 +103,8 @@ function applySettings(): void {
     bob: settings.bool('headBob'),
     fovDegrees: settings.num('fieldOfView'),
     colourLevels: settings.num('colours') || 24,
-    gpu: settings.str('renderer') === 'gpu',
     lights: settings.num('lightsPerPixel') || 4,
   };
-  renderer.terrain.setMaxDistance(settings.num('renderDistance') * 1000);
   applyResolution(0);
   input.mouse.sensitivity = 0.0022 * (settings.num('mouseSensitivity') / 100);
   input.mouse.invertY = settings.bool('invertMouse');
@@ -334,7 +332,7 @@ function frame(now: number): void {
     quick: input.quick.slots,
     fps,
     debug: meEntity
-      ? `pos ${meEntity.pos.x.toFixed(1)}, ${meEntity.pos.y.toFixed(1)}  z ${meEntity.z.toFixed(1)}\ntick ${sim.state.tick}  entities ${sim.state.entities.size}\nchunks ${sim.state.chunks.size}  lod blocks ${renderer.terrain.lod.size}\nburning ${sim.state.burning.size}  wet ${sim.state.weather.wetness.toFixed(2)}\nframe ${st.totalMs.toFixed(1)}ms  gpu ${st.gpuMs.toFixed(1)}  terrain ${st.terrainMs.toFixed(1)}  sprites ${st.spritesMs.toFixed(1)}`
+      ? `pos ${meEntity.pos.x.toFixed(1)}, ${meEntity.pos.y.toFixed(1)}  z ${meEntity.z.toFixed(1)}\ntick ${sim.state.tick}  entities ${sim.state.entities.size}\nchunks ${sim.state.chunks.size}  lod blocks ${renderer.lod.size}\nburning ${sim.state.burning.size}  wet ${sim.state.weather.wetness.toFixed(2)}\nframe ${st.totalMs.toFixed(1)}ms  gpu ${st.gpuMs.toFixed(1)}`
       : '',
   });
   requestAnimationFrame(frame);

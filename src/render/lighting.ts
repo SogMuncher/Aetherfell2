@@ -23,7 +23,7 @@ export const LM_SIZE = 96;
 /**
  * Gathers every light near the camera from shared data: a thing's `light`, a bolt's spell light, what an actor holds,
  * the realm's carried lamp, and anything burning (the `fire` matter state's `light`, on ground, cells and bodies).
- * `lights` is that list (the GPU lights each pixel from it). Classic also splats it into a 1 m grid (`grid`).
+ * `lights` is that list (the GPU lights each pixel from it). It is also splatted into a 1 m grid (`grid`) that lights the held item.
  */
 export class LightMap {
   readonly r = new Float32Array(LM_SIZE * LM_SIZE);
