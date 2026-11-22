@@ -115,6 +115,19 @@ export const SETTINGS: readonly SettingDef[] = [
       { value: 'gpu', label: 'Graphics card (experimental)' },
     ],
   },
+  {
+    id: 'lightsPerPixel',
+    group: 'Video',
+    label: 'Lights per pixel',
+    help: 'How many nearby lights (torches, fires, spells) light and shadow each pixel. More is richer and slower.',
+    kind: 'choice',
+    value: '4',
+    options: [
+      { value: '2', label: '2' },
+      { value: '4', label: '4' },
+      { value: '8', label: '8' },
+    ],
+  },
   { id: 'showFps', group: 'Video', label: 'Show frame rate and details', help: 'The same as pressing F3.', kind: 'toggle', value: false },
 
   // Controls

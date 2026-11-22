@@ -19,7 +19,8 @@ material atlas yet; clouds use a shader noise, not the CPU pattern; structures a
 | Far land (LOD pyramid, `terrainLod.ts`) | coarser height/colour mips, same mesh path | when cache block built |
 | 3D bricks (`state.volume`, 16^3) | 3D texture pages (shape byte + material byte), page table texture | on `volumeChanged` per brick |
 | Sprites (creatures, props, items, tile billboards) | one RGBA atlas (+ palette-region mask for `@palette` fill) | when a sprite is first built |
-| Lights (`lighting.ts` point lights) | uniform block, nearest N | per frame |
+| Lights (`LightMap.lights`: thing/spell/held light, realm lamp, `fire` state light) | RGBA32F list per 4 m square, nearest 16 | per frame |
+| What blocks light (tile walls, closed doors, 3D cells, ground heights) | 96x96x48 m R8 solid field + height grid (`gpuSolid.ts`) | on a step / 3D change / every 12 frames |
 | Particles | one instanced quad buffer | per frame |
 
 ## Pass order (one depth buffer)
@@ -67,6 +68,7 @@ Done = works on the GPU path. Sock's rule: procedural textures, lighting and eff
 - [x] Structures show correctly from inside (changed bricks re-uploaded, new ones first; a brick whose box holds the eye is drawn as a full-screen cover with rays built from the pixel, because box walls next to the eye got clipped and walls vanished)
 - [x] Structure cell state: wet, fire glow, oil sheen, soot (a state atlas beside the brick atlas); doors are shape cells so they re-upload like any change
 - [x] Point lights: the CPU light grid is a texture used by land, tile walls, structures and sprites (torches, fire, spells, lamps)
+- [x] **Per-pixel ray-traced light** (`gpuLight.ts`): solid passes also write albedo/normal/sun share (`SURFACE_OUT`); one full-screen pass rebuilds each pixel's hit from depth, takes the nearest N lights that reach it (setting *Lights per pixel*, 2/4/8; each light's reach is its data `radius`), fires a shadow ray to each through the solid field, plus one toward the sun/moon within 44 m. Fixed cost per pixel; runs before clouds.
 - [x] Sprites: creatures, props, items, hit flash, palette fill, dither fade, depth-tested (art still built on the CPU)
 - [x] Particles and spell looks from rune `look` data (CPU simulates, GPU draws); rain streaks, stops under roofs; [x] rain splashes (they are particles, drawn with the rest)
 - [x] Held item (painted by `ViewModel` into a buffer, composited on top), swing/bob/shake

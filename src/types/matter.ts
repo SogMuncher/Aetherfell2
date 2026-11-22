@@ -1,4 +1,5 @@
 import type { TileInfo, TileKind } from './tiles';
+import type { LightDef } from './defs/things';
 
 /**
  * MATTER — one way to talk about "the stuff at a place", whatever holds it.
@@ -36,6 +37,8 @@ export interface StateLookDef {
   glint?: { share: number; amount: number };
   /** Light it gives off (flames), flickering. */
   glow?: readonly [number, number, number];
+  /** Light it casts on its surroundings at full strength (a burning spot or a burning creature), like any other light. */
+  light?: LightDef;
   /** Rain adds this much strength to stuff open to the sky. */
   rain?: number;
   /** Things resting on it keep this much of their speed each second when it is full strength (frost is slick). */

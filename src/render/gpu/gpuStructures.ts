@@ -9,7 +9,6 @@ import type { Env } from '../lighting';
 import { compile, loc, makeTexture, makeTextureArray } from './glUtil';
 import { bindStateLooks, packStates, STATE_LAYERS } from './gpuStates';
 import type { CamBasis } from './glUtil';
-import type { GpuLight } from './gpuLight';
 import { GRID, PIECE_FLOATS, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
 
 /** All numbers live here. */
@@ -48,7 +47,7 @@ export class GpuStructures {
   /** Bricks drawn in the last frame. */
   bricks = 0;
 
-  constructor(private readonly gl: WebGL2RenderingContext, private readonly surf: WebGLTexture, private readonly light: GpuLight) {
+  constructor(private readonly gl: WebGL2RenderingContext, private readonly surf: WebGLTexture) {
     this.prog = compile(gl, STRUCT_VS, STRUCT_FS);
     for (let i = GPU_STRUCT.slots - 1; i >= 0; i--) this.free.push(i);
     this.vao = gl.createVertexArray() as WebGLVertexArrayObject;
@@ -197,7 +196,6 @@ export class GpuStructures {
       gl.uniform1i(loc(gl, p, name), unit);
     };
     bind(0, this.atlas, 'uAtlas'); bind(1, this.page, 'uPage'); bind(2, this.pieces, 'uPieces'); bind(3, this.shapeIdx, 'uShapeIdx'); bind(4, this.surf, 'uSurf');
-    this.light.bind(p, 5);
     gl.activeTexture(gl.TEXTURE6);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.stateAtlas);
     bindStateLooks(gl, p, 6);

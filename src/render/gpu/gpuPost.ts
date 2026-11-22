@@ -1,6 +1,7 @@
 /**
  * GPU scene target and finishing pass: everything is drawn into a low-res colour+depth target, then this pass does the
- * retro finish (vignette, pain/water/downed tints, ordered dither into fewer colours) and writes the canvas.
+ * retro finish. Solid passes also write each pixel's surface (albedo + kind, normal + sun share) beside the colour, so
+ * the per-pixel light pass (`gpuLight.ts`) can light what every primary ray hit (vignette, pain/water/downed tints, ordered dither into fewer colours) and writes the canvas.
  */
 import { compile, loc, makeTexture } from './glUtil';
 
@@ -39,6 +40,10 @@ export class GpuPost {
   private fbo: WebGLFramebuffer;
   private tex: WebGLTexture;
   private depthTex: WebGLTexture;
+  private alb: WebGLTexture;
+  private nrm: WebGLTexture;
+  /** The colour target alone (no depth), so a pass can read the depth while adding to the colour. */
+  private readonly litFbo: WebGLFramebuffer;
   private w = 0;
   private h = 0;
 
@@ -48,6 +53,9 @@ export class GpuPost {
     this.fbo = gl.createFramebuffer() as WebGLFramebuffer;
     this.tex = makeTexture(gl, gl.RGBA8, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE);
     this.depthTex = makeTexture(gl, gl.DEPTH_COMPONENT24, 1, 1, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT);
+    this.alb = makeTexture(gl, gl.RGBA8, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE);
+    this.nrm = makeTexture(gl, gl.RGBA8, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE);
+    this.litFbo = gl.createFramebuffer() as WebGLFramebuffer;
   }
 
   private resize(w: number, h: number): void {
@@ -62,6 +70,30 @@ export class GpuPost {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this.depthTex, 0);
+    gl.deleteTexture(this.alb);
+    this.alb = makeTexture(gl, gl.RGBA8, w, h, gl.RGBA, gl.UNSIGNED_BYTE);
+    gl.deleteTexture(this.nrm);
+    this.nrm = makeTexture(gl, gl.RGBA8, w, h, gl.RGBA, gl.UNSIGNED_BYTE);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.alb, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, this.nrm, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.litFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
+  }
+
+  /** Surface albedo (rgb) + kind (a: 0 sky, 0.5 sprite, 1 surface) and normal (rgb) + share of sun in its light (a). */
+  get surfaceTextures(): { alb: WebGLTexture; nrm: WebGLTexture } {
+    return { alb: this.alb, nrm: this.nrm };
+  }
+
+  /** Colour only, for the light pass (it reads `depthTexture`). */
+  get litTarget(): WebGLFramebuffer {
+    return this.litFbo;
+  }
+
+  /** Solid passes write the surface targets too (their shaders include SURFACE_OUT); every other pass writes colour only. */
+  surfaces(on: boolean): void {
+    const gl = this.gl;
+    gl.drawBuffers(on ? [gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2] : [gl.COLOR_ATTACHMENT0, gl.NONE, gl.NONE]);
   }
 
   /** The scene's depth, for passes (clouds) that need to know how far the nearest surface is. Only sample it while drawing into another target. */
@@ -82,8 +114,10 @@ export class GpuPost {
     gl.viewport(0, 0, w, h);
     gl.depthMask(true);
     gl.enable(gl.DEPTH_TEST);
-    gl.clearColor(0, 0, 0, 1);
+    gl.clearColor(0, 0, 0, 0);
+    this.surfaces(true);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    this.surfaces(false);
   }
 
   /** Finishes the frame onto the canvas. */

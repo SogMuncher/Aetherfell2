@@ -113,7 +113,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 ## src/render/
 - `color.ts` (50) packed pixel colour helpers
 - `env.ts` (147) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
-- `lighting.ts` (163) ambient and point lights (LightMap); re-exports Env
+- `lighting.ts` (~150) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); Classic grid; re-exports Env
 - `airCells.ts` (~200) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
 - `stateLooks.ts` (~70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
@@ -143,8 +143,9 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `gpuStructShader.ts` (~110) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (~165) tile walls/doors/windows as boxes from tile data, with their matter states
 - `gpuSprites.ts` (~165) billboards: sprite atlas + instanced quads
-- `gpuLight.ts` (~40) light grid as a texture
-- `gpuSurfaces.ts` (~40) shared tile surface atlas (+ the surfaces matter states cover things with)
+- `gpuLight.ts` (~150) per-pixel light pass: nearest lights per pixel from 4 m squares, shadow rays, sun shadows near the eye
+- `gpuSolid.ts` (~140) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
+- `gpuSurfaces.ts` (~50) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
 - `gpuParticles.ts` (~140) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (~55) held item buffer composited on top
 - `gpuSky.ts` (~70) full-screen sky: gradient, sun, moon, stars, aurora

@@ -10,9 +10,7 @@ import { TILES } from '../../content/tiles';
 import type { Env } from '../lighting';
 import { compile, loc, makeTextureArray } from './glUtil';
 import { bindStateLooks, packStates, STATE_LAYERS, STATE_SHADER } from './gpuStates';
-import { LIGHT_SHADER } from './gpuLight';
-import type { GpuLight } from './gpuLight';
-import { SURFACE_SHADER } from './gpuSurfaces';
+import { SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
 
 /** All numbers live here. */
 export const GPU_TILE_BLOCKS = { range: 56, rebuildEvery: 4, max: 12000, sink: 0.6 } as const;
@@ -37,10 +35,10 @@ void main(){
 const FS = `#version 300 es
 precision highp float; precision highp int;
 ${SURFACE_SHADER}
-${LIGHT_SHADER}
+${SURFACE_OUT}
 ${STATE_SHADER}
 uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uFogDist, uRainWet, uTime;
-in vec3 vPos; flat in float fMat; flat in int vInst; out vec4 o;
+in vec3 vPos; flat in float fMat; flat in int vInst; layout(location = 0) out vec4 o;
 void main(){
   vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos)));
   vec3 col; vec2 suv;
@@ -49,7 +47,9 @@ void main(){
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2(vInst % ${ST_W}, vInst / ${ST_W}), suv, uRainWet, 0.75 + 0.25 * sin(uTime * 40.0 + vPos.x * 1.7 + vPos.y * 2.3), glow);
   float lit = max(0.0, dot(n, uSunDir));
-  vec3 c = col * (uAmb + uSun * lit + lightAt(vPos.xy + n.xy * 0.6)) + glow;
+  vec3 lv = uAmb + uSun * lit;
+  vec3 c = col * lv + glow;
+  surfaceOut(col, dot(n, uEye - vPos) < 0.0 ? -n : n, sunShare(uSun * lit, lv), 1.0);
   float f = 1.0 - exp(-length(vPos - uEye) / uFogDist);
   o = vec4(mix(c, uFog, f), 1.0);
 }`;
@@ -66,7 +66,7 @@ export class GpuTileBlocks {
   private stAny = true;
   private frame = 0;
 
-  constructor(private readonly gl: WebGL2RenderingContext, private readonly surf: WebGLTexture, private readonly light: GpuLight) {
+  constructor(private readonly gl: WebGL2RenderingContext, private readonly surf: WebGLTexture) {
     this.prog = compile(gl, VS, FS);
     this.stTex = makeTextureArray(gl, gl.RGBA8, ST_W, ST_H, STATE_LAYERS, gl.RGBA, gl.UNSIGNED_BYTE);
     this.vao = gl.createVertexArray() as WebGLVertexArrayObject;
@@ -143,7 +143,6 @@ export class GpuTileBlocks {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.surf);
     gl.uniform1i(loc(gl, p, 'uSurf'), 0);
-    this.light.bind(p, 1);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.stTex);
     bindStateLooks(gl, p, 2);

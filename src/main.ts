@@ -104,6 +104,7 @@ function applySettings(): void {
     fovDegrees: settings.num('fieldOfView'),
     colourLevels: settings.num('colours') || 24,
     gpu: settings.str('renderer') === 'gpu',
+    lights: settings.num('lightsPerPixel') || 4,
   };
   renderer.terrain.setMaxDistance(settings.num('renderDistance') * 1000);
   applyResolution(0);

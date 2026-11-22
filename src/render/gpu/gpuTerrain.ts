@@ -14,9 +14,7 @@ import { refreshGroundState } from './gpuTerrainState';
 import { CANOPY_FULL, FLORA_FADE } from '../raycaster/tileBillboards';
 import { GPU_STRUCT } from './gpuStructures';
 import type { CloudShadow } from '../raycaster/cloudShadow';
-import { SURFACE_SHADER } from './gpuSurfaces';
-import { LIGHT_SHADER } from './gpuLight';
-import type { GpuLight } from './gpuLight';
+import { SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
 
 /** All numbers live here. */
 export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, recolourEvery: 15, texLevels: 2, texFade: [30, 90], sink: 0.03, grit: 0.09 } as const;
@@ -41,12 +39,12 @@ void main(){
 const FS = `#version 300 es
 precision highp float; precision highp usampler2D;
 ${SURFACE_SHADER}
-${LIGHT_SHADER}
+${SURFACE_OUT}
 ${STATE_SHADER}
 uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist; uniform vec3 uSun; uniform vec3 uSunDir; uniform vec3 uAmb;
 uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade;
 uniform float uRainWet; uniform sampler2D uShade; uniform vec4 uShadeO; uniform vec3 uHorizon; uniform float uDay, uTime, uShadeOn;
-in vec3 vPos; in vec3 vCol; flat in float vA; out vec4 o;
+in vec3 vPos; in vec3 vCol; flat in float vA; layout(location = 0) out vec4 o;
 float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 void main(){
@@ -70,7 +68,7 @@ void main(){
     }
     lit *= sh;
   }
-  vec3 lv = uAmb + uSun * lit + lightAt(vPos.xy);
+  vec3 lv = uAmb + uSun * lit;
   if (uTexOn > 0.5 && vA <= 0.99) {
     // What has happened to the ground (the same matter states the sim's rules use), blended over its own surface.
     vec3 glow = vec3(0.0);
@@ -85,6 +83,7 @@ void main(){
     float fl = vA * 2.0 * (0.75 + 0.25 * sin(uTime * 9.0 + vPos.x * 0.7 + vPos.y * 0.3));
     c += vec3(0.9, 0.38, 0.09) * fl;
   }
+  surfaceOut(base, n, sunShare(uSun * lit, lv), 1.0);
   float f = 1.0 - exp(-d / uFogDist);
   o = vec4(mix(c, uFog, f), 1.0);
 }`;
@@ -121,7 +120,7 @@ export class GpuTerrain {
   private shadeMean = 1;
   private shadeO = [0, 0, 48];
 
-  constructor(private readonly gl: WebGL2RenderingContext, private readonly lod: TerrainLod, private readonly tiles: ReadonlyTiles, private readonly surf: WebGLTexture, private readonly light: GpuLight) {
+  constructor(private readonly gl: WebGL2RenderingContext, private readonly lod: TerrainLod, private readonly tiles: ReadonlyTiles, private readonly surf: WebGLTexture) {
     this.prog = compile(gl, VS, FS);
     const idx = new Uint32Array(N * N * 6);
     let k = 0;
@@ -259,7 +258,6 @@ export class GpuTerrain {
     gl.uniform2f(loc(gl, p, 'uTexFade'), GPU_TERRAIN.texFade[0], GPU_TERRAIN.texFade[1]);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this.surf);
-    this.light.bind(p, 4);
     gl.activeTexture(gl.TEXTURE5);
     gl.bindTexture(gl.TEXTURE_2D, this.shadeTex);
     gl.uniform1i(loc(gl, p, 'uShade'), 5);
