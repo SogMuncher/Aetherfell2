@@ -9,7 +9,7 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 - `raycaster/`: `terrainRenderer.ts` column marcher (near live tiles, far cached LOD blocks: `terrainLod.ts`,
   `lodLooks.ts`, ~7 km), `volumeRenderer.ts` ray casts 3D-layer bricks, `tileBillboards.ts`, `sky.ts` (ray-marched clouds,
   sun, stars), `cloudShadow.ts`, `camera.ts`. Clouds and ground mist follow the world's moisture (`airMoisture` in `content/skyField.ts`, set by `Simulation`; layer `wet`).
-- Clouds are 3D cells (`cloudCells.ts`, sizes in `SkyDef.cells`): every layer, fine near and coarser far, filled from `cloudColumn`; the GPU marches them. A new cloud kind is a new layer in `content/sky.ts`, nothing else.
+- Clouds and ground mist are air cells (`cloudCells.ts`, sizes in `SkyDef.cells` + per-layer `cell`): every layer, fine near and merged into blocks twice as wide every `cells.lod` cells of distance, filled from `cloudColumn`; far levels refresh less often. The GPU walks them cell by cell and draws each as a block shaded by its face (top lit, base dark, sides by sun). A new cloud/mist kind is a new layer in `content/sky.ts`, nothing else.
 - Fog (`env.ts`): the fog colour is the sky's horizon colour, or the cloud you stand in (shorter sight, cloud colour); clouds use `Env.cloudLit` (same light as the overcast sky) and haze over `fogDist × sky.haze`. Classic is no longer maintained.
 - LOD blocks of every level (incl. the 1 m one the GPU textured levels fade into) get changed tiles painted over them (`terrainLodPaint.paintChunk`); the GPU refills its fine levels when `lod.painted` moves.
 - `materials/` paints surfaces into textures.

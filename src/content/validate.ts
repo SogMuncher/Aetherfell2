@@ -31,7 +31,7 @@ export function validateContent(c: Content): string[] {
     if (!(l.detail >= 1 && l.detail <= 6)) out.push(`${w}: detail runs from 1 to 6`);
   }
   const cl = c.sky.cells;
-  if (!(cl.perShape >= 4 && cl.count >= 16 && cl.count % 8 === 0 && cl.slices >= 2 && cl.slices <= 64 && cl.budget > 0)) out.push('sky cells: perShape >= 4, count a multiple of 8 (>= 16), 2..64 slices, a positive budget');
+  if (!(cl.perShape >= 4 && cl.count >= 16 && cl.count % 8 === 0 && cl.slices >= 2 && cl.slices <= 64 && cl.budget > 0 && cl.lod >= 2 && cl.lod <= cl.count * 0.35)) out.push('sky cells: perShape >= 4, count a multiple of 8 (>= 16), 2..64 slices, a positive budget, lod 2..count × 0.35');
   out.push(...validateShapes());
   out.push(...gearProblems(c));
   for (const [id, s] of Object.entries(c.structures)) {
