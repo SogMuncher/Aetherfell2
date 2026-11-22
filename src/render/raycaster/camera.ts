@@ -33,6 +33,17 @@ export function project(cam: Camera, W: number, H: number, focal = 0.86): Projec
   return { W, H, F, HOR, FX, FY, RX: -FY, RY: FX, cam };
 }
 
+/**
+ * The camera's right-hand direction as seen looking from the camera's POSITION at (x, y): which side of a thing the
+ * camera sees depends on where the camera stands, never on which way it is turned.
+ */
+export function sideFrom(p: Projection, x: number, y: number): { rx: number; ry: number } {
+  const dx = x - p.cam.x;
+  const dy = y - p.cam.y;
+  const d = Math.hypot(dx, dy);
+  return d < 1e-4 ? { rx: p.RX, ry: p.RY } : { rx: -dy / d, ry: dx / d };
+}
+
 /** World point → screen. Returns false if behind the camera. */
 export function toScreen(p: Projection, x: number, y: number, z: number, out: { sx: number; sy: number; depth: number }): boolean {
   const dx = x - p.cam.x;

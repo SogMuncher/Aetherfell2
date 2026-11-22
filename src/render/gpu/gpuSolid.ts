@@ -18,16 +18,14 @@ const H = GPU_SOLID.height;
 export const SOLID_UNIFORMS = `
 uniform highp sampler3D uSolid; uniform highp sampler2D uGround; uniform ivec3 uSolid0;`;
 
-/** GLSL: `solidAt(cell)`, `groundAt(xy)` and `shadowRay(from, dir, length, steps, sprites)` (1 = reaches, 0 = blocked). */
+/** GLSL: `solidAt(cell)`, `groundAt(xy)` and `shadowRay(from, dir, length, steps, sprites, selfSprite)` (1 = reaches, 0 = blocked). */
 export const SOLID_SHADER = `
 bool solidAt(ivec3 c){ ivec3 q = c - uSolid0; if (any(lessThan(q, ivec3(0))) || any(greaterThanEqual(q, ivec3(${S}, ${S}, ${H})))) return false; return texelFetch(uSolid, q, 0).r > 0.5; }
 float groundAt(vec2 p){
-  vec2 g = p - vec2(uSolid0.xy); ivec2 i = ivec2(floor(g)); vec2 t = g - vec2(i);
-  if (i.x < 0 || i.y < 0 || i.x >= ${S} || i.y >= ${S}) return -1e9;
-  float a = texelFetch(uGround, i, 0).r, b = texelFetch(uGround, i + ivec2(1, 0), 0).r, c = texelFetch(uGround, i + ivec2(0, 1), 0).r, d = texelFetch(uGround, i + ivec2(1, 1), 0).r;
-  return mix(mix(a, b, t.x), mix(c, d, t.x), t.y);
+  vec2 g = p - vec2(uSolid0.xy); if (g.x < 0.0 || g.y < 0.0 || g.x >= ${S}.0 || g.y >= ${S}.0) return -1e9;
+  return texture(uGround, (g + 0.5) / ${S + 1}.0).r + float(uSolid0.z); // one filtered fetch: heights are kept relative to the field
 }
-float shadowRay(vec3 o, vec3 d, float len, int steps, bool sprites){
+float shadowRay(vec3 o, vec3 d, float len, int steps, bool sprites, int self){
   ivec3 cell = ivec3(floor(o)); vec3 st = sign(d); vec3 ad = max(abs(d), vec3(1e-5));
   vec3 tMax = (st * (vec3(cell) + 0.5 - o) + 0.5) / ad; vec3 tDelta = 1.0 / ad; float t = 0.0; vec3 e = o + d * len;
   bool newCol = true;
@@ -39,7 +37,7 @@ float shadowRay(vec3 o, vec3 d, float len, int steps, bool sprites){
     vec3 m = o + d * min((t + tn) * 0.5, len);
     if (t > 0.5 && m.z < groundAt(m.xy) - 0.3) return 0.0; // the drawn land is a mesh over the same heights: allow it a little slack
     if (i > 0 && solidAt(cell)) return 0.0; // the first cell holds the surface itself (slopes, slabs)
-    if (sprites && newCol && castersAt(cell.xy, o, d, len, e)) return 0.0;
+    if (sprites && newCol){ float za = o.z + d.z * t, zb = o.z + d.z * min(tn, len); if (castersAt(cell.xy, o, d, len, e, self, min(za, zb), max(za, zb))) return 0.0; }
     newCol = tMax.z != tn;
     if (tMax.x == tn){ cell.x += int(st.x); tMax.x += tDelta.x; } else if (tMax.y == tn){ cell.y += int(st.y); tMax.y += tDelta.y; } else { cell.z += int(st.z); tMax.z += tDelta.z; }
     t = tn;
@@ -66,9 +64,11 @@ export class GpuSolid {
     gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, S, S, H, 0, gl.RED, gl.UNSIGNED_BYTE, null);
     this.ground = gl.createTexture() as WebGLTexture;
     gl.bindTexture(gl.TEXTURE_2D, this.ground);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, S + 1, S + 1, 0, gl.RED, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, S + 1, S + 1, 0, gl.RED, gl.FLOAT, null);
   }
 
   update(eye: { x: number; y: number; z: number }, tiles: ReadonlyTiles, vol: ReadonlyVolume): void {
@@ -94,7 +94,7 @@ export class GpuSolid {
   private build(tiles: ReadonlyTiles, vol: ReadonlyVolume): void {
     const { ox, oy, oz, cells, heights } = this;
     cells.fill(0);
-    for (let j = 0; j <= S; j++) for (let i = 0; i <= S; i++) heights[j * (S + 1) + i] = tiles.ground(ox + i, oy + j);
+    for (let j = 0; j <= S; j++) for (let i = 0; i <= S; i++) heights[j * (S + 1) + i] = tiles.ground(ox + i, oy + j) - oz;
     // Tile walls and closed doors, the same boxes the tile-block pass draws.
     for (let cy = Math.floor(oy / CHUNK_SIZE); cy * CHUNK_SIZE < oy + S; cy++) {
       for (let cx = Math.floor(ox / CHUNK_SIZE); cx * CHUNK_SIZE < ox + S; cx++) {

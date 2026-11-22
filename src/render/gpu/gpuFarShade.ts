@@ -9,7 +9,7 @@ import type { GpuTerrain } from './gpuTerrain';
 import { GPU_SOLID } from './gpuSolid';
 
 /** Terrain levels walked (cell 4 m over 512 m, then 64 m over 8 km), and the march: `steps` growing by `grow` from `start` m. */
-export const GPU_FAR_SHADE = { levels: [2, 6], start: 1.5, grow: 1.4, steps: 22 } as const;
+export const GPU_FAR_SHADE = { levels: [2, 6], start: 1.5, grow: 1.55, steps: 16 } as const;
 
 /** GLSL (after SOLID_UNIFORMS): `cloudShade(xy)`, `landSun(p, sunDir)`. */
 export const FAR_SHADE_SHADER = `
