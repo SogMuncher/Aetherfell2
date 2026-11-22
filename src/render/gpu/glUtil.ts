@@ -28,6 +28,19 @@ export function makeTexture(gl: WebGL2RenderingContext, internal: number, w: num
   return t;
 }
 
+/** A stack of `layers` same-size 2D textures (sampler2DArray), nearest-sampled, uploaded later. */
+export function makeTextureArray(gl: WebGL2RenderingContext, internal: number, w: number, h: number, layers: number, fmt: number, type: number): WebGLTexture {
+  const t = gl.createTexture();
+  if (!t) throw new Error('gl texture');
+  gl.bindTexture(gl.TEXTURE_2D_ARRAY, t);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, internal, w, h, layers, 0, fmt, type, null);
+  return t;
+}
+
 export interface CamBasis {
   fwd: [number, number, number];
   right: [number, number, number];

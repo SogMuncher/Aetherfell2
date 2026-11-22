@@ -14,6 +14,7 @@ interface SavedChunk {
   fuel: number[];
   oil: number[];
   soot: number[];
+  frost?: number[];
   door: number[];
 }
 
@@ -77,6 +78,7 @@ function packChunks(chunks: ReadonlyMap<number, Chunk>): SavedChunk[] {
       fuel: Array.from(c.fuel),
       oil: Array.from(c.oil),
       soot: Array.from(c.soot),
+      frost: Array.from(c.frost),
       door: Array.from(c.door),
     });
   }
@@ -93,6 +95,7 @@ function unpackChunks(list: SavedChunk[], seed: number, realm: RealmId, regen: R
     c.fuel.set(sc.fuel);
     c.oil.set(sc.oil);
     c.soot.set(sc.soot);
+    if (sc.frost) c.frost.set(sc.frost);
     c.door.set(sc.door);
     c.dirty = true;
     c.version = 1;

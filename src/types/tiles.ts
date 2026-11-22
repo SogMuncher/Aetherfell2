@@ -114,6 +114,8 @@ export interface Chunk {
   fuel: Uint16Array;
   oil: Uint8Array;
   soot: Uint8Array;
+  /** Ice in the ground (frozen wetness); it thaws back into wet. */
+  frost: Uint8Array;
   /** 0 = closed, 255 = fully open. */
   door: Uint8Array;
   /** Ground height at tile corners, (CHUNK_SIZE+1)² values. Tile (i,j) spans corners i..i+1, j..j+1. */
@@ -134,6 +136,7 @@ export interface TileCellData {
   fuel: number;
   oil: number;
   soot: number;
+  frost: number;
   door: number;
 }
 
@@ -145,6 +148,7 @@ export interface ReadonlyTiles {
   fire(x: number, y: number): number;
   oil(x: number, y: number): number;
   soot(x: number, y: number): number;
+  frost(x: number, y: number): number;
   door(x: number, y: number): number;
   /** Ground height (bilinear over tile corners), ignoring structures. Works at any real position. */
   ground(x: number, y: number): number;
@@ -171,6 +175,7 @@ export interface TileAccess extends ReadonlyTiles {
   fuel(x: number, y: number): number;
   setOil(x: number, y: number, v: number): void;
   setSoot(x: number, y: number, v: number): void;
+  setFrost(x: number, y: number, v: number): void;
   setDoor(x: number, y: number, v: number): void;
   setCell(x: number, y: number, cell: TileCellData): void;
 }

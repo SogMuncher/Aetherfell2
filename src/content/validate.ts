@@ -214,6 +214,9 @@ export function validateContent(c: Content): string[] {
     need(t.floor in c.surfaces, `tile ${k} (${t.name})`, `surface '${t.floor}'`);
     if (t.shape !== 'floor' && t.shape !== 'billboard') need(t.wall in c.surfaces, `tile ${k} (${t.name})`, `wall surface '${t.wall}'`);
   }
+  for (const [k, s] of Object.entries(c.matterStates)) {
+    if (s.cover && 'surface' in s.cover) need(s.cover.surface in c.surfaces, `matter state ${k}`, `surface '${s.cover.surface}'`);
+  }
   let fallback = false;
   for (const [id, b] of Object.entries(c.biomes)) {
     const w = `biome '${id}'`;

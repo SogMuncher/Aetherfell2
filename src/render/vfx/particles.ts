@@ -327,7 +327,7 @@ export class Particles implements FireSink {
         }
         break;
       case 'froze':
-        if (Math.random() < 0.35) this.play(fx('frostCreep'), e.x + 0.5, e.y + 0.5, 0.1);
+        if (Math.random() < 0.35) this.play(fx('frostCreep'), e.x + 0.5, e.y + 0.5, e.z !== undefined && e.z !== GROUND_Z ? e.z + 0.5 : 0.1);
         break;
       case 'shatter': {
         const it = state.entities.get(e.entity);

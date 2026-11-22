@@ -93,6 +93,10 @@ export class WorldTiles implements TileAccess {
     const { c, i } = this.at(x, y);
     return c.soot[i] ?? 0;
   }
+  frost(x: number, y: number): number {
+    const { c, i } = this.at(x, y);
+    return c.frost[i] ?? 0;
+  }
   door(x: number, y: number): number {
     const { c, i } = this.at(x, y);
     return c.door[i] ?? 0;
@@ -146,6 +150,7 @@ export class WorldTiles implements TileAccess {
       fuel: c.fuel[i] ?? 0,
       oil: c.oil[i] ?? 0,
       soot: c.soot[i] ?? 0,
+      frost: c.frost[i] ?? 0,
       door: c.door[i] ?? 0,
     };
   }
@@ -156,7 +161,7 @@ export class WorldTiles implements TileAccess {
     this.state.tileChanges.add(packKey(Math.floor(x), Math.floor(y)));
   }
 
-  private write(field: 'wet' | 'fire' | 'oil' | 'soot' | 'door', x: number, y: number, v: number): void {
+  private write(field: 'wet' | 'fire' | 'oil' | 'soot' | 'frost' | 'door', x: number, y: number, v: number): void {
     const { c, i } = this.at(x, y);
     const nv = Math.max(0, Math.min(255, Math.round(v)));
     if (c[field][i] === nv) return;
@@ -200,6 +205,9 @@ export class WorldTiles implements TileAccess {
   setSoot(x: number, y: number, v: number): void {
     this.write('soot', x, y, v);
   }
+  setFrost(x: number, y: number, v: number): void {
+    this.write('frost', x, y, v);
+  }
   setDoor(x: number, y: number, v: number): void {
     this.write('door', x, y, v);
   }
@@ -211,6 +219,7 @@ export class WorldTiles implements TileAccess {
     c.fuel[i] = cell.fuel;
     c.oil[i] = cell.oil;
     c.soot[i] = cell.soot;
+    c.frost[i] = cell.frost;
     c.door[i] = cell.door;
     c.dirty = true;
     c.version++;

@@ -28,7 +28,7 @@ export function cellIndex(x: number, y: number, z: number): number {
 
 /**
  * What a brick's cells carry besides shape and material: the same state a ground tile has (wet, fire,
- * oil, soot) plus fuel already burnt and wear from blows. Allocated only once something happens to a
+ * oil, soot, frost) plus fuel already burnt and wear from blows. Allocated only once something happens to a
  * cell, so quiet bricks cost nothing. Indexed like the shape array.
  */
 export interface BrickMatter {
@@ -36,13 +36,15 @@ export interface BrickMatter {
   fire: Uint8Array;
   oil: Uint8Array;
   soot: Uint8Array;
+  /** Ice in it (frozen wetness); it thaws back into wet. */
+  frost: Uint8Array;
   /** Fuel burnt so far (the cell's fuel is its material's fuel minus this). */
   spent: Uint16Array;
   /** Damage taken from blows (mends slowly). */
   wear: Uint16Array;
 }
 
-export type BrickMatterField = 'wet' | 'fire' | 'oil' | 'soot' | 'spent' | 'wear';
+export type BrickMatterField = 'wet' | 'fire' | 'oil' | 'soot' | 'frost' | 'spent' | 'wear';
 
 export interface VolumeBrick {
   readonly bx: number;
@@ -108,7 +110,7 @@ export interface VolumeBrickData {
   shape: number[];
   mat: number[];
   /** Packed cell state, present only when something has happened to the brick's cells. */
-  state?: { wet: number[]; fire: number[]; oil: number[]; soot: number[]; spent: number[]; wear: number[] };
+  state?: { wet: number[]; fire: number[]; oil: number[]; soot: number[]; frost?: number[]; spent: number[]; wear: number[] };
 }
 
 /** What something sees and bumps into where the ray hit. */

@@ -42,6 +42,7 @@ export class Matter implements MatterAccess {
         case 'fire': return this.tiles.fire(x, y);
         case 'oil': return this.tiles.oil(x, y);
         case 'soot': return this.tiles.soot(x, y);
+        case 'frost': return this.tiles.frost(x, y);
         case 'fuel': return this.tiles.fuel(x, y);
         case 'wear': return this.state.tileWear.get(packKey(x, y)) ?? 0;
       }
@@ -67,6 +68,7 @@ export class Matter implements MatterAccess {
         case 'fire': this.tiles.setFire(x, y, v); return;
         case 'oil': this.tiles.setOil(x, y, v); return;
         case 'soot': this.tiles.setSoot(x, y, v); return;
+        case 'frost': this.tiles.setFrost(x, y, v); return;
         case 'fuel': this.tiles.setFuel(x, y, v); return;
         case 'wear':
           if (v <= 0) this.state.tileWear.delete(packKey(x, y));
@@ -111,7 +113,7 @@ export class Matter implements MatterAccess {
   }
 
   wetness(x: number, y: number, z: number): number {
-    return this.get('wet', x, y, z) + (this.exposed(x, y, z) ? this.state.weather.wetness * 255 : 0);
+    return this.get('wet', x, y, z) + this.get('frost', x, y, z) + (this.exposed(x, y, z) ? this.state.weather.wetness * 255 : 0);
   }
 
   forNeighbours(x: number, y: number, z: number, fn: (x: number, y: number, z: number, weight: number) => void): void {
