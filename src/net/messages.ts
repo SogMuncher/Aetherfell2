@@ -65,6 +65,7 @@ export function cleanInput(raw: unknown): InputSnapshot {
     useItem: id(i.useItem),
     dropItem: id(i.dropItem),
     throwItem: cleanThrow(i.throwItem),
+    throwHeld: b(i.throwHeld),
     pickUp: typeof i.pickUp === 'number' && Number.isInteger(i.pickUp) ? i.pickUp : null,
     wear: cleanWear(i.wear),
     choice: typeof i.choice === 'number' && Number.isInteger(i.choice) ? i.choice : null,
@@ -75,7 +76,7 @@ function cleanWear(v: unknown): WearRequest | null {
   if (typeof v !== 'object' || v === null) return null;
   const w = v as Record<string, unknown>;
   const short = (x: unknown): x is string => typeof x === 'string' && x.length > 0 && x.length <= 64;
-  if (w.do === 'wear' && short(w.item)) return { do: 'wear', item: w.item };
+  if (w.do === 'wear' && short(w.item)) return short(w.slot) ? { do: 'wear', item: w.item, slot: w.slot } : { do: 'wear', item: w.item };
   if (w.do === 'wearFrom' && typeof w.entity === 'number' && Number.isInteger(w.entity)) return { do: 'wearFrom', entity: w.entity };
   if (w.do === 'remove' && short(w.region)) return { do: 'remove', region: w.region };
   return null;
@@ -144,7 +145,7 @@ export function cleanFriendId(v: unknown): string | null {
 
 /** True when an input presses something (these go by the sure road; plain movement goes by the fast one). */
 export function inputHasPress(i: InputSnapshot): boolean {
-  return i.jump || i.interact || i.grab || i.cast || i.prepare !== null || i.useItem !== null || i.dropItem !== null || i.throwItem !== null || i.pickUp !== null || i.wear !== null || i.choice !== null;
+  return i.jump || i.interact || i.grab || i.cast || i.prepare !== null || i.useItem !== null || i.dropItem !== null || i.throwItem !== null || i.throwHeld || i.pickUp !== null || i.wear !== null || i.choice !== null;
 }
 
 /**

@@ -52,8 +52,6 @@ export interface WeaponStats {
   speed: number;
   /** Knockback multiplier. */
   push: number;
-  /** Hits before it is worn out (then it does 40%). */
-  durability: number;
   /** Tint for the first-person view model. */
   tint: Color;
   /** Extra effects on whatever it hits, scaled with the blow (a venomous bite, a freezing blade). */

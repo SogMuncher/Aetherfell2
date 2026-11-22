@@ -2,7 +2,8 @@ import { type Content, type Effect, PARTICLE_KINDS, Tile } from '../types';
 import { SWING_DIRS } from '../types/input';
 import { colourProblem, paletteProblems } from './palettes';
 import { formProblems } from './forms';
-import { gearProblems, itemDef } from './gear';
+import { gearProblems } from './gearCheck';
+import { itemDef } from './itemDefs';
 import { lookProblems } from './looks';
 import { spellFor, spellKey } from './spellcraft';
 import { tileTableProblems } from './tiles';
@@ -78,7 +79,8 @@ export function validateContent(c: Content): string[] {
   }
   for (const [id, it] of Object.entries(c.items)) {
     if (it.use) effects(it.use, `item '${id}'`);
-    if (it.thrown) effects(it.thrown.effects, `item '${id}'`);
+    if (it.onBreak?.effects) effects(it.onBreak.effects, `item '${id}' onBreak`);
+    if (it.onBreak?.into && !itemDef(c, it.onBreak.into)) out.push(`item '${id}': breaks into unknown item '${it.onBreak.into}'`);
     if (it.weapon?.effects) effects(it.weapon.effects, `item '${id}' weapon`);
   }
   for (const [id, b] of Object.entries(c.brains)) {
@@ -153,19 +155,19 @@ export function validateContent(c: Content): string[] {
     for (const r of s.villagers ?? []) need(r in c.roles, w, `role '${r}'`);
     for (const p of s.population) {
       need(p.thing in c.things, `site '${id}'`, `thing '${p.thing}'`);
-      if (p.item) need(p.item.id in c.items, `site '${id}'`, `item '${p.item.id}'`);
+      if (p.item) need(!!itemDef(c, p.item.id), `site '${id}'`, `item '${p.item.id}'`);
     }
   }
   if (share <= 0) out.push('sites: no kind of place has a chance above 0');
   for (const [id, r] of Object.entries(c.roles)) {
     const w = `role '${id}'`;
-    for (const s of r.stock) need(s.id in c.items, w, `item '${s.id}'`);
+    for (const s of r.stock) need(!!itemDef(c, s.id), w, `item '${s.id}'`);
     const q = r.quest;
     if (q?.kind === 'cull') need(q.target in c.things, w, `thing '${q.target}'`);
     if (q?.kind === 'fetch') need(q.item in c.items, w, `item '${q.item}'`);
     if (q?.kind === 'explore') need(q.site in c.sites, w, `site '${q.site}'`);
     const b = r.trade?.barter;
-    if (b) for (const i of [...b.buys, b.sells]) need(i in c.items, w, `item '${i}'`);
+    if (b) for (const i of [...b.buys, b.sells]) need(!!itemDef(c, i), w, `item '${i}'`);
   }
   const ru = c.rules;
   need(ru.currency in c.items, 'rules', `currency item '${ru.currency}'`);
@@ -206,7 +208,8 @@ export function validateContent(c: Content): string[] {
   for (const [id, it] of Object.entries(c.items)) for (const d of it.weapon?.swings ?? []) need((SWING_DIRS as readonly string[]).includes(d), `item '${id}' weapon`, `swing '${d}'`);
   need(ru.fire.mote in c.things, 'rules.fire', `thing '${ru.fire.mote}'`);
   for (const s of ru.start.inventory) need(!!itemDef(c, s.id), 'rules.start', `item '${s.id}'`);
-  if (ru.start.wield) need(!!c.items[ru.start.wield]?.weapon, 'rules.start', `weapon '${ru.start.wield}'`);
+  if (ru.start.wield) need(!!itemDef(c, ru.start.wield), 'rules.start', `item '${ru.start.wield}'`);
+  for (const [id, e] of Object.entries(c.gear.enchants)) if (e.hit) effects(e.hit, `gear enchantment '${id}'`);
   for (const r of ru.start.prepared) need(r in c.runes, 'rules.start', `rune '${r}'`);
   // Tiles, surfaces, biomes and world generation.
   out.push(...tileTableProblems());

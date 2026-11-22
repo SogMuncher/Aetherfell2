@@ -44,10 +44,11 @@ export interface ChargeState {
 }
 
 export interface ActorData {
-  /** Wielded item, or null for the natural weapon from the definition. */
+  /**
+   * What is in the hands (the paperdoll's hand slot): any item, or null for the natural weapon from
+   * the definition. Whatever it is gets swung; how worn it is rides in its id (`id@wear`).
+   */
   weapon: ItemId | null;
-  /** Hits left before the wielded weapon is worn out. */
-  wear: number;
   swing: SwingState | null;
   /** Direction currently guarded, or null if not blocking. */
   guard: SwingDir | null;

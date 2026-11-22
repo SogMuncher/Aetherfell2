@@ -18,7 +18,7 @@ import type { StructureDef } from './volume';
 
 export type { MaterialId, ThingId, ItemId, SpellId, RuneId, StatusId, BrainId, LootId, SiteId, FactionId, RoleId, SpriteId, RealmId } from './defs/ids';
 export type { SoundClass, MaterialDef, LightDef, HeldLightDef, WeaponStats, Burst, RealmDef, ThingDef } from './defs/things';
-export type { ItemCategory, ItemForm, VesselBody, ItemLook, ItemDef } from './defs/items';
+export type { BreakDef, ItemCategory, ItemForm, VesselBody, ItemLook, ItemDef } from './defs/items';
 export type { Delivery, SpellSound, SpellDef, MoteLook, SpellLook, EssenceLook, LookTweak, EssencePart, ShapePart, PowerPart, RuneDef, StatusDef } from './defs/magic';
 export type { BehaviourDef, BehaviourKind, BrainDef, LootEntry, LootDef, HabitatDef, Placement, PopulationEntry } from './defs/brains';
 export type { SiteLayoutDef, CompassSide, DistrictDef, Landmark, CityLayout, WardDef, SiteDef, StreetStyle, VillageStyle } from './defs/sites';

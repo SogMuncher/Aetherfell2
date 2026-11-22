@@ -1,9 +1,23 @@
-import type { DamageKind } from './effects';
+import type { DamageKind, Effect } from './effects';
 import type { MaterialId } from './defs';
 import type { ItemId } from './defs';
 
 /** A part of a body that armour can cover (content/gear.ts: head, torso, arms, legs). */
 export type BodyRegionId = string;
+
+/** The slot for what is held in the hands. Gear made for it is swung; anything else put there is swung as it is. */
+export const HAND_SLOT = 'hand';
+
+/** Where a piece of gear goes: a part of the body, or the hands. */
+export type GearSlot = BodyRegionId;
+
+/** A box on the paperdoll figure, as shares of its width and height. */
+export interface DollBox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 /** What a body part looks like on the paperdoll and how often blows land on it. */
 export interface BodyRegionDef {
@@ -12,13 +26,14 @@ export interface BodyRegionDef {
   cover: number;
   /** Swing directions that favour it, as multipliers on `cover` (missing = ×1). Keys are swing directions. */
   aim?: Readonly<Record<string, number>>;
-  /** Boxes on the paperdoll figure, as shares of its width and height. Arms and legs have two. */
-  at: readonly { x: number; y: number; w: number; h: number }[];
+  /** Boxes on the paperdoll figure. Arms and legs have two. */
+  at: readonly DollBox[];
 }
 
 /**
- * What a worn piece does. The numbers are worked out from its form, material and quality
- * (content/gear.ts) or written straight into a hand-made item.
+ * What a worn piece does. The numbers are worked out from its form, material, quality and
+ * enchantment (content/gear.ts) or written straight into a hand-made item. How worn it is lives on
+ * the item (every item has durability), not here.
  */
 export interface ArmourStats {
   region: BodyRegionId;
@@ -26,30 +41,43 @@ export interface ArmourStats {
   armor: number;
   /** Multipliers on harm by kind (heat through cloth, cold through steel…); missing = ×1. */
   resist: Partial<Record<DamageKind, number>>;
-  /** Blows it can take before it breaks. */
-  durability: number;
-  /** Blows left. */
-  wear: number;
 }
 
-/** A kind of garment: the shape of armour for one body part (content/gear.ts, `forms`). */
+/** The fighting numbers of a held gear form, before material and quality. */
+export interface GearWeaponBase {
+  damage: number;
+  kind: DamageKind;
+  reach: number;
+  speed?: number;
+  push?: number;
+  swings?: readonly ('left' | 'right' | 'thrust' | 'overhead')[];
+  charge?: number;
+}
+
+/**
+ * A kind of gear: a garment for one part of the body, or something made to be held and swung
+ * (content/gear.ts, `forms`). Its picture is put together from `parts` (render/entities/itemParts.ts).
+ */
 export interface GearFormDef {
   name: string;
-  region: BodyRegionId;
+  /** Where it goes: a body part, or HAND_SLOT for weapons. */
+  slot: GearSlot;
   /** Which material families it can be made of. */
   families: readonly string[];
-  /** Base numbers before material and quality. */
-  armor: number;
+  /** Worn: flat protection before material and quality. */
+  armor?: number;
+  /** Held: fighting numbers before material and quality. */
+  weapon?: GearWeaponBase;
   weight: number;
   value: number;
   durability: number;
-  /** Which picture shape draws it (render/entities/itemArt.ts). */
-  shape: string;
+  /** Picture pieces, painted in order (later ones over earlier ones). */
+  parts: readonly string[];
   /** 0 (cloth) .. 1 (plates): how much of the picture is hard plate. Materials add to it. */
   plate: number;
 }
 
-/** What armour can be made of. */
+/** What gear can be made of. */
 export interface GearMaterialDef {
   /** Word in the name ("iron helm"). */
   name: string;
@@ -57,8 +85,8 @@ export interface GearMaterialDef {
   /** The physical material (fire, rot…) the piece is made of. */
   material: MaterialId;
   tint: number;
-  /** Multipliers on the form's numbers. */
-  armor: number;
+  /** Multiplier on protection when worn and on harm when swung. */
+  power: number;
   weight: number;
   durability: number;
   value: number;
@@ -73,7 +101,7 @@ export interface GearMaterialDef {
 export interface GearQualityDef {
   /** Word in the name; empty for ordinary work. */
   name: string;
-  armor: number;
+  power: number;
   durability: number;
   value: number;
   /** 0..1 shine in the picture. */
@@ -82,12 +110,37 @@ export interface GearQualityDef {
   rarity: number;
 }
 
+/**
+ * A magic laid into a piece. A new enchantment is one entry: what it adds to every blow struck
+ * with it, what it turns aside when worn, and the words and glow it gives.
+ */
+export interface EnchantDef {
+  /** Words after the name ("Iron sword of embers"). */
+  name: string;
+  /** Which slots it can be laid into (missing = any). */
+  slots?: readonly GearSlot[];
+  /** Held: extra effects on whatever it hits, scaled with the blow. */
+  hit?: Effect[];
+  /** Worn: extra multipliers on harm by kind. */
+  resist?: Partial<Record<DamageKind, number>>;
+  /** Multipliers on power and durability (missing = ×1). */
+  power?: number;
+  durability?: number;
+  value: number;
+  /** Colour of the glow in its picture. */
+  glow: number;
+  rarity: number;
+}
+
 export interface GearTables {
   regions: Readonly<Record<BodyRegionId, BodyRegionDef>>;
+  /** The hands on the paperdoll. */
+  hand: { name: string; at: readonly DollBox[] };
   forms: Readonly<Record<string, GearFormDef>>;
   materials: Readonly<Record<string, GearMaterialDef>>;
   qualities: Readonly<Record<string, GearQualityDef>>;
-  /** Tuning shared by every system that touches armour. */
+  enchants: Readonly<Record<string, EnchantDef>>;
+  /** Tuning shared by every system that touches gear. */
   rules: {
     /** Armour that is worn down to nothing still gives this share of its protection (the rest depends on wear left). */
     worn: number;
@@ -97,17 +150,22 @@ export interface GearTables {
     dropChance: number;
     /** Wear a dropped piece has left, as a share of its durability. */
     droppedWear: readonly [number, number];
+    /** Chance a rolled piece carries an enchantment. */
+    enchantChance: number;
   };
 }
 
-/** Asks for a piece of armour to be made at random: anything left out is picked by rarity. */
+/** Asks for a piece of gear to be made at random: anything left out is picked by rarity. */
 export interface GearRoll {
-  region?: BodyRegionId;
+  /** A body part, or HAND_SLOT for something to swing. */
+  region?: GearSlot;
   form?: string;
   /** Material families or material ids to choose from. */
   materials?: readonly string[];
   /** Quality ids to choose from. */
   qualities?: readonly string[];
+  /** Chance of an enchantment (default: rules.enchantChance). */
+  enchant?: number;
 }
 
 /** Garments a creature puts on when it first appears: each entry is tried on its own. */
@@ -116,11 +174,11 @@ export interface OutfitEntry {
   roll: GearRoll;
 }
 
-/** A request to change what a traveller wears (an input, like using an item). */
+/** A request to change what a traveller wears or holds (an input, like using an item). */
 export type WearRequest =
-  /** Put on a piece from the bag. */
-  | { do: 'wear'; item: ItemId }
+  /** Put a piece from the bag on (or, with `slot` HAND_SLOT, take anything from the bag into the hands). */
+  | { do: 'wear'; item: ItemId; slot?: GearSlot }
   /** Put on a piece lying in the world (it is picked up first, if within reach). */
   | { do: 'wearFrom'; entity: number }
-  /** Take the piece off this part of the body and into the bag. */
-  | { do: 'remove'; region: BodyRegionId };
+  /** Take what is on this part of the body (or in the hands) into the bag. */
+  | { do: 'remove'; region: GearSlot };

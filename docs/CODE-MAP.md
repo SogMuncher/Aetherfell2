@@ -11,7 +11,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
 - `fireBench.ts` (30) Benchmark (manual): lights a big brush field, prints burning count, burn-out time and tick cost.
 - `fireSmoke.ts` (21) Headless check that a grass/brush fire spreads with wind and stops in rain.
-- `gearSmoke.ts` (218) check: armour pieces, regions, wear, paperdoll data
+- `gearSmoke.ts` (~300) check: gear (weapons, armour, enchantments), hand slot, wear/break on ground and 3D cell, G throw
 - `matterSmoke.ts` (338) MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
 - `mechanicsSmoke.ts` (519) check: core mechanics (combat, items, fire, traps, statuses) on ground and cells
 - `realmSmoke.ts` (159) REALMS: the underworld is a second set of tiles, cells and things swapped in for the surface; every
@@ -64,7 +64,10 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `day.ts` (36) The one day-and-night clock. Times are a share of the day: 0 is midnight, 0.25 six in the
 - `effects.ts` (38) Bursts of motes for things that happen in the world (not spells: those have their own look in
 - `forms.ts` (458) trees, bushes, rocks, stones, plants as pieces (D)
-- `gear.ts` (242) armour as data: parts, garments, materials, qualities, rolls
+- `gear.ts` (59) gear as data: body parts, hand slot, forms (garments + weapons), materials, qualities, enchantments
+- `gearItems.ts` (159) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
+- `gearCheck.ts` (56) gearProblems: the gear tables are sound
+- `itemDefs.ts` (107) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (112) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
 - `index.ts` (76) collects every table into CONTENT, re-exports helpers, runs validation
@@ -127,7 +130,11 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `bodyPaint.ts` (324) ray-intersect solids into colour-region pixels
 - `creatures.ts` (82) picks the sprite for a creature look and individual
 - `formArt.ts` (257) grows trees, rocks, objects from content forms
-- `itemArt.ts` (828) item pictures painted from item traits (C-size, shared with viewmodel thread)
+- `itemArt.ts` (192) paints an item: its parts in order (one picture per item), other base forms, world size
+- `itemPaint.ts` (218) item painting tools (Pix, axis, palette materials) and the resolved look
+- `itemParts.ts` (182) weapon parts (grip, guard, blade, pommel, haft, axe bit, heads) + ITEM_PARTS table
+- `itemPlates.ts` (131) armour parts: headgear, torsowear, armwear, legwear
+- `itemVessel.ts` (157) flasks, bottles, vials, jugs, pots
 - `mesh.ts` (402) tiny 3D painter for the held weapon (being replaced)
 - `props.ts` (55) props grown from forms
 - `spriteRenderer.ts` (217) depth-tested billboards, dithered
@@ -176,7 +183,8 @@ Search this first, then open only the file you need. Update the entry (and line 
 ## src/render/ui/
 - `bag.ts` (476) BagWindow: draggable inventory window (C)
 - `bagParts.ts` (148) bag constants, icon urls, item description, layout store
-- `paperdoll.ts` (322) C key: armour slots, stats, skills, statuses
+- `paperdoll.ts` (293) C key: armour slots and the hand slot, drag to take off
+- `paperdollStats.ts` (52) the paperdoll's side panel: health, protection, hands, skills
 - `settingsMenu.ts` (257) Esc/O menu built from settings data + cheat tab
 - `style.ts` (132) HUD CSS from content/hud.ts
 - `ui.ts` (656) GameUI: HUD, dialogue, journal, map, runebook (C)
@@ -205,6 +213,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `temperature.ts` (107) temperature of tiles/cells: heat dries then burns, cold freezes wet, spots settle back
 
 ## src/sim/
+- `breakage.ts` (18) ctx.breakItem: an item's onBreak burst + what it breaks into
 - `inputQueue.ts` (44) queueing/folding of guest inputs
 - `simLoop.ts` (497) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
 - `simState.ts` (97) rng, createState, newPlayer
@@ -217,20 +226,24 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `magicSystem.ts` (188) Casting. The prepared spell is composed from runes (content/spellcraft.ts): a delivery (bolt,
 
 ## src/sim/melee/
-- `meleeSystem.ts` (305) How hard a shove of weight 1 pushes, in m/s (the weapon's own push and the swing's knock scale it).
+- `meleeSurface.ts` (91) striking walls/doors/trees; wearHeld (held item wears and breaks)
+- `meleeSystem.ts` (222) How hard a shove of weight 1 pushes, in m/s (the weapon's own push and the swing's knock scale it).
 
 ## src/sim/persistence/
 - `persistence.ts` (260) save/load with fflate
 
 ## src/sim/physics/
-- `physicsSystem.ts` (299) Knockback left after each tick (it fades in about a third of a second).
+- `impacts.ts` (77) fast loose things hurt, onImpact bursts, thrown items take a blow and break
+- `physicsSystem.ts` (273) Knockback left after each tick (it fades in about a third of a second).
 - `spatialHash.ts` (41) Uniform grid of entities, rebuilt once per tick. Answers "what is near here?" cheaply.
 
 ## src/sim/player/
 - `playerSystem.ts` (222) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
 
 ## src/sim/rpg/
-- `rpgSystem.ts` (296) Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
+- `gearHandling.ts` (67) put on / take off armour, hold anything in the hands
+- `throwing.ts` (107) throw from the bag, G throw/drop from the hands, pick up from the view
+- `rpgSystem.ts` (173) Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
 
 ## src/sim/social/
 - `socialSystem.ts` (227) Conversation: greetings that depend on the hour and on what the party has done, rumours that
@@ -280,7 +293,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `entities.ts` (225) Entity and its components
 - `events.ts` (62) Things that happened during a tick. Audio, render effects, UI and the network react to these.
 - `forms.ts` (98) How a world object is put together, as data: trees, bushes, rocks, standing stones, haystacks,
-- `gear.ts` (126) A part of a body that armour can cover (content/gear.ts: head, torso, arms, legs).
+- `gear.ts` (184) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
 - `index.ts` (21) re-exports all types
 - `input.ts` (90) Letting go of an item from the bag over the view: where the cursor was decides the throw.
 - `items.ts` (26) Inventory helpers shared by every system that touches items.

@@ -17,8 +17,8 @@ export interface UiCallbacks {
   throwItem(aim: ThrowAim): void;
   /** The bag: a loose item in the view was dragged into it (entity id). */
   pickUp(entity: number): void;
-  /** The paperdoll: put this piece of armour from the bag on. */
-  wear(id: ItemId): void;
+  /** The paperdoll: put this piece of armour from the bag on (or, with a slot of the hands, hold anything). */
+  wear(id: ItemId, slot?: string): void;
   /** The paperdoll: put on a piece of armour lying in the view (entity id). */
   wearFrom(entity: number): void;
   /** The paperdoll: take what is worn on this part of the body off. */
@@ -136,11 +136,12 @@ export class GameUI {
       use: (id) => this.cb.use(id),
       throwItem: (aim) => this.cb.throwItem(aim),
       pickUp: (id) => this.cb.pickUp(id),
-      wear: (id) => this.cb.wear(id),
+      wear: (id, slot) => this.cb.wear(id, slot),
       wearFrom: (id) => this.cb.wearFrom(id),
     });
     this.doll = new PaperdollWindow(host, { remove: (r) => this.cb.remove(r) });
     this.bag.dollAt = (x, y) => this.doll.contains(x, y);
+    this.bag.dollSlotAt = (x, y) => this.doll.slotAt(x, y);
     this.bag.dollOpen = () => this.doll.open;
     this.mapPanel = el('div', 'panel map hidden', host, '<h2>Map</h2>');
     this.mapCanvas = el('canvas', '', this.mapPanel);
@@ -169,10 +170,10 @@ export class GameUI {
         <div><kbd>RMB</kbd> guard (tap just before a hit to parry)</div>
         <div><kbd>Q</kbd>/<kbd>MMB</kbd> cast · <kbd>B</kbd> runebook</div>
         <div><kbd>E</kbd> use / talk / open / revive</div>
-        <div><kbd>F</kbd> grab, then throw</div>
+        <div><kbd>F</kbd> grab, then throw · <kbd>G</kbd> throw what is in your hands (look down to set it at your feet)</div>
         <div><kbd>1</kbd>–<kbd>4</kbd> quick use (draught, flask, bread…) · in the bag, click an item then a number to change a key</div>
         <div><kbd>I</kbd> bag (drag items onto the world to throw, or things lying nearby into the bag)</div>
-        <div><kbd>C</kbd> you: armour on a paperdoll, stats, skills, afflictions (double-click armour in the bag to wear it)</div>
+        <div><kbd>C</kbd> you: armour on a paperdoll, stats, skills, afflictions (double-click armour in the bag to wear it, drag anything onto the hands to hold it)</div>
         <div><kbd>J</kbd> journal · <kbd>M</kbd> map</div>
         <div><kbd>F5</kbd> save · <kbd>F9</kbd> load · <kbd>F3</kbd> debug</div>
         <div><kbd>Esc</kbd>/<kbd>O</kbd> settings and debug cheats</div>

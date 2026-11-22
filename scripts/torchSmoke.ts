@@ -40,7 +40,7 @@ check('content validates', validateContent(CONTENT).length === 0, validateConten
   const a = me.actor;
   check('a traveller has a weapon slot', !!a);
   if (a) {
-    a.weapon = 'travellerSword';
+    a.weapon = 'gear:sword:iron:common';
     check('a sword gives no light', !heldLight(CONTENT, me));
     a.weapon = 'torch';
     const l = heldLight(CONTENT, me);

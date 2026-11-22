@@ -13,7 +13,7 @@
 | `tiles` (+`tileCodes` ledger, `surfaces`, `palettes`) | ground/wall kinds, also the material of 3D cells; textures; colours |
 | `biomes`, `world` | landscape kinds (first fit wins); land shape, roads, water numbers |
 | `things`, `living` | entity archetypes by traits (body, health, actor, brain, light, portal...); brains, factions, habitats |
-| `items`, `gear`, `loot` | goods, armour pieces (`gear:<form>:<material>:<quality>`), drop tables |
+| `items`, `gear`, `loot` | goods; weapons + armour (`gear:<form>:<material>:<quality>[:<enchant>]`, worn ids end `@wear`); drops |
 | `runes`, `spellcraft`, `statuses`, `effects` | spell syllables, ongoing conditions, mote bursts |
 | `sites`, `roles`, `structures`, `shapes` | places, villager jobs, building recipes, 3D shapes (append-only ledger) |
 | `looks`, `forms`, `props` | creature parts, trees/rocks/plants, made objects, drawn from pieces + colour regions |
@@ -25,8 +25,10 @@ Thing traits (systems act on these): `body` `health` `material` `actor` `brain` 
 
 ## Recipes (content only unless noted)
 - Creature: `things` + `habitats` entry. New behaviour *kind* needs code (see RPG.md).
-- Potion/food: `items.use: Effect[]`. Throwable: `thrown`. Weapon: `items.weapon`. Light: `items.light`.
-- Armour: one entry in `gear.ts` (form, material, quality or body part). Resolve with `itemDef()`, never `items[id]`.
+- Potion/food: `items.use: Effect[]`. Throwable: `thrown {speed}`. Break reaction: `onBreak {radius, effects, into}`. Light: `items.light`.
+  Any item can be held, swung, thrown and broken by default (`rules.items`); `durability`/`weapon` only to override.
+- Weapon or armour: one entry in `gear.ts` (form with `slot` + `parts`, material, quality, body part). Enchantment: one
+  `gear.enchants` entry (`hit` effects, `resist`, multipliers). Resolve with `itemDef()`, never `items[id]`.
 - Rune: `runes` entry (+ stone item `rune:<id>`, loot). Condition: `statuses`. Material behaviour: `materials`.
 - Tile/building material: `tiles` entry (+ `surfaces`); code uses `tileCode('id')`. Landscape: `biomes` (order matters).
 - Tree/rock/plant: `forms` + a `tiles` entry whose sprite names it. Prop: `props` form named by the thing's `sprite`.

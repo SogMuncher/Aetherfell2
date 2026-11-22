@@ -36,9 +36,9 @@ export const ROLES: Record<RoleId, RoleDef> = {
       thanks: 'Good thick hide. The forge will roar again.',
     },
     stock: [
-      { id: 'ironSword', count: 1 },
-      { id: 'woodAxe', count: 1 },
-      { id: 'spear', count: 1 },
+      { id: 'gear:sword:iron:fine', count: 1 },
+      { id: 'gear:axe:iron:common', count: 1 },
+      { id: 'gear:spear:bronze:common', count: 1 },
       { id: 'glider', count: 1 },
     ],
     trade: {

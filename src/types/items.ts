@@ -24,3 +24,20 @@ export function removeItem(inv: ItemStack[], id: ItemId, count: number): boolean
 export function countItem(inv: readonly ItemStack[], id: ItemId): number {
   return inv.find((x) => x.id === id)?.count ?? 0;
 }
+
+/**
+ * Any item id may carry how many blows this one has left: `torch@12`, `gear:sword:iron:fine@40`.
+ * A new item carries nothing. These split and join that mark; content/itemDefs.ts reads it.
+ */
+export function splitWear(id: ItemId): { base: ItemId; wear: number | undefined } {
+  const at = id.lastIndexOf('@');
+  if (at <= 0) return { base: id, wear: undefined };
+  const w = Number(id.slice(at + 1));
+  return Number.isFinite(w) ? { base: id.slice(0, at), wear: w } : { base: id, wear: undefined };
+}
+
+/** The id of `base` with this many blows left (no mark when it is as good as new). */
+export function joinWear(base: ItemId, wear: number | undefined, durability: number): ItemId {
+  if (wear === undefined || wear >= durability) return base;
+  return `${base}@${Math.max(0, Math.round(wear))}`;
+}

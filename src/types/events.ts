@@ -53,6 +53,8 @@ export type SimEvent =
   | { type: 'froze'; x: number; y: number; z?: number }
   | { type: 'thawed'; x: number; y: number; z?: number }
   | { type: 'shatter'; entity: number; x: number; y: number }
+  /** An item broke (in the hands or flying into something). */
+  | { type: 'itemBroke'; item: ItemId; x: number; y: number; z: number }
   | { type: 'glide'; entity: number; open: boolean }
   | { type: 'locked'; entity: number; x: number; y: number }
   | { type: 'unlocked'; entity: number; x: number; y: number }

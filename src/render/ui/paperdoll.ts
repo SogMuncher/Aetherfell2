@@ -1,7 +1,8 @@
-import type { BodyRegionId, DamageKind, Entity, ItemId } from '../../types';
-import { DAMAGE_KINDS } from '../../types';
-import { CONTENT, gearCondition, gearEffect, itemDef, skillXp, stackWeight, thingDef, weaponStats, wornWeight } from '../../content';
+import type { BodyRegionId, DollBox, Entity, ItemId } from '../../types';
+import { HAND_SLOT } from '../../types';
+import { CONTENT, itemDef, skillXp } from '../../content';
 import { describe, iconUrl } from './bagParts';
+import { dollStats, esc } from './paperdollStats';
 
 export interface PaperdollCallbacks {
   /** Take what is worn on this part of the body off (it goes into the bag). */
@@ -12,10 +13,6 @@ export interface PaperdollCallbacks {
 const FIG_W = 76;
 const FIG_H = 112;
 const SHOW = 2;
-
-function esc(s: string): string {
-  return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c);
-}
 
 function css(c: number, k = 1): string {
   const ch = (shift: number): number => Math.max(0, Math.min(255, Math.round(((c >> shift) & 255) * k)));
@@ -67,7 +64,7 @@ export class PaperdollWindow {
     this.el.innerHTML = `<div class="doll-title"><h2>You</h2><button data-close title="Close (C)">×</button></div>
       <div class="doll-body"><div class="doll-fig"><canvas></canvas></div><div class="doll-side"></div></div>
       <div class="doll-note dim"></div>
-      <div class="hint">Double-click armour in the bag, or drag it here from the bag or from the ground, to wear it · double-click a worn piece, or drag it off, to take it off</div>`;
+      <div class="hint">Double-click armour in the bag, or drag it here from the bag or from the ground, to wear it · drag anything onto the hands to hold it · double-click a worn piece, or drag it off, to take it off</div>`;
     host.appendChild(this.el);
     const fig = this.el.querySelector<HTMLElement>('.doll-fig');
     const canvas = this.el.querySelector<HTMLCanvasElement>('canvas');
@@ -83,11 +80,12 @@ export class PaperdollWindow {
     this.fig.style.width = `${FIG_W * SHOW}px`;
     this.fig.style.height = `${FIG_H * SHOW}px`;
     this.el.querySelector('button[data-close]')?.addEventListener('click', () => this.toggle(false));
-    // One slot over every box of every body part the content names.
-    for (const [region, def] of Object.entries(CONTENT.gear.regions)) {
+    // One slot over every box of every body part the content names, and one for the hands.
+    const places: [string, { name: string; at: readonly DollBox[] }][] = [...Object.entries(CONTENT.gear.regions), [HAND_SLOT, CONTENT.gear.hand]];
+    for (const [region, def] of places) {
       for (const b of def.at) {
         const el = document.createElement('div');
-        el.className = 'doll-slot';
+        el.className = region === HAND_SLOT ? 'doll-slot doll-hand' : 'doll-slot';
         el.dataset.region = region;
         el.title = def.name;
         el.style.left = `${b.x * 100}%`;
@@ -126,7 +124,9 @@ export class PaperdollWindow {
   /** Called every frame. */
   update(e: Entity): void {
     if (!this.open) return;
-    const worn = e.worn ?? {};
+    // The hands are one more slot: whatever is held shows there.
+    const worn: Record<BodyRegionId, ItemId> = { ...(e.worn ?? {}) };
+    if (e.actor?.weapon) worn[HAND_SLOT] = e.actor.weapon;
     this.lastWorn = worn;
     const wornKey = Object.entries(worn).map(([r, id]) => `${r}=${id}`).join(',');
     if (wornKey !== this.figKey) {
@@ -140,7 +140,7 @@ export class PaperdollWindow {
           s.el.title = itemDef(CONTENT, id)?.name ?? s.region;
         } else {
           s.img.style.display = 'none';
-          s.el.title = CONTENT.gear.regions[s.region]?.name ?? s.region;
+          s.el.title = this.slotName(s.region);
         }
       }
     }
@@ -155,11 +155,11 @@ export class PaperdollWindow {
       Math.ceil(e.hp), e.maxHp, Math.floor(p.stamina), Math.floor(p.mana), wornKey,
       Object.entries(p.skills).map(([k, v]) => `${k}${v.level}.${Math.floor((v.xp * 20) / skillXp(v.level))}`).join(','),
       Object.entries(e.status).filter(([, t]) => t > 0).map(([k, t]) => `${k}${Math.ceil(t / 20)}`).join(','),
-      a?.weapon ?? '', a?.wear ?? 0, p.stats.might, p.stats.grace, p.stats.will,
+      a?.weapon ?? '', p.stats.might, p.stats.grace, p.stats.will,
     ].join('|');
     if (key === this.key) return;
     this.key = key;
-    this.side.innerHTML = this.stats(e);
+    this.side.innerHTML = dollStats(e);
   }
 
   /** The figure: skin and plain cloth, with every worn piece painted over its part in its own colour. */
@@ -201,48 +201,6 @@ export class PaperdollWindow {
     };
     for (const r of Object.keys(CONTENT.gear.regions)) draw(r, false);
     for (const r of Object.keys(CONTENT.gear.regions)) draw(r, true);
-  }
-
-  private stats(e: Entity): string {
-    const p = e.player;
-    if (!p) return '';
-    const def = thingDef(CONTENT, e.def);
-    const worn = e.worn ?? {};
-    const bar = (cls: string, v: number, max: number, label: string): string => `<div class="doll-bar ${cls}"><i style="width:${Math.max(0, Math.min(100, (100 * v) / Math.max(1, max)))}%"></i><span>${label} ${Math.ceil(v)} / ${Math.round(max)}</span></div>`;
-    // Protection: what each body part turns off a blow, and the kinds of harm that worn pieces change.
-    const base = def.health?.armor ?? 0;
-    const parts: string[] = [];
-    const harm: Partial<Record<DamageKind, number>> = {};
-    for (const [region, rd] of Object.entries(CONTENT.gear.regions)) {
-      if (!def.wears?.includes(region)) continue;
-      const id = worn[region];
-      const a = id ? itemDef(CONTENT, id)?.armour : undefined;
-      const val = base + (a ? a.armor * gearEffect(CONTENT.gear, a) : 0);
-      const item = id ? itemDef(CONTENT, id) : undefined;
-      parts.push(`<div class="${a ? '' : 'dim'}">${esc(rd.name)} <b>${val.toFixed(1)}</b> ${item && a ? `· ${esc(item.name)} <small class="dim">(${gearCondition(a)})</small>` : '· nothing worn'}</div>`);
-      if (a) for (const k of DAMAGE_KINDS) if (a.resist[k] !== undefined) harm[k] = (harm[k] ?? 1) * (a.resist[k] ?? 1);
-    }
-    const kinds = Object.entries(harm).filter(([, v]) => Math.abs((v ?? 1) - 1) > 0.01).map(([k, v]) => `${k} ${(v ?? 1) < 1 ? '−' : '+'}${Math.round(Math.abs(1 - (v ?? 1)) * 100)}%`);
-    const wpn = e.actor ? weaponStats(CONTENT, def, e.actor.weapon) : null;
-    const hand = wpn ? `${esc(wpn.name)} · ${wpn.damage} ${wpn.kind}${e.actor?.weapon ? ` · edge ${e.actor.wear}/${wpn.durability}` : ''}` : 'bare hands';
-    const skills = Object.entries(p.skills)
-      .map(([k, s]) => `<div class="doll-skill"><span>${esc(k)} ${s.level}</span><i><b style="width:${Math.min(100, (100 * s.xp) / skillXp(s.level))}%"></b></i></div>`)
-      .join('');
-    const afflictions = Object.entries(e.status)
-      .filter(([, t]) => t > 0)
-      .map(([id, t]) => `<span class="doll-status">${esc(CONTENT.statuses[id]?.name ?? id)} <small>${Math.ceil(t / 20)}s</small></span>`)
-      .join('');
-    const load = stackWeight(p.inventory) + wornWeight(CONTENT, e.worn);
-    const limit = 30 + p.stats.might * 4;
-    return `<div class="doll-name">${esc(p.name)}</div>
-      ${bar('hp', e.hp, e.maxHp, 'Health')}${bar('st', p.stamina, p.maxStamina, 'Stamina')}${bar('mp', p.mana, p.maxMana, 'Aether')}
-      <h3>Protection</h3><div class="doll-parts">${parts.join('')}</div>
-      ${kinds.length ? `<div class="dim">Harm taken: ${esc(kinds.join(', '))}</div>` : ''}
-      <h3>Stats</h3><div>Might ${p.stats.might} · Grace ${p.stats.grace} · Will ${p.stats.will}</div>
-      <div class="dim">${esc(hand)}</div>
-      <div class="${load > limit ? 'heavy' : 'dim'}">Load ${load.toFixed(1)} / ${limit} kg</div>
-      <h3>Skills</h3>${skills}
-      <h3>Afflictions</h3><div>${afflictions || '<span class="dim">none</span>'}</div>`;
   }
 
   // -------------------------------------------------------------------------------------------
@@ -306,6 +264,19 @@ export class PaperdollWindow {
 
   private lastWorn: Readonly<Record<BodyRegionId, ItemId>> | undefined;
 
+  private slotName(region: string): string {
+    return region === HAND_SLOT ? CONTENT.gear.hand.name : (CONTENT.gear.regions[region]?.name ?? region);
+  }
+
+  /** The slot (body part or hands) under this screen point, if any (the bag asks where a piece is dropped). */
+  slotAt(x: number, y: number): string | null {
+    for (const s of this.slots) {
+      const r = s.el.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return s.region;
+    }
+    return null;
+  }
+
   private click(region: BodyRegionId): void {
     const now = performance.now();
     if (this.lastClick.region === region && now - this.lastClick.at < 380) {
@@ -316,7 +287,7 @@ export class PaperdollWindow {
     this.lastClick = { region, at: now };
     const id = this.wornId(region);
     const def = id ? itemDef(CONTENT, id) : undefined;
-    this.note.innerHTML = def ? `<b>${esc(def.name)}</b> — ${describe(def).map(esc).join(' ')}` : esc(`${CONTENT.gear.regions[region]?.name ?? region}: nothing worn.`);
+    this.note.innerHTML = def ? `<b>${esc(def.name)}</b> — ${describe(def).map(esc).join(' ')}` : esc(`${this.slotName(region)}: ${region === HAND_SLOT ? 'empty' : 'nothing worn'}.`);
     this.noteUntil = now + 6000;
   }
 }

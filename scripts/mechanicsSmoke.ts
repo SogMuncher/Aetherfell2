@@ -1,7 +1,7 @@
 // Headless checks for the core mechanics: content validation, frost and ice, throwables, glider,
 // weapons, keys and locked chests, fire traps, and status rules. Prints PASS/FAIL per check.
 import { Simulation, createState } from '../src/sim';
-import { CONTENT, fillText, siteBaseName, spellFor, validateContent } from '../src/content';
+import { CONTENT, fillText, itemDef, siteBaseName, spellFor, validateContent } from '../src/content';
 import { siteInRegion } from '../src/sim/world/sites';
 import { ITEM_FORMS, paintItem } from '../src/render/entities/itemArt';
 import type { Entity, InputSnapshot } from '../src/types';
@@ -91,7 +91,7 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
   const ev = run(sim, 40);
   let oil = 0;
   for (let j = -12; j <= 12; j++) for (let i = -12; i <= 12; i++) if (sim.tiles.oil(x + i, y + j) > 0) oil++;
-  check('oil flask shatters', ev.includes('shatter'));
+  check('oil flask shatters', ev.includes('itemBroke'));
   check('oil coats the ground', oil > 3, `${oil} oily tiles`);
   sim.state.queues.effects.push({ target: { kind: 'area', x: x + 5, y: y + 0.5, z: 0, radius: 3 }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
   const ev2 = run(sim, 4);
@@ -127,15 +127,16 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
   const y = 15000;
   arena(sim, x, y);
   put(me, sim, x + 0.5, y + 0.5);
-  me.player?.inventory.push({ id: 'warHammer', count: 1 });
-  run(sim, 1, () => ({ useItem: 'warHammer' }));
-  check('wield a found weapon', me.actor?.weapon === 'warHammer');
-  check('old weapon goes back in the pack', !!me.player?.inventory.some((s) => s.id === 'travellerSword'));
+  me.player?.inventory.push({ id: 'gear:hammer:iron:common', count: 1 });
+  run(sim, 1, () => ({ useItem: 'gear:hammer:iron:common' }));
+  check('wield a found weapon', me.actor?.weapon === 'gear:hammer:iron:common');
+  check('old weapon goes back in the pack', !!me.player?.inventory.some((s) => s.id === 'gear:sword:iron:common'));
   const c = spawner(sim).spawn('crate', x + 1.8, y + 0.5, { z: sim.tiles.ground(x + 1.8, y + 0.5) });
-  const wear0 = me.actor?.wear ?? 0;
+  const heldWear = (): number => (me.actor?.weapon ? (itemDef(CONTENT, me.actor.weapon)?.wear ?? 0) : 0);
+  const wear0 = heldWear();
   const ev = run(sim, 60, (i) => ({ attack: i % 30 < 2, swingDir: 'thrust' }));
   check('hammer smashes a crate', c.dead || c.hp < c.maxHp, `crate hp ${c.hp}/${c.maxHp}`);
-  check('weapon wears with use', (me.actor?.wear ?? 0) < wear0, `${wear0} → ${me.actor?.wear}`);
+  check('weapon wears with use', heldWear() < wear0, `${wear0} → ${heldWear()}`);
   check('crate breaks noisily', ev.includes('propBroken') || !c.dead);
 }
 
@@ -205,25 +206,25 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
     me.player?.inventory.push({ id: item, count: 2 });
     const before = new Set(sim.state.entities.keys());
     const events = run(sim, 60, (i) => (i === 0 ? { throwItem: { item, yaw, lift, power } } : {}));
-    const thrown = [...sim.state.entities.values()].find((e) => !before.has(e.id) && e.item?.id === item);
+    const thrown = [...sim.state.entities.values()].find((e) => !before.has(e.id) && !!e.item?.id.startsWith(item));
     let oil = 0;
     for (let j = -30; j <= 30; j++) for (let i = -30; i <= 30; i++) oil += sim.tiles.oil(x + i, y + j);
     const left = me.player?.inventory.find((s) => s.id === item)?.count ?? 0;
     return { dx: thrown ? thrown.pos.x - me.pos.x : NaN, dy: thrown ? thrown.pos.y - me.pos.y : NaN, events, left, oil };
   };
-  const drop = toss('ironSword', 0, -0.5, 0.05);
-  const mid = toss('ironSword', 0, 0, 0.5);
-  const far = toss('ironSword', 0, 0.5, 1);
+  const drop = toss('gear:sword:iron:fine', 0, -0.5, 0.05);
+  const mid = toss('gear:sword:iron:fine', 0, 0, 0.5);
+  const far = toss('gear:sword:iron:fine', 0, 0.5, 1);
   check('letting go low on the screen sets it down in front of you', drop.dx > 0.3 && drop.dx < 2.5, `${drop.dx.toFixed(2)} m`);
   check('higher up the screen throws further', mid.dx > drop.dx + 1 && far.dx > mid.dx + 2, `${drop.dx.toFixed(1)} < ${mid.dx.toFixed(1)} < ${far.dx.toFixed(1)} m`);
   check('the item leaves the bag', far.left === 1);
-  const right = toss('ironSword', 0.6, 0.2, 0.8);
-  const leftward = toss('ironSword', -0.6, 0.2, 0.8);
+  const right = toss('gear:sword:iron:fine', 0.6, 0.2, 0.8);
+  const leftward = toss('gear:sword:iron:fine', -0.6, 0.2, 0.8);
   check('letting go right of centre throws right', right.dy > 1.5 && leftward.dy < -1.5, `right ${right.dy.toFixed(1)}, left ${leftward.dy.toFixed(1)}`);
   const gentle = toss('oilFlask', 0, -0.5, 0.05);
-  check('a flask set down does not break', gentle.oil === 0 && !gentle.events.includes('shatter'));
+  check('a flask set down does not break', gentle.oil === 0 && !gentle.events.includes('itemBroke'));
   const hurled = toss('oilFlask', 0, 0.3, 0.9);
-  check('a flask thrown hard bursts where it lands', hurled.events.includes('shatter') && hurled.oil > 0);
+  check('a flask thrown hard bursts where it lands', hurled.events.includes('itemBroke') && hurled.oil > 0);
 }
 
 // --- Places, villagers and rules are data ------------------------------------------------------
@@ -411,13 +412,13 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
 
 // Item pictures are built from data: every item paints something, and weapons differ by their stats.
 {
-  const art = (id: string): Uint32Array => paintItem(CONTENT.items[id]);
+  const art = (id: string): Uint32Array => paintItem(itemDef(CONTENT, id));
   const filled = (px: Uint32Array): number => px.reduce((n, c) => n + (c !== 0 ? 1 : 0), 0);
   const empty = Object.keys(CONTENT.items).filter((id) => filled(art(id)) < 12);
   check('every item has a picture', empty.length === 0, empty.join(', '));
-  const sword = CONTENT.items.ironSword;
+  const sword = itemDef(CONTENT, 'gear:sword:iron:fine');
   const longer = sword?.weapon ? paintItem({ ...sword, weapon: { ...sword.weapon, reach: sword.weapon.reach + 0.8 } }) : null;
-  check('a longer reach paints a longer blade', !!longer && filled(longer) > filled(art('ironSword')));
+  check('a longer reach paints a longer blade', !!longer && filled(longer) > filled(art('gear:sword:iron:fine')));
   const looks = new Set(Object.keys(CONTENT.items).map((id) => art(id).join(',')));
   check('different items look different', looks.size >= Object.keys(CONTENT.items).length - 2, `${looks.size} distinct of ${Object.keys(CONTENT.items).length}`);
   check('every named look form exists', Object.values(CONTENT.items).every((d) => !d.look?.form || ITEM_FORMS.includes(d.look.form)));
@@ -428,7 +429,7 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
   const x = 21000;
   const y = 21000;
   /** Holds the button for `hold` ticks, lets go, and reports what the first hit did. */
-  const duel = (dir: 'left' | 'right' | 'thrust' | 'overhead', hold: number, weapon = 'travellerSword'): { dmg: number; kb: { x: number; y: number }; stamina: number; frozen: number; them: Entity; me: Entity; sim: Simulation } => {
+  const duel = (dir: 'left' | 'right' | 'thrust' | 'overhead', hold: number, weapon = 'gear:sword:iron:common'): { dmg: number; kb: { x: number; y: number }; stamina: number; frozen: number; them: Entity; me: Entity; sim: Simulation } => {
     const { sim, me } = world();
     arena(sim, x, y);
     put(me, sim, x + 0.5, y + 0.5);
@@ -467,7 +468,7 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
   check('left and right sweeps throw foes opposite ways', L.kb.y * Rr.kb.y < 0, `left ${L.kb.y.toFixed(2)}, right ${Rr.kb.y.toFixed(2)}`);
   check('a thrust drives straight back', tap.kb.x > Math.abs(tap.kb.y) * 2 && tap.kb.x > L.kb.x, `thrust ${tap.kb.x.toFixed(2)} sweep ${L.kb.x.toFixed(2)}`);
   check('a solid hit holds both bodies still (hitstop)', tap.frozen > 0, `${tap.frozen} ticks`);
-  const stun = duel('overhead', 1, 'warHammer');
+  const stun = duel('overhead', 1, 'gear:hammer:iron:common');
   check('a heavy blow staggers (hitstun)', (stun.them.status[CONTENT.rules.combat.hitstun.status] ?? 0) > 0);
   check('wild creatures do not hurt their own kind', CONTENT.factions.wild?.friendlyFire === true);
 
@@ -478,8 +479,8 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
     put(me, sim, x + 0.5, y + 40.5);
     if (me.actor) me.actor.weapon = weapon;
     sim.tiles.setKind(x + 2, y + 40, kind as 0);
-    if (me.actor) me.actor.wear = 1000;
-    const w0 = me.actor?.wear ?? 0;
+    const wearNow = (): number => (me.actor?.weapon ? (itemDef(CONTENT, me.actor.weapon)?.wear ?? 0) : 0);
+    const w0 = wearNow();
     let n = 0;
     for (let i = 0; i < hits * 40; i++) {
       sim.enqueue({ type: 'input', playerId: 'local', input: { ...emptyInput(i, 0), attack: i % 40 < 2, swingDir: 'thrust' } });
@@ -487,12 +488,12 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
       if (me.player) me.player.stamina = 100;
       if (sim.tiles.kind(x + 2, y + 40) !== kind) break;
     }
-    return { sim, me, wearLost: (w0 - (me.actor?.wear ?? 0)) / Math.max(1, n), broke: sim.tiles.kind(x + 2, y + 40) !== kind };
+    return { sim, me, wearLost: (w0 - wearNow()) / Math.max(1, n), broke: sim.tiles.kind(x + 2, y + 40) !== kind };
   };
-  const door = strikeTile(Tile.Door, 30, 'warHammer');
+  const door = strikeTile(Tile.Door, 30, 'gear:hammer:steel:masterwork:enduring');
   check('a door can be broken down', door.broke && door.sim.tiles.kind(x + 2, y + 40) === Tile.WoodFloor, `now tile ${door.sim.tiles.kind(x + 2, y + 40)}`);
-  const stone = strikeTile(Tile.StoneWall, 10, 'travellerSword');
-  const wood = strikeTile(Tile.WoodWall, 10, 'travellerSword');
+  const stone = strikeTile(Tile.StoneWall, 10, 'gear:sword:steel:masterwork:enduring');
+  const wood = strikeTile(Tile.WoodWall, 10, 'gear:sword:steel:masterwork:enduring');
   check('stone walls do not give', !stone.broke);
   check('hard stone wears a blade more than wood (per blow)', stone.wearLost > wood.wearLost, `stone ${stone.wearLost}, wood ${wood.wearLost}`);
 

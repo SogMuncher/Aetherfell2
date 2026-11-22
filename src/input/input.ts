@@ -14,7 +14,7 @@ export class InputSystem {
   readonly keyboard: Keyboard;
   readonly mouse: Mouse;
   private seq = 0;
-  private latched = { interact: false, grab: false, cast: false, jump: false };
+  private latched = { interact: false, grab: false, cast: false, jump: false, throwHeld: false };
   private prepare: RuneId[] | null = null;
   private useItem: ItemId | null = null;
   private dropItem: ItemId | null = null;
@@ -46,6 +46,7 @@ export class InputSystem {
     const m = this.mouse;
     if (k.consume('KeyE')) this.latched.interact = true;
     if (k.consume('KeyF')) this.latched.grab = true;
+    if (k.consume('KeyG')) this.latched.throwHeld = true;
     if (k.consume('KeyQ') || m.consume(1)) this.latched.cast = true;
     if (k.consume('Space')) this.latched.jump = true;
     for (let i = 0; i < 6; i++) {
@@ -53,9 +54,8 @@ export class InputSystem {
       if (this.dialogueOpen) this.choice = i;
       else if (i < QUICK_SLOTS) this.quickKey(i);
     }
-    // The old keys still work: H is quick key 1, G quick key 2.
+    // The old key still works: H is quick key 1.
     if (k.consume('KeyH')) this.quickKey(0);
-    if (k.consume('KeyG')) this.quickKey(1);
     if (k.consume('KeyI') || k.consume('Tab')) this.uiQueue.push('inventory');
     if (k.consume('KeyC')) this.uiQueue.push('paperdoll');
     if (k.consume('KeyJ')) this.uiQueue.push('journal');
@@ -100,8 +100,8 @@ export class InputSystem {
     this.pickUp = entity;
   }
   /** The paperdoll and the bag: put a piece from the bag on. */
-  queueWear(item: ItemId): void {
-    this.wear = { do: 'wear', item };
+  queueWear(item: ItemId, slot?: string): void {
+    this.wear = slot ? { do: 'wear', item, slot } : { do: 'wear', item };
   }
   /** A piece of armour lying in the view was dragged onto the paperdoll. */
   queueWearFrom(entity: number): void {
@@ -154,15 +154,16 @@ export class InputSystem {
       useItem: this.useItem,
       dropItem: this.dropItem,
       throwItem: this.throwItem,
+      throwHeld: this.latched.throwHeld,
       pickUp: this.pickUp,
       wear: this.wear,
       choice: this.choice,
     };
-    this.latched = { interact: false, grab: false, cast: false, jump: false };
+    this.latched = { interact: false, grab: false, cast: false, jump: false, throwHeld: false };
     if (frozen) {
       snap.forward = snap.strafe = 0;
       snap.sprint = snap.jump = snap.jumpHeld = snap.attack = snap.block = false;
-      snap.interact = snap.grab = snap.cast = false;
+      snap.interact = snap.grab = snap.cast = snap.throwHeld = false;
     }
     this.prepare = null;
     this.useItem = null;

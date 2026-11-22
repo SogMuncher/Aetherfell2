@@ -99,7 +99,6 @@ function pose(weapon: string | null, kind: 'rest' | 'guard' | SwingDir, t: numbe
   const a = me.actor;
   if (!a) throw new Error('no actor');
   a.weapon = weapon;
-  a.wear = 99;
   a.swing = null;
   a.charge = null;
   a.guard = null;
@@ -124,13 +123,13 @@ function shot(name: string, night: boolean, warm = true, vm = new ViewModel()): 
   return lit;
 }
 
-const weapons = ['travellerSword', 'woodAxe', 'warHammer', 'spear', 'torch', null];
+const weapons = ['gear:sword:iron:common', 'gear:axe:iron:common', 'gear:hammer:iron:common', 'gear:spear:iron:common', 'torch', null];
 for (const w of weapons) {
   pose(w, 'rest', 0);
   const n = shot(`rest_${w ?? 'fist'}`, false);
   check(`${w ?? 'fist'} draws at rest`, n > 400, `${n} edges`);
 }
-for (const w of ['travellerSword', 'torch']) {
+for (const w of ['gear:sword:iron:common', 'torch']) {
   for (const dirn of ['left', 'right', 'thrust', 'overhead'] as const) {
     // A run of frames through one swing so the ribbon builds up.
     const vm = new ViewModel();
@@ -145,7 +144,7 @@ for (const w of ['travellerSword', 'torch']) {
     }
   }
 }
-pose('travellerSword', 'guard', 0);
+pose('gear:sword:iron:common', 'guard', 0);
 shot('guard_sword', false);
 console.log(failed === 0 ? 'viewmodelShot: all passed' : `viewmodelShot: ${failed} failed`);
 if (failed) throw new Error('viewmodel checks failed');

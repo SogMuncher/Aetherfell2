@@ -15,7 +15,7 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 - `materials/` paints surfaces into textures.
 - Matter states (soot, wet, oil, frost, fire) are never drawn by swapping materials: `content/matterStates.ts` says how each blends (shade, cover colour or surface, glint, glow, rain), `gpu/gpuStates.ts` `blendStates` draws them on ground, tile walls and 3D cells; far land gets `stateLooks.tintFar`. Classic is unsupported and does not show new states.
 - `entities/`: creatures posed from parts (`bodyArt.ts`, `bodyMath.ts`, `bodyPaint.ts`, `creatures.ts`), objects grown
-  from forms (`formArt.ts`, `props.ts`), items (`itemArt.ts`), billboards (`spriteRenderer.ts`). Colour regions are filled from
+  from forms (`formArt.ts`, `props.ts`), items (`itemArt.ts`: one picture per item, never mirrored, from `look.parts` in `itemParts.ts`/`itemPlates.ts`; edges on the left), billboards (`spriteRenderer.ts`). Colour regions are filled from
   palettes at draw time (`palette.ts`). Missing sprite = magenta checks, never a crash.
 - `vfx/particles.ts` + `particleKinds.ts`: spell/effect looks come from rune `look` data.
 - Held item: `entities/viewModel.ts` and `mesh.ts` (being replaced by sprites in another thread; do not extend).

@@ -78,12 +78,20 @@ export const RULES: RulesDef = {
       { id: 'glider', count: 1 },
       { id: 'coin', count: 12 },
     ],
-    wield: 'travellerSword',
+    wield: 'gear:sword:iron:common',
     // Plain clothes to begin with; anything better is found, bought or taken.
     worn: ['gear:tunic:wool:common', 'gear:leggings:wool:common'],
     prepared: ['ember'],
   },
-  quickUse: ['healingDraught', '@throwable', 'torch', 'travellerSword'],
+  quickUse: ['healingDraught', '@throwable', 'torch', 'gear:sword:iron:common'],
+  // Every item can be held, swung, thrown and broken. Flasks and pots break at the first blow.
+  items: {
+    durability: { currency: 400, potion: 1, throwable: 1, food: 3, weapon: 100, armour: 60, material: 8, key: 60, tool: 30, rune: 200 },
+    material: { currency: 'metal', potion: 'glass', throwable: 'clay', food: 'flesh', weapon: 'metal', armour: 'cloth', material: 'fur', key: 'metal', tool: 'wood', rune: 'stone' },
+    improvised: { damage: 2, perKg: 2.2, kind: 'blunt', reach: 1.6, speed: 0.85, slowPerKg: 0.08, push: 0.6, pushPerKg: 0.25 },
+    dropPitch: -0.55,
+    impactSpeed: 4,
+  },
   skills: {
     blade: { maxHp: 4 },
     evocation: { maxMana: 6 },

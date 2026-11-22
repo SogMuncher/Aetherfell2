@@ -116,10 +116,11 @@ export class SpriteRenderer {
         colours = c.colours;
       } else {
         s = this.spriteFor(e);
-        // Face the way it moves, as seen from where the camera stands.
+        // Face the way it moves, as seen from where the camera stands. Items never turn: each has
+        // exactly one picture (its edge stays on the left).
         const { rx, ry } = sideFrom(p, e.pos.x, e.pos.y);
         const vr = e.vel.x * rx + e.vel.y * ry;
-        facing = Math.abs(vr) > 0.1 ? vr < 0 : Math.cos(e.angle) * rx + Math.sin(e.angle) * ry < 0;
+        facing = !e.item && (Math.abs(vr) > 0.1 ? vr < 0 : Math.cos(e.angle) * rx + Math.sin(e.angle) * ry < 0);
         if (e.player && e.player.downed > 0) sink = 0.6;
       }
       if (!s) continue;

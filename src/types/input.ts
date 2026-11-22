@@ -55,6 +55,8 @@ export interface InputSnapshot {
   dropItem: ItemId | null;
   /** An item dragged out of the bag and let go over the view (thrown or dropped there). */
   throwItem: ThrowAim | null;
+  /** G: throw what is in the hands where you look, or set it at your feet when looking down. */
+  throwHeld: boolean;
   /** A loose item (entity id) dragged from the view into the open bag: pick it up if within reach. */
   pickUp: number | null;
   /** Putting armour on or taking it off (the paperdoll and the bag). */
@@ -83,6 +85,7 @@ export function emptyInput(seq = 0, yaw = 0): InputSnapshot {
     useItem: null,
     dropItem: null,
     throwItem: null,
+    throwHeld: false,
     pickUp: null,
     wear: null,
     choice: null,

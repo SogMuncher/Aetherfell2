@@ -1,6 +1,7 @@
 import { CONTENT } from './index';
-import type { Content, Creature, Entity, HeldLightDef, ItemId, ItemStack, Rng, ThingDef, WeaponStats } from '../types';
-import { itemDef, rollGear } from './gear';
+import type { Content, Creature, Entity, ItemStack, Rng, ThingDef } from '../types';
+import { itemDef } from './itemDefs';
+import { rollGear } from './gearItems';
 
 
 /** Fills {name} slots in a line of text from content ("Kill {count} of them"). Unknown slots stay as they are. */
@@ -36,22 +37,6 @@ export const UNKNOWN_THING: ThingDef = {
 
 export function thingDef(c: Content, id: string): ThingDef {
   return c.things[id] ?? UNKNOWN_THING;
-}
-
-/** The weapon an actor is swinging: its wielded item, or the natural one from its definition. */
-export function weaponStats(c: Content, def: ThingDef, wielded: ItemId | null): WeaponStats | null {
-  if (wielded) {
-    const w = c.items[wielded]?.weapon;
-    if (w) return w;
-  }
-  return def.actor?.weapon ?? null;
-}
-
-/** The light an actor carries because of what it wields (a torch in the hand), if any. */
-export function heldLight(c: Content, e: Entity): HeldLightDef | undefined {
-  const w = e.actor?.weapon;
-  // A worn-out brand is still a brand: it only hits softly.
-  return w ? c.items[w]?.light : undefined;
 }
 
 /** Walks, fights and thinks for itself: an animal, a monster or a villager, all the same to the systems. */
