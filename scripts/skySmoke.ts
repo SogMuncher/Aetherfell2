@@ -3,6 +3,8 @@
 import { Simulation, createState } from '../src/sim';
 import { CONTENT, airMoisture, cloudDensity3, setAirMoisture, layerCover, layerDensity, rainAt, sunThrough, validateContent } from '../src/content';
 import type { WeatherState } from '../src/types';
+import { CloudCells } from '../src/render/cloudCells';
+import { computeEnv } from '../src/render/env';
 import { emptyInput } from '../src/types';
 
 let failed = 0;
@@ -180,6 +182,57 @@ for (const l of SKY.layers) {
     check('the air moisture is smooth between coarse cells', Math.abs(airMoisture(4999, 0) - airMoisture(5001, 0)) < 0.05);
     setAirMoisture(null);
     check('no world moisture means neutral air', airMoisture(10, 10) === 0.5);
+  }
+}
+
+// Clouds as 3D cells around the eye: the same density rule, fine near, coarse far, reaching the far horizon; moving
+// with the wind without a refill; and standing in a low cloud fogs the view in the cloud's colour.
+{
+  const w = weather(0.7, 0.3);
+  const cells = new CloudCells();
+  cells.fillAll(w, 5000, 3000);
+  check('every cloud layer is kept as cells', cells.layers.length === SKY.layers.length);
+  check('the coarsest level of every layer reaches the far clouds', cells.layers.every((L) => (cells.levels[L.first + L.count - 1]?.cell ?? 0) * cells.n * 0.35 >= SKY.cloudRange));
+  let worst = 0;
+  let filled = 0;
+  cells.layers.forEach((L, li) => {
+    const cv = layerCover(L.def, w);
+    const lv = cells.levels[L.first];
+    if (!lv) return;
+    for (let k = 0; k < 40; k++) {
+      // Cell centres of the finest level near the eye.
+      const x = lv.ox + (20 + ((k * 7) % 24) + 0.5) * lv.cell + (w.drift?.x ?? 0) * L.def.speed;
+      const y = lv.oy + (20 + ((k * 11) % 24) + 0.5) * lv.cell + (w.drift?.y ?? 0) * L.def.speed;
+      const hf = ((k % lv.slices) + 0.5) / lv.slices;
+      const want = (L.def.thickness ?? 0) > 0 ? cloudDensity3(L.def, w, cv, x, y, hf) : layerDensity(L.def, w, cv, x, y);
+      const got = cells.sample(li, w, x, y, hf);
+      worst = Math.max(worst, Math.abs(want - got));
+      if (got > 0) filled++;
+    }
+  });
+  check('cloud cells hold the same clouds as the density rule', worst < 0.01 && filled > 10, `worst ${worst.toFixed(3)}, ${filled} cloudy cells`);
+  const moved = { ...w, drift: { x: 400, y: 150 } };
+  const L0 = cells.layers[0];
+  const sp = L0?.def.speed ?? 0;
+  check('cloud cells drift with the wind without refilling', !!L0 && Math.abs(cells.sample(0, w, 5100, 3100, 0.5) - cells.sample(0, moved, 5100 + 400 * sp, 3100 + 150 * sp, 0.5)) < 1e-6);
+  let farCloud = 0;
+  for (let a = 0; a < 72; a++) cells.layers.forEach((_, li) => { if (cells.sample(li, w, 5000 + Math.cos(a / 11.46) * SKY.cloudRange * 0.9, 3000 + Math.sin(a / 11.46) * SKY.cloudRange * 0.9, 0.5) > 0) farCloud++; });
+  check('far clouds come from coarse cells (no hole toward the horizon)', farCloud > 5, `${farCloud} cloudy spots 36 km out`);
+  const state = createState(77);
+  const low = SKY.layers.find((l) => (l.wet ?? 0) >= 0.9 && (l.thickness ?? 0) > 0);
+  check('a low layer reaches up the slopes of a 500 m peak', !!low && low.height < 500 && low.height + (low.thickness ?? 0) > 500);
+  if (low) {
+    state.weather = { ...weather(1, 0.2), time: 0.5 };
+    const cv = layerCover(low, state.weather);
+    let spot: [number, number] | null = null;
+    for (let i = 0; i < 4000 && !spot; i++) if (cloudDensity3(low, state.weather, cv, i * 53, i * 29, 0.5) > 0.8) spot = [i * 53, i * 29];
+    const z = low.height + (low.thickness ?? 0) * 0.5;
+    if (spot) {
+      const clear = computeEnv(state, 0, spot[0], spot[1], 0);
+      const inside = computeEnv(state, 0, spot[0], spot[1], z);
+      check('outside a cloud the fog is the sky at the horizon', clear.fog.every((c, i) => c === clear.horizon[i]));
+      check('standing in a cloud shortens the sight', inside.fogDist < clear.fogDist * 0.5, `${inside.fogDist.toFixed(0)} vs ${clear.fogDist.toFixed(0)} m`);
+    } else check('found a thick spot of low cloud to stand in', false);
   }
 }
 

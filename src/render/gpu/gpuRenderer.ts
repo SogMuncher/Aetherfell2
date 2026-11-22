@@ -148,7 +148,7 @@ export class GpuRenderer {
     this.blocks.draw(vp, f.eye, f.env, f.tiles);
     this.structures.draw(vp, cam, w, h, f.time, f.eye, f.env, f.volume);
     this.sprites.draw(vp, cam, f.eye, f.env, f.billboards);
-    this.clouds.draw(cam, f.eye, f.env, f.weather, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR);
+    this.clouds.draw(cam, f.eye, f.env, f.weather, f.time, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR);
     gl.viewport(0, 0, w, h);
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;

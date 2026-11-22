@@ -130,7 +130,7 @@ export class Renderer {
     };
     const p = project(cam, vp.width, vp.height, 0.5 / Math.tan((this.options.fovDegrees * Math.PI) / 360));
     this.lastProjection = p;
-    const env = computeEnv(state, this.flash, cx, cy);
+    const env = computeEnv(state, this.flash, cx, cy, cz);
     // Under a roof no rain falls on you (the streaks and splashes stop).
     if (env.rain > 0 && !state.volume.openSky(cx, cy, cz + 0.3)) env.rain = 0;
     this.lastEnv = env;

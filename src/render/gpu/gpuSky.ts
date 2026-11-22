@@ -26,7 +26,7 @@ void main(){
   if (uOpen < 0.5){ o = vec4(uHorizon, 1.0); return; }
   float t = e <= 0.0 ? 0.0 : pow(min(1.0, e * 1.7), 0.6);
   vec3 c = mix(uHorizon, uZenith, t);
-  if (e < 0.0) c *= 1.0 - min(1.0, -e * 3.0) * 0.22;
+  // Below the horizon the sky stays the horizon colour: it is what the fog fades the land into.
   float sd = dot(d, uSunDir); float sa = acos(clamp(sd, -1.0, 1.0));
   c += uSunGlow * pow(max(0.0, sd), 8.0) * (0.4 + uDusk) * max(0.0, 1.0 - abs(d.z - uSunDir.z) * 1.5);
   if (sa < uSunSize) c += uSunDisc * (1.0 - sa / uSunSize);

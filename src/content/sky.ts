@@ -16,8 +16,8 @@ export const SKY: SkyDef = {
     { name: 'cumulus', height: 520, thickness: 750, wet: 0.5, tower: 0.9, billow: 1, scale: 1100, speed: 1, cover: { base: 0.12, perCloud: 0.45, perRain: 0.15 }, softness: 0.09, detail: 5, tint: [250, 250, 248], belly: 0.3, opacity: 1, shadow: 0.45, seed: 37 },
     // Storm cells: dark-bellied towers. Rain falls only under these.
     { name: 'storm', height: 380, thickness: 1900, wet: 0.4, tower: 0.95, billow: 0.8, scale: 3400, speed: 0.7, cover: { base: -0.3, perCloud: 0.15, perRain: 0.95 }, softness: 0.18, detail: 3, tint: [214, 216, 224], belly: 0.62, opacity: 1, shadow: 0.7, rain: true, seed: 53 },
-    // Low hanging cloud at hill height: it gathers over wet land, so valleys and marshes go grey and dry steppe stays bright.
-    { name: 'stratus', height: 230, thickness: 170, tower: 0.15, billow: 0.5, scale: 1500, speed: 0.8, cover: { base: 0, perCloud: 0.55, perRain: 0.3 }, softness: 0.22, detail: 3, tint: [226, 228, 232], belly: 0.35, opacity: 0.9, shadow: 0.3, wet: 1, seed: 71 },
+    // Low hanging cloud round the upper slopes, so a high peak stands in it or above it: it gathers over wet land, so valleys and marshes go grey and dry steppe stays bright.
+    { name: 'stratus', height: 260, thickness: 320, tower: 0.15, billow: 0.5, scale: 1500, speed: 0.8, cover: { base: 0, perCloud: 0.55, perRain: 0.3 }, softness: 0.22, detail: 3, tint: [226, 228, 232], belly: 0.35, opacity: 0.9, shadow: 0.3, wet: 1, seed: 71 },
   ],
   colours: {
     zenith: { night: [8, 10, 26], day: [62, 110, 196], dusk: [86, 60, 108] },
@@ -28,5 +28,7 @@ export const SKY: SkyDef = {
   moon: { size: 0.03, colour: [210, 214, 226], halo: [120, 130, 160] },
   stars: { density: 0.0035 },
   aurora: { colour: [40, 190, 120], edge: [0, 0, 60] },
-  cloudRange: 30000,
+  cloudRange: 40000,
+  haze: 6,
+  cells: { perShape: 32, count: 64, slices: 12, budget: 8000, refresh: 10 },
 };
