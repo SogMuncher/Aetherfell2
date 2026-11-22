@@ -1,7 +1,7 @@
 // Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
 // cloud shadows, and the sim soaking only what stands under a storm.
 import { Simulation, createState } from '../src/sim';
-import { CONTENT, cloudDensity3, layerCover, layerDensity, rainAt, sunThrough, validateContent } from '../src/content';
+import { CONTENT, airMoisture, cloudDensity3, setAirMoisture, layerCover, layerDensity, rainAt, sunThrough, validateContent } from '../src/content';
 import type { WeatherState } from '../src/types';
 import { emptyInput } from '../src/types';
 
@@ -156,6 +156,30 @@ for (const l of SKY.layers) {
     const flat = { ...cu, thickness: 0 };
     check('a flat layer is just its column density', cloudDensity3(flat, w, cv, 1234, 987, 0.5) === layerDensity(flat, w, cv, 1234, 987));
     check('rain and shade still come from the column, so overhead and underfoot agree', rainAt(SKY, w, 3000, 3000) === rainAt(SKY, w, 3000, 3000) && sunThrough(SKY, w, 3000, 3000) <= 1);
+  }
+}
+
+// Low layers gather over damp land (the world's moisture shifts a wet layer's cloud edge), dry layers do not care.
+{
+  const w = weather(0.5, 0);
+  const low = SKY.layers.find((l) => (l.wet ?? 0) >= 0.9);
+  const mean = (l: (typeof SKY.layers)[number]): number => {
+    let sum = 0;
+    const cv = layerCover(l, w);
+    for (let j = 0; j < 60; j++) for (let i = 0; i < 60; i++) sum += layerDensity(l, w, cv, i * 397 + 11, j * 421 + 7);
+    return sum / 3600;
+  };
+  check('a low layer hangs near mountain height', !!low && low.height < 400);
+  if (low) {
+    setAirMoisture(() => 0.9);
+    const wetMean = mean(low);
+    setAirMoisture(() => 0.1);
+    const dryMean = mean(low);
+    check('a wet-loving layer covers more damp land than dry', wetMean > dryMean + 0.05, `${wetMean.toFixed(2)} vs ${dryMean.toFixed(2)}`);
+    setAirMoisture((x) => (x < 5000 ? 0.1 : 0.9));
+    check('the air moisture is smooth between coarse cells', Math.abs(airMoisture(4999, 0) - airMoisture(5001, 0)) < 0.05);
+    setAirMoisture(null);
+    check('no world moisture means neutral air', airMoisture(10, 10) === 0.5);
   }
 }
 
