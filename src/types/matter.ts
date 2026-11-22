@@ -15,7 +15,31 @@ import type { TileInfo, TileKind } from './tiles';
 export const GROUND_Z = -2048;
 
 /** Which state a spot carries. */
-export type MatterField = 'wet' | 'fire' | 'oil' | 'soot' | 'fuel' | 'wear';
+export type MatterField = 'wet' | 'fire' | 'oil' | 'soot' | 'frost' | 'fuel' | 'wear';
+
+/**
+ * The states that show ON stuff as a blend over its own unchanged material, in blending order. Each has a look row in
+ * content/matterStates.ts; when the value falls back to 0 the stuff looks exactly as it did. A new state = a field here,
+ * its storage (chunk + brick), and a row of data.
+ */
+export const SHOWN_STATES = ['soot', 'wet', 'oil', 'frost', 'fire'] as const;
+export type ShownState = (typeof SHOWN_STATES)[number];
+
+/** How a state looks at full strength (255); weaker, it blends in part-way. */
+export interface StateLookDef {
+  /** The colour beneath is multiplied by this (soot darkens, wet darkens and cools). */
+  shade?: readonly [number, number, number];
+  /** This share of the colour beneath is covered by a flat colour ('#rrggbb') or by a surface's own texture (content/surfaces.ts). */
+  cover?: { amount: number; colour: string } | { amount: number; surface: string };
+  /** Bright specks: this share of the texels lightened by `amount` (oil sheen, glittering frost). */
+  glint?: { share: number; amount: number };
+  /** Light it gives off (flames), flickering. */
+  glow?: readonly [number, number, number];
+  /** Rain adds this much strength to stuff open to the sky. */
+  rain?: number;
+  /** Things resting on it keep this much of their speed each second when it is full strength (frost is slick). */
+  slide?: number;
+}
 
 /** A number that names a spot, safe as a Map key. Ground spots and cells never collide. */
 export function spotKey(x: number, y: number, z: number): number {
@@ -39,11 +63,11 @@ export interface MatterAccess {
   solid(x: number, y: number, z: number): boolean;
   get(field: MatterField, x: number, y: number, z: number): number;
   set(field: MatterField, x: number, y: number, z: number, v: number): void;
-  /** Swaps the material (burnt, broken, frozen). A cell whose new material is not a solid block disappears, leaving that stuff on the ground below if it stood there. */
+  /** Swaps the material (burnt away, broken, water to ice). A cell whose new material is not a solid block disappears, leaving that stuff on the ground below if it stood there. */
   setKind(x: number, y: number, z: number, kind: TileKind): void;
   /** Open to the sky above it, so rain and sun reach it. */
   exposed(x: number, y: number, z: number): boolean;
-  /** How wet it is: its own wetness plus the weather's where it is exposed. */
+  /** How wet it is: its own wetness and frost plus the weather's where it is exposed. */
   wetness(x: number, y: number, z: number): number;
   /** Spots that touch this one: fire, heat and damp creep along them. `weight` is how strongly (fire climbs). */
   forNeighbours(x: number, y: number, z: number, fn: (x: number, y: number, z: number, weight: number) => void): void;

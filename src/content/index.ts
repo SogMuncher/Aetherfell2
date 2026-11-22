@@ -20,6 +20,7 @@ import { SKY } from './sky';
 import { STATUSES } from './statuses';
 import { STRUCTURES } from './structures';
 import { SURFACES } from './surfaces';
+import { MATTER_STATES } from './matterStates';
 import { THINGS } from './things';
 import { TILES, TILE_IDS } from './tiles';
 import { VIEWMODEL } from './viewmodel';
@@ -43,6 +44,7 @@ export const CONTENT: Content = {
   tiles: TILES,
   tileIds: TILE_IDS,
   surfaces: SURFACES,
+  matterStates: MATTER_STATES,
   biomes: BIOMES,
   world: WORLD,
   things: THINGS,

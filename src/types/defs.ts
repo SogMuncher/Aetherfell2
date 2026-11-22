@@ -10,6 +10,7 @@ import type { ItemDef } from './defs/items';
 import type { LookDef, LookId } from './looks';
 import type { MaterialDef, RealmDef, ThingDef } from './defs/things';
 import type { PaletteDef, PaletteId } from './palettes';
+import type { ShownState, StateLookDef } from './matter';
 import type { RuneDef, StatusDef } from './defs/magic';
 import type { SiteDef } from './defs/sites';
 import type { SkyDef } from './sky';
@@ -34,6 +35,8 @@ export interface Content {
   tileIds: Readonly<Record<string, TileKind>>;
   /** Procedural surfaces (textures) by id. */
   surfaces: Readonly<Record<string, SurfaceDef>>;
+  /** How soot, wet, oil, frost and fire look blended over the stuff they are on. */
+  matterStates: Readonly<Record<ShownState, StateLookDef>>;
   /** Kinds of landscape, in the order they are tried. */
   biomes: Readonly<Record<string, BiomeDef>>;
   /** World-wide generation choices (land shape, moisture, roads, far colours). */

@@ -85,6 +85,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `sky.ts` (30) The sky. Each cloud layer is a sheet of drifting shapes at its own height, size and speed, and
 - `skyField.ts` (187) Where the clouds are. One pure function of the sky data, the weather (cover, storminess, how far
 - `spellcraft.ts` (286) composes a spell from up to 3 runes; spell descriptions
+- `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (34) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (416) building recipes for the 3D layer (D)
 - `surfaces.ts` (202) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
@@ -111,6 +112,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 
 ## src/render/
 - `color.ts` (50) packed pixel colour helpers
+- `stateLooks.ts` (~70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `lighting.ts` (281) sun path, sky/fog colours, ambient and point lights
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (60) adaptive pixel size from frame time
@@ -133,13 +135,14 @@ Search this first, then open only the file you need. Update the entry (and line 
 ## src/render/gpu/
 - `gpuRenderer.ts` (123) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
 - `gpuTerrain.ts` (290) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, far lift + canopy, depth fog
-- `gpuTerrainState.ts` (50) soot/wet/oil/fire of live ground cells as a texture for the finest levels
+- `gpuTerrainState.ts` (~45) every matter state of live ground cells as a texture array for the finest levels
+- `gpuStates.ts` (~70) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
 - `gpuStructures.ts` (~165) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
 - `gpuStructShader.ts` (~110) shader text for structures: shapes, DDA, surface textures, sun/cover light
-- `gpuTileBlocks.ts` (~125) tile walls/doors/windows as boxes from tile data
+- `gpuTileBlocks.ts` (~165) tile walls/doors/windows as boxes from tile data, with their matter states
 - `gpuSprites.ts` (~165) billboards: sprite atlas + instanced quads
 - `gpuLight.ts` (~40) light grid as a texture
-- `gpuSurfaces.ts` (~30) shared tile surface atlas
+- `gpuSurfaces.ts` (~40) shared tile surface atlas (+ the surfaces matter states cover things with)
 - `gpuParticles.ts` (~140) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (~55) held item buffer composited on top
 - `gpuSky.ts` (~70) full-screen sky: gradient, sun, moon, stars, aurora
@@ -159,7 +162,8 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `cloudShadow.ts` (73) cloud shadows on the land
 - `lodLooks.ts` (57) far colours of biomes
 - `sky.ts` (295) ray-marched cloud slabs, sun, moon, stars, aurora
-- `terrainLod.ts` (425) cached LOD pyramid for far land (C)
+- `terrainLod.ts` (263) cached LOD pyramid for far land (C)
+- `terrainLodPaint.ts` (184) paints changed chunks (tiles, matter states) over a LOD block's seed picture
 - `terrainRenderer.ts` (416) voxel-space column marcher (C)
 - `tileBillboards.ts` (171) tree/rock billboards from tiles
 - `volumeRenderer.ts` (407) ray-casts 3D-layer bricks (C)

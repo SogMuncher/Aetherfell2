@@ -20,7 +20,7 @@ Details live in the other docs (see the table in `CLAUDE.md`).
 | Concern | The one system / type |
 | --- | --- |
 | Harming, healing, heating, soaking, chilling, shoving, spilling | **effects queue** (`sim/effects`). Targets: `tile`, `spot`, `entity`, `area`. |
-| Stuff at a place (material, wet, fire, fuel, oil, soot, wear) | **`ctx.matter`** (`types/matter.ts`, `sim/world/matter.ts`). Spot `(x,y,z)`; `z = GROUND_Z` is the ground tile, else a cell of the 3D layer. Material = a tile kind, so `content/tiles.ts` is the single table of what things are made of. |
+| Stuff at a place (material, wet, fire, fuel, oil, soot, frost, wear) | **`ctx.matter`** (`types/matter.ts`, `sim/world/matter.ts`). Spot `(x,y,z)`; `z = GROUND_Z` is the ground tile, else a cell of the 3D layer. Material = a tile kind, so `content/tiles.ts` is the single table of what things are made of. |
 | Fire spread, drying, rain, frost, oil | `sim/interaction`, `sim/effects` via `ctx.matter` (`forNeighbours` walks tiles and cells together). |
 | Blows, bolts, thrown things hitting terrain | `ctx.matter` probes → `strikeSpot`. |
 | Sight, light, roofs | `volume.openSky/floorBelow/ceilingAbove`, light grid. A roof is cells whether house or cavern. |

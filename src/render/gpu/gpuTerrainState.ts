@@ -1,9 +1,10 @@
 /**
  * Live ground cells for the GPU terrain's finest levels: the tile code (so a tile that burns out, floods or gets built on changes look at once)
- * and soot, wet, oil and fire per cell (r,g,b,a). Refreshed every few frames; uploads only when something changed.
+ * and every matter state per cell (gpuStates layout). Refreshed every few frames; uploads only when something changed.
  */
 import { CHUNK_SIZE } from '../../types';
 import type { ReadonlyTiles } from '../../types';
+import { clearStates, packStates, STATE_LAYERS } from './gpuStates';
 
 export interface StateLevel {
   ox: number;
@@ -25,9 +26,9 @@ export function refreshGroundState(gl: WebGL2RenderingContext, tiles: ReadonlyTi
       const x = Math.floor(l.ox + i * l.cs);
       const y = Math.floor(l.oy + j * l.cs);
       const ch = tiles.peekChunk(Math.floor(x / CHUNK_SIZE), Math.floor(y / CHUNK_SIZE));
-      const k = (j * V + i) * 4;
+      const t = j * V + i;
       if (!ch) {
-        l.st[k] = l.st[k + 1] = l.st[k + 2] = l.st[k + 3] = 0;
+        clearStates(l.st, t, V * V);
         continue;
       }
       const q = (y - ch.cy * CHUNK_SIZE) * CHUNK_SIZE + (x - ch.cx * CHUNK_SIZE);
@@ -36,15 +37,7 @@ export function refreshGroundState(gl: WebGL2RenderingContext, tiles: ReadonlyTi
         l.code[j * V + i] = kind;
         codeChanged = true;
       }
-      const a = ch.soot[q] ?? 0;
-      const b = ch.wet[q] ?? 0;
-      const c = ch.oil[q] ?? 0;
-      const d = ch.fire[q] ?? 0;
-      l.st[k] = a;
-      l.st[k + 1] = b;
-      l.st[k + 2] = c;
-      l.st[k + 3] = d;
-      if (a | b | c | d) any = true;
+      if (packStates(ch, q, l.st, t, V * V)) any = true;
     }
   }
   if (codeChanged) {
@@ -54,8 +47,8 @@ export function refreshGroundState(gl: WebGL2RenderingContext, tiles: ReadonlyTi
   }
   if (!any && !l.stDirty) return codeChanged;
   l.stDirty = any;
-  gl.bindTexture(gl.TEXTURE_2D, l.stTex);
+  gl.bindTexture(gl.TEXTURE_2D_ARRAY, l.stTex);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-  gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, V, V, gl.RGBA, gl.UNSIGNED_BYTE, l.st);
+  gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, 0, V, V, STATE_LAYERS, gl.RGBA, gl.UNSIGNED_BYTE, l.st);
   return codeChanged;
 }

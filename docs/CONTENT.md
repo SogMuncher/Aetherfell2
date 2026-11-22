@@ -31,6 +31,8 @@ Thing traits (systems act on these): `body` `health` `material` `actor` `brain` 
 - Tile/building material: `tiles` entry (+ `surfaces`); code uses `tileCode('id')`. Landscape: `biomes` (order matters).
 - Tree/rock/plant: `forms` + a `tiles` entry whose sprite names it. Prop: `props` form named by the thing's `sprite`.
 - Place: `sites` entry (a new layout *shape* needs code, see WORLD.md). Building: `structures` recipe in a site's list.
+- Look of a state on stuff (soot, wet, oil, frost, fire): `matterStates.ts` row. A brand-new state also needs its name in
+  `SHOWN_STATES` (types/matter.ts) and storage in the chunk and brick (code).
 - Realm: `realms` entry + portals/habitats naming it. Tuning: `rules.ts`.
 - New reference field: add a line to `validate.ts`. Text that varies: `fillText()` templates.
 

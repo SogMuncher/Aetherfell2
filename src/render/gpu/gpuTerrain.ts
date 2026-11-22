@@ -4,7 +4,8 @@
  * Heights and colours live in textures; the vertex shader displaces a fixed grid. Each level hides the part the
  * finer one already covers. Fog is depth based. Read-only on the sim.
  */
-import { compile, loc, makeTexture } from './glUtil';
+import { compile, loc, makeTexture, makeTextureArray } from './glUtil';
+import { bindStateLooks, STATE_LAYERS, STATE_SHADER } from './gpuStates';
 import type { Env } from '../lighting';
 import { BLOCK, LEVEL_CELL, TerrainLod } from '../raycaster/terrainLod';
 import { CHUNK_SIZE } from '../../types';
@@ -41,9 +42,10 @@ const FS = `#version 300 es
 precision highp float; precision highp usampler2D;
 ${SURFACE_SHADER}
 ${LIGHT_SHADER}
+${STATE_SHADER}
 uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist; uniform vec3 uSun; uniform vec3 uSunDir; uniform vec3 uAmb;
 uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade;
-uniform sampler2D uState; uniform float uRainWet; uniform sampler2D uShade; uniform vec4 uShadeO; uniform vec3 uHorizon; uniform float uDay, uTime, uShadeOn;
+uniform float uRainWet; uniform sampler2D uShade; uniform vec4 uShadeO; uniform vec3 uHorizon; uniform float uDay, uTime, uShadeOn;
 in vec3 vPos; in vec3 vCol; flat in float vA; out vec4 o;
 float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -69,14 +71,11 @@ void main(){
     lit *= sh;
   }
   vec3 lv = uAmb + uSun * lit + lightAt(vPos.xy);
-  if (uTexOn > 0.5) {
-    // What has happened to the ground (the same cell state the sim's rules use): soot darkens, wet darkens and cools, oil sheens, fire glows.
-    vec4 st = texelFetch(uState, ivec2(floor((vPos.xy - uOrigin) / uCell)), 0);
-    float soot = st.r, wet = min(1.0, st.g + (vA > 0.99 ? 0.0 : uRainWet)), oil = st.b, fire = st.a;
-    lv *= 1.0 - soot * 0.75;
-    lv *= vec3(1.0, 1.0, 1.04) * (1.0 - wet * 0.28);
-    base = base * (1.0 - oil * 0.6) + vec3(40.0, 30.0, 18.0) / 255.0 * oil + (hash(floor(vPos.xy * 8.0)) > 0.9 ? oil * 0.24 : 0.0);
-    lv += fire * (0.7 + 0.3 * sin(uTime * 20.0 + vPos.x * 3.0)) * vec3(1.4, 0.6, 0.15);
+  if (uTexOn > 0.5 && vA <= 0.99) {
+    // What has happened to the ground (the same matter states the sim's rules use), blended over its own surface.
+    vec3 glow = vec3(0.0);
+    base = blendStates(base, ivec2(floor((vPos.xy - uOrigin) / uCell)), vPos.xy * 16.0, uRainWet, 0.7 + 0.3 * sin(uTime * 20.0 + vPos.x * 3.0), glow);
+    lv += glow;
   }
   vec3 c = base * lv;
   if (vA > 0.99) {
@@ -143,8 +142,8 @@ export class GpuTerrain {
         cs: LEVEL_CELL[L] ?? 1, ox: NaN, oy: NaN, frame: 0, coarse: true, valid: false, recolour: false,
         hTex: makeTexture(gl, gl.RGB32F, V, V, gl.RGB, gl.FLOAT),
         cTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
-        h: new Float32Array(V * V * 3), c: new Uint8Array(V * V * 4), code: new Uint8Array(V * V).fill(255), st: new Uint8Array(V * V * 4), stDirty: true,
-        stTex: makeTexture(gl, gl.RGBA8, V, V, gl.RGBA, gl.UNSIGNED_BYTE),
+        h: new Float32Array(V * V * 3), c: new Uint8Array(V * V * 4), code: new Uint8Array(V * V).fill(255), st: new Uint8Array(V * V * 4 * STATE_LAYERS), stDirty: true,
+        stTex: makeTextureArray(gl, gl.RGBA8, V, V, STATE_LAYERS, gl.RGBA, gl.UNSIGNED_BYTE),
         codeTex: makeTexture(gl, gl.R8UI, V, V, gl.RED_INTEGER, gl.UNSIGNED_BYTE),
       });
     }
@@ -270,7 +269,7 @@ export class GpuTerrain {
     gl.uniform2f(loc(gl, p, 'uCanopy'), FLORA_FADE, CANOPY_FULL);
     gl.uniform2f(loc(gl, p, 'uLift'), GPU_STRUCT.range - GPU_STRUCT.fade, GPU_STRUCT.range);
     gl.uniform1f(loc(gl, p, 'uDay'), env.day);
-    gl.uniform1i(loc(gl, p, 'uState'), 6);
+    bindStateLooks(gl, p, 6);
     gl.uniform1f(loc(gl, p, 'uRainWet'), env.rain > 0 ? 0.5 : 0);
     gl.uniform1f(loc(gl, p, 'uTime'), time);
     for (let L = 0; L < this.levels.length; L++) {
@@ -292,7 +291,7 @@ export class GpuTerrain {
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, l.codeTex);
       gl.activeTexture(gl.TEXTURE6);
-      gl.bindTexture(gl.TEXTURE_2D, l.stTex);
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, l.stTex);
       gl.uniform1f(loc(gl, p, 'uTexOn'), L < GPU_TERRAIN.texLevels ? 1 : 0);
       gl.drawElements(gl.TRIANGLES, this.indexCount, gl.UNSIGNED_INT, 0);
     }
