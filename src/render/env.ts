@@ -3,7 +3,7 @@
  * horizon (or the cloud you stand in) so far land always fades into the sky behind it. Every drawer reads this one Env.
  */
 import type { SimState } from '../types';
-import { CONTENT, airMoisture, cloudDensity3, layerCover, rainAt, sunAngle } from '../content';
+import { CONTENT, airAt, airMoisture, rainAt, sunAngle } from '../content';
 
 export interface Env {
   /** Direction towards the main light (sun by day, moon by night), z up. */
@@ -105,15 +105,12 @@ export function computeEnv(state: SimState, flash: number, x = 0, y = 0, z = 0):
   let fogDist = 2600 * (1 - rain * 0.72) * (1 - night * 0.45) * (1 - 0.55 * Math.min(1, Math.max(0, (airMoisture(x, y) - 0.45) * 2.5) + state.weather.wetness * 0.5) * (0.3 + 0.7 * Math.max(night, dusk)));
   let fog = horizon;
   // Standing in a cloud (a high peak in low cloud): the sight shortens to what the cloud lets through, in the cloud's colour.
-  for (const l of CONTENT.sky.layers) {
-    const th = l.thickness ?? 0;
-    if (th <= 0 || z < l.height || z > l.height + th) continue;
-    const hf = (z - l.height) / th;
-    const d = cloudDensity3(l, w, layerCover(l, w), x, y, hf) * l.opacity;
-    if (d <= 0.01) continue;
-    fogDist = Math.min(fogDist, Math.max(60, th) / (3.2 * d));
-    const shade = 1 - l.belly * (0.55 + rain * 0.45) * (1 - hf) * 0.75;
-    const c: [number, number, number] = [l.tint[0] * cloudLit[0] * shade, l.tint[1] * cloudLit[1] * shade, l.tint[2] * cloudLit[2] * shade];
+  // The same air cells the clouds are drawn from: in any layer (low cloud, ground mist) the sight shortens.
+  const air = airAt(CONTENT.sky, w, x, y, z);
+  if (air.dens > 0.01) {
+    const d = Math.min(1, air.dens);
+    fogDist = Math.min(fogDist, Math.max(30, 3 / (CONTENT.sky.air.ext * d)));
+    const c: [number, number, number] = [255 * air.lite * cloudLit[0], 255 * air.lite * cloudLit[1], 255 * air.lite * cloudLit[2]];
     fog = mix3(fog, c, Math.min(1, d * 1.5));
   }
   return {

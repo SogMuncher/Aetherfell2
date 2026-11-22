@@ -83,7 +83,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `sites.ts` (341) named places: odds, layout, population (D)
 - `gateRule.ts` (12) where roads tell sites which city gates to open (own file so the start-up order never breaks)
 - `sky.ts` (32) The sky and air. Each cloud/mist layer is a sheet of drifting shapes at its own height, size and speed, and
-- `skyField.ts` (250) Where the clouds are. One pure function of the sky data, the weather (cover, storminess, how far
+- `skyField.ts` (~290) Where the clouds are (`airColumn`: every layer into air cells). One pure function of the sky data, the weather (cover, storminess, how far
 - `spellcraft.ts` (286) composes a spell from up to 3 runes; spell descriptions
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (34) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
@@ -114,7 +114,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `color.ts` (50) packed pixel colour helpers
 - `env.ts` (147) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
 - `lighting.ts` (~150) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); Classic grid; re-exports Env
-- `cloudCells.ts` (185) air layers (clouds, mist) as 3D cells around the eye, a level per doubling of cell size out to `cloudRange`, refilled a few rows per frame
+- `airCells.ts` (~200) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
 - `stateLooks.ts` (~70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (60) adaptive pixel size from frame time
@@ -149,7 +149,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `gpuParticles.ts` (~140) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (~55) held item buffer composited on top
 - `gpuSky.ts` (~70) full-screen sky: gradient, sun, moon, stars, aurora
-- `gpuClouds.ts` (255) air cells in a texture array, walked cell by cell per pixel as face-shaded blocks (coarser blocks far), cut at the scene depth
+- `gpuClouds.ts` (~215) air cells in a texture array, walked nearest first per pixel, outside faces shaded, cut at the scene depth
 - `gpuPost.ts` (98) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (71) shader/texture helpers, camera basis and view-projection
