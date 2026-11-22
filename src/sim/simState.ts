@@ -41,7 +41,7 @@ export function createState(seed: number): SimState {
     tileChanges: new Set(),
     burning: new Set(),
     damp: new Set(),
-    thaw: new Map(),
+    temp: new Map(),
     later: new Map(),
     tileWear: new Map(),
     locations: [],

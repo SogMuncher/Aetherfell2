@@ -36,6 +36,7 @@ export class Matter implements MatterAccess {
   }
 
   get(field: MatterField, x: number, y: number, z: number): number {
+    if (field === 'temp') return this.state.temp.get(spotKey(x, y, z)) ?? 0;
     if (z === GROUND_Z) {
       switch (field) {
         case 'wet': return this.tiles.wet(x, y);
@@ -58,6 +59,11 @@ export class Matter implements MatterAccess {
   }
 
   set(field: MatterField, x: number, y: number, z: number, v: number): void {
+    if (field === 'temp') {
+      if (v === 0) this.state.temp.delete(spotKey(x, y, z));
+      else this.state.temp.set(spotKey(x, y, z), v);
+      return;
+    }
     if (z === GROUND_Z) {
       switch (field) {
         case 'wet':
@@ -182,6 +188,10 @@ export class Matter implements MatterAccess {
     }
     for (const k of this.vol.dampCells) out.push(k);
     return out;
+  }
+
+  warm(): number[] {
+    return [...this.state.temp.keys()];
   }
 
   worn(): number[] {

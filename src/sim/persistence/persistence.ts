@@ -25,7 +25,7 @@ interface SavedRealm {
   entities: Entity[];
   burning: number[];
   damp: number[];
-  thaw: [number, number][];
+  temp: [number, number][];
   later: [number, number][];
   wear: [number, number][];
   regions: number[];
@@ -44,7 +44,7 @@ interface SaveFile {
   chunks: SavedChunk[];
   burning: number[];
   damp: number[];
-  thaw: [number, number][];
+  temp: [number, number][];
   later?: [number, number][];
   /** Damage on doors and the like (added after version 3; older saves simply have none). */
   wear?: [number, number][];
@@ -117,7 +117,7 @@ export function serialize(state: SimState): Uint8Array {
       entities: w.entities.filter((e) => !e.dead),
       burning: w.burning,
       damp: w.damp,
-      thaw: w.thaw,
+      temp: w.temp,
       later: w.later,
       wear: w.tileWear,
       regions: w.regions,
@@ -136,7 +136,7 @@ export function serialize(state: SimState): Uint8Array {
     chunks,
     burning: [...state.burning],
     damp: [...state.damp],
-    thaw: [...state.thaw],
+    temp: [...state.temp],
     later: [...state.later],
     wear: [...state.tileWear],
     regions: [...state.regions],
@@ -191,7 +191,7 @@ export function deserialize(bytes: Uint8Array, regen: Regen, makeVolume: () => V
       entities: w.entities,
       burning: w.burning,
       damp: w.damp,
-      thaw: w.thaw,
+      temp: w.temp,
       later: w.later,
       tileWear: w.wear,
       regions: w.regions,
@@ -214,7 +214,7 @@ export function deserialize(bytes: Uint8Array, regen: Regen, makeVolume: () => V
     tileChanges: new Set(),
     burning: new Set(f.burning),
     damp: new Set(f.damp),
-    thaw: new Map(Array.isArray(f.thaw) ? f.thaw : []),
+    temp: new Map(Array.isArray(f.temp) ? f.temp : []),
     later: new Map(Array.isArray(f.later) ? f.later : []),
     tileWear: new Map(Array.isArray(f.wear) ? f.wear : []),
     regions: new Set(f.regions),

@@ -1,6 +1,7 @@
 import { type EffectRequest, GROUND_Z, type SimContext, type SimSystem } from '../../types';
 import { applyToEntity } from './entityEffects';
-import { applyToSpot, mendWear, thaw, touchesMatter } from './spotEffects';
+import { applyToSpot, mendWear, touchesMatter } from './spotEffects';
+import { settleTemperatures } from './temperature';
 import { thingDef } from '../../content';
 
 
@@ -10,7 +11,7 @@ import { thingDef } from '../../content';
  *   2. material reaction (resistances, catching fire, soaking, chilling, freezing water)
  *   3. status rules (cancels / blocked by)
  *   4. death or destruction (onDestroy effects, loot, credit)
- * Also thaws frozen tiles whose time is up. Which status heat, water and cold give a body comes from
+ * Also lets warm and cold spots settle back (sim/effects/temperature.ts). Which status heat, water and cold give a body comes from
  * content.rules.reactions; which tile freezes or melts into which comes from the tile definitions.
  */
 export const effectsSystem: SimSystem = (ctx: SimContext) => {
@@ -22,7 +23,7 @@ export const effectsSystem: SimSystem = (ctx: SimContext) => {
     state.queues.effects = [];
     for (const r of list) apply(ctx, r);
   }
-  thaw(ctx);
+  settleTemperatures(ctx);
   mendWear(ctx);
 };
 

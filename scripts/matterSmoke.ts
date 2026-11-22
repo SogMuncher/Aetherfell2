@@ -278,7 +278,7 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   sim.matter.set('wet', X + 1, Y, GROUND_Z, 255);
   chill(X + 1, Y, GROUND_Z);
   check('wet ground frosts over but stays grass', sim.matter.info(X + 1, Y, GROUND_Z)?.id === 'grass' && sim.matter.get('frost', X + 1, Y, GROUND_Z) > 200);
-  sim.state.thaw.set(spotKey(X + 1, Y, GROUND_Z), sim.state.tick);
+  sim.state.temp.set(spotKey(X + 1, Y, GROUND_Z), 0); // skip the wait: it is back to its surroundings
   run(sim, 400);
   check('the frost thaws back into wet grass', sim.matter.get('frost', X + 1, Y, GROUND_Z) === 0 && sim.matter.info(X + 1, Y, GROUND_Z)?.id === 'grass' && sim.matter.get('wet', X + 1, Y, GROUND_Z) > 0);
   const z = gz(sim, X, Y) + 1;
@@ -288,8 +288,11 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   sim.matter.set('wet', X + 3, Y, z, 255);
   chill(X + 3, Y, z);
   check('a wet wall frosts over and stays a stone wall', sim.matter.info(X + 3, Y, z)?.id === 'stoneWall' && sim.matter.get('frost', X + 3, Y, z) > 200);
-  sim.state.queues.effects.push({ target: { kind: 'cell', x: X + 3, y: Y, z }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
-  run(sim, 1);
+  // It was chilled twice, so it takes two torches: the first only brings it back up to the cold of the air.
+  for (let i = 0; i < 2; i++) {
+    sim.state.queues.effects.push({ target: { kind: 'cell', x: X + 3, y: Y, z }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
+    run(sim, 1);
+  }
   check('and heat thaws it back to what it was', sim.matter.info(X + 3, Y, z)?.id === 'stoneWall' && sim.matter.get('frost', X + 3, Y, z) === 0);
   me.status = {};
   sim.state.queues.effects.push({ target: { kind: 'entity', id: me.id }, effects: [{ type: 'chill', amount: 1 }], source: null, from: null });
@@ -299,6 +302,36 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   sim.state.queues.effects.push({ target: { kind: 'entity', id: me.id }, effects: [{ type: 'chill', amount: 1 }], source: null, from: null });
   run(sim, 1);
   check('a wet body freezes', (me.status.frozen ?? 0) > 0 && !(me.status.wet ?? 0));
+}
+
+// ---- Heat is temperature: it dries wet stuff first, then burns it; it settles back by itself ---
+{
+  const { sim } = world();
+  const X = 6300;
+  const Y = 6300;
+  flatten(sim, X, Y, 6, Tile.Grass);
+  sim.state.weather.wetness = 0;
+  sim.state.weather.rain = 0;
+  const z = gz(sim, X, Y) + 1;
+  sim.state.volume.set(X + 3, Y, z, CUBE, WOOD);
+  const heat = (x: number, y: number, zz: number): void => {
+    sim.state.queues.effects.push({ target: zz === GROUND_Z ? { kind: 'tile', x: x + 0.5, y: y + 0.5 } : { kind: 'cell', x, y, z: zz }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
+    run(sim, 1);
+  };
+  for (const [x, zz, what] of [[X, GROUND_Z, 'wet grass'], [X + 3, z, 'a wet timber wall']] as const) {
+    sim.matter.set('wet', x, Y, zz, 255);
+    heat(x, Y, zz);
+    check(`one torch on ${what} dries it a little but does not light it`, sim.matter.get('fire', x, Y, zz) === 0 && sim.matter.get('wet', x, Y, zz) < 255 && sim.matter.get('wet', x, Y, zz) > 0);
+    heat(x, Y, zz);
+    heat(x, Y, zz);
+    check(`keep the heat on and ${what} dries out and burns`, sim.matter.get('wet', x, Y, zz) === 0 && sim.matter.get('fire', x, Y, zz) > 0);
+  }
+  sim.matter.set('wet', X + 1, Y + 2, GROUND_Z, 0);
+  sim.state.queues.effects.push({ target: { kind: 'tile', x: X + 1.5, y: Y + 2.5 }, effects: [{ type: 'heat', amount: 0.5 }], source: null, from: null });
+  run(sim, 1);
+  check('a spark warms dry grass without lighting it', sim.matter.get('temp', X + 1, Y + 2, GROUND_Z) > 0 && sim.matter.get('fire', X + 1, Y + 2, GROUND_Z) === 0);
+  run(sim, 1500);
+  check('and the warmth fades back to the surroundings', sim.matter.get('temp', X + 1, Y + 2, GROUND_Z) === 0 && !sim.state.temp.has(spotKey(X + 1, Y + 2, GROUND_Z)));
 }
 
 console.log(failed === 0 ? 'matter checks passed' : `${failed} matter checks FAILED`);
