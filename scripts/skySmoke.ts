@@ -266,19 +266,23 @@ for (const l of SKY.layers) {
 {
   const w = weather(0.2, 0);
   const tiles = { ground: () => 10, fire: (x: number, y: number) => (x === 3 && y === 4 ? 255 : 0) } as unknown as ReadonlyTiles;
-  const cellFire = (on: boolean): ReadonlyVolume => ({ burningCells: new Set(on ? [spotKey(40, 4, 30)] : []), cellGet: () => 255 }) as unknown as ReadonlyVolume;
+  const cellFire = (on: boolean): ReadonlyVolume => ({ burningCells: new Set(on ? [spotKey(20, 4, 30)] : []), cellGet: () => 255 }) as unknown as ReadonlyVolume;
   const none = new AirSmoke();
   for (let i = 0; i < 30; i++) none.update(0.1, w, 0, 0, 12, tiles, new Set(), cellFire(false));
   check('no fire, no smoke', !none.active);
   const sm = new AirSmoke();
-  for (let i = 0; i < 40; i++) sm.update(0.1, w, 0, 0, 12, tiles, new Set([packKey(3, 4)]), cellFire(true));
-  const low = sm.at(w, 3.5, 4.5, 12);
-  const high = sm.at(w, 3.5, 4.5, 16);
-  check('a burning tile smokes and the smoke rises', low > 0.05 && high > 0.01, `${low.toFixed(2)} at the fire, ${high.toFixed(2)} 4 m up`);
-  check('a burning 3D cell smokes too', sm.at(w, 40.5, 4.5, 32) > 0.05);
+  const burn = new Set([packKey(3, 4)]);
+  sm.update(0.1, w, 0, 0, 12, tiles, burn, cellFire(true));
+  check('a fire smokes only the one cell above it', sm.at(w, 3.5, 4.5, 10.5) > 0 && sm.at(w, 2.5, 4.5, 10.5) === 0 && sm.at(w, 3.5, 4.5, 11.5) < sm.at(w, 3.5, 4.5, 10.5) * 0.1);
+  for (let i = 0; i < 150; i++) sm.update(0.1, w, 0, 0, 12, tiles, burn, cellFire(true));
+  const low = sm.at(w, 3.5, 4.5, 10.5);
+  const high = sm.at(w, 3.5, 4.5, 14.5);
+  const side = sm.at(w, 2.5, 4.5, 14.5);
+  check('a burning tile makes a slow, thin column of smoke', low > 0.3 && high > 0.1 && side > 0 && side < high * 0.5 && sm.at(w, 3.5, 4.5, 40.5) === 0, `${low.toFixed(2)} at the fire, ${high.toFixed(2)} 4 m up, ${side.toFixed(3)} beside it`);
+  check('a burning 3D cell smokes too', sm.at(w, 20.5, 4.5, 32) > 0.05);
   const blown = { ...w, drift: { x: 6, y: 0 } };
-  check('the wind carries the smoke downwind', Math.abs(sm.at(blown, 9.5, 4.5, 16) - high) < 1e-6);
-  for (let i = 0; i < 400; i++) sm.update(0.1, w, 0, 0, 12, tiles, new Set(), cellFire(false));
+  check('the wind carries the smoke downwind', Math.abs(sm.at(blown, 9.5, 4.5, 14.5) - high) < 1e-6);
+  for (let i = 0; i < 3000; i++) sm.update(0.1, w, 0, 0, 12, tiles, new Set(), cellFire(false));
   check('smoke thins away once the fire is out', !sm.active);
 }
 
