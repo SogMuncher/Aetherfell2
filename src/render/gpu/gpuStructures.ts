@@ -6,7 +6,8 @@
 import type { ReadonlyVolume, VolumeBrick } from '../../types';
 import { SHAPE_COUNT, SHAPE_PIECES, SHAPE_START } from '../../content/shapes';
 import type { Env } from '../lighting';
-import { compile, loc, makeTexture } from './glUtil';
+import { compile, loc, makeTexture, makeTextureArray } from './glUtil';
+import { bindStateLooks, packStates, STATE_LAYERS } from './gpuStates';
 import type { CamBasis } from './glUtil';
 import type { GpuLight } from './gpuLight';
 import { GRID, PIECE_FLOATS, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
@@ -24,7 +25,7 @@ interface Resident {
   version: number;
   /** What the atlas holds for it (to upload only real changes). */
   copy: Uint8Array;
-  /** What the state atlas holds for it (soot, wet, oil, fire per cell), or null while it is all zero there. */
+  /** What the state atlas holds for it (every matter state per cell, gpuStates layout), or null while it is all zero there. */
   copyState: Uint8Array | null;
 }
 
@@ -34,7 +35,7 @@ export class GpuStructures {
   private readonly inst: WebGLBuffer;
   private readonly atlas: WebGLTexture;
   private readonly stateAtlas: WebGLTexture;
-  private readonly stateData = new Uint8Array(4096 * 4);
+  private readonly stateData = new Uint8Array(4096 * 4 * STATE_LAYERS);
   private readonly page: WebGLTexture;
   private readonly pieces: WebGLTexture;
   private readonly shapeIdx: WebGLTexture;
@@ -71,7 +72,7 @@ export class GpuStructures {
       gl.vertexAttribDivisor(a, 1);
     }
     this.atlas = makeTexture(gl, gl.RG8UI, ATLAS, ATLAS, gl.RG_INTEGER, gl.UNSIGNED_BYTE);
-    this.stateAtlas = makeTexture(gl, gl.RGBA8, ATLAS, ATLAS, gl.RGBA, gl.UNSIGNED_BYTE);
+    this.stateAtlas = makeTextureArray(gl, gl.RGBA8, ATLAS, ATLAS, STATE_LAYERS, gl.RGBA, gl.UNSIGNED_BYTE);
     this.page = makeTexture(gl, gl.R16UI, GW * GW, GRID.zCount, gl.RED_INTEGER, gl.UNSIGNED_SHORT);
     const n = SHAPE_PIECES.length / PIECE_FLOATS;
     this.pieces = makeTexture(gl, gl.R32F, PIECE_FLOATS, n, gl.RED, gl.FLOAT);
@@ -108,11 +109,7 @@ export class GpuStructures {
     const ts = this.stateData;
     if (m) {
       for (let i = 0; i < 4096; i++) {
-        const o = (((i >> 8 >> 2) * 16 + ((i >> 4) & 15)) * 64 + ((i >> 8) & 3) * 16 + (i & 15)) * 4;
-        ts[o] = m.soot[i] ?? 0;
-        ts[o + 1] = m.wet[i] ?? 0;
-        ts[o + 2] = m.oil[i] ?? 0;
-        ts[o + 3] = m.fire[i] ?? 0;
+        packStates(m, i, ts, ((i >> 8 >> 2) * 16 + ((i >> 4) & 15)) * 64 + ((i >> 8) & 3) * 16 + (i & 15), 4096);
       }
     }
     const stateSame = m ? r.copyState !== null && ts.every((v, i) => v === (r.copyState?.[i] ?? 0)) : r.copyState === null;
@@ -122,11 +119,11 @@ export class GpuStructures {
     gl.bindTexture(gl.TEXTURE_2D, this.atlas);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, (slot % 32) * 64, Math.floor(slot / 32) * 64, 64, 64, gl.RG_INTEGER, gl.UNSIGNED_BYTE, t);
     if (m || r.copyState) {
-      if (m) r.copyState = (r.copyState ?? new Uint8Array(4096 * 4)).fill(0);
+      if (m) r.copyState = (r.copyState ?? new Uint8Array(ts.length)).fill(0);
       if (m && r.copyState) r.copyState.set(ts);
       else r.copyState = null;
-      gl.bindTexture(gl.TEXTURE_2D, this.stateAtlas);
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, (slot % 32) * 64, Math.floor(slot / 32) * 64, 64, 64, gl.RGBA, gl.UNSIGNED_BYTE, m ? ts : new Uint8Array(4096 * 4));
+      gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.stateAtlas);
+      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, (slot % 32) * 64, Math.floor(slot / 32) * 64, 0, 64, 64, STATE_LAYERS, gl.RGBA, gl.UNSIGNED_BYTE, m ? ts : new Uint8Array(ts.length));
     }
     return true;
   }
@@ -201,7 +198,10 @@ export class GpuStructures {
     };
     bind(0, this.atlas, 'uAtlas'); bind(1, this.page, 'uPage'); bind(2, this.pieces, 'uPieces'); bind(3, this.shapeIdx, 'uShapeIdx'); bind(4, this.surf, 'uSurf');
     this.light.bind(p, 5);
-    bind(6, this.stateAtlas, 'uState');
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.stateAtlas);
+    bindStateLooks(gl, p, 6);
+    gl.uniform1f(loc(gl, p, 'uRainWet'), env.rain > 0 ? 0.5 : 0);
     gl.uniform1f(loc(gl, p, 'uTime'), time);
     gl.uniformMatrix4fv(loc(gl, p, 'uVP'), false, vp);
     gl.uniform3f(loc(gl, p, 'uFwd'), cam.fwd[0], cam.fwd[1], cam.fwd[2]);

@@ -32,7 +32,7 @@ function unpack(runs: readonly number[], into: Uint8Array | Uint16Array): void {
   }
 }
 
-const FIELD_MAX: Record<BrickMatterField, number> = { wet: 255, fire: 255, oil: 255, soot: 255, spent: 65535, wear: 65535 };
+const FIELD_MAX: Record<BrickMatterField, number> = { wet: 255, fire: 255, oil: 255, soot: 255, frost: 255, spent: 65535, wear: 65535 };
 
 function newMatter(): BrickMatter {
   return {
@@ -40,6 +40,7 @@ function newMatter(): BrickMatter {
     fire: new Uint8Array(BRICK_CELLS),
     oil: new Uint8Array(BRICK_CELLS),
     soot: new Uint8Array(BRICK_CELLS),
+    frost: new Uint8Array(BRICK_CELLS),
     spent: new Uint16Array(BRICK_CELLS),
     wear: new Uint16Array(BRICK_CELLS),
   };
@@ -115,6 +116,7 @@ export class VolumeStore implements Volume {
     m.fire[i] = 0;
     m.oil[i] = 0;
     m.soot[i] = 0;
+    m.frost[i] = 0;
     m.spent[i] = 0;
     m.wear[i] = 0;
     const k = spotKey(x, y, z);
@@ -267,7 +269,7 @@ export class VolumeStore implements Volume {
   exportBrick(b: VolumeBrick): VolumeBrickData {
     const m = b.matter;
     const out: VolumeBrickData = { bx: b.bx, by: b.by, bz: b.bz, shape: pack(b.shape), mat: pack(b.mat) };
-    if (m) out.state = { wet: pack(m.wet), fire: pack(m.fire), oil: pack(m.oil), soot: pack(m.soot), spent: pack(m.spent), wear: pack(m.wear) };
+    if (m) out.state = { wet: pack(m.wet), fire: pack(m.fire), oil: pack(m.oil), soot: pack(m.soot), frost: pack(m.frost), spent: pack(m.spent), wear: pack(m.wear) };
     return out;
   }
 
@@ -308,6 +310,7 @@ export class VolumeStore implements Volume {
       unpack(d.state.fire, matter.fire);
       unpack(d.state.oil, matter.oil);
       unpack(d.state.soot, matter.soot);
+      if (d.state.frost) unpack(d.state.frost, matter.frost);
       unpack(d.state.spent, matter.spent);
       unpack(d.state.wear, matter.wear);
     }

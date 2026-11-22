@@ -1,4 +1,5 @@
 import type { Burst, Entity, ReadonlyTiles, ReadonlyVolume, SimContext, SimSystem, ThingDef, TileInfo } from '../../types';
+import { GROUND_Z, SHOWN_STATES } from '../../types';
 import { thingDef } from '../../content';
 
 const GRAVITY = 22;
@@ -26,6 +27,22 @@ function topAt(tiles: ReadonlyTiles, x: number, y: number, r: number): number {
 }
 
 /** A solid surface resting at water level (ice): you walk on it instead of wading. */
+/** How much of its speed a thing resting here keeps each second: its material's slide, made slicker by states on it (frost). */
+function slideAt(ctx: SimContext, x: number, y: number, z: number): number {
+  const cell = ctx.matter.cellAt(x, y, z - 0.05);
+  const sx = cell ? cell.x : Math.floor(x);
+  const sy = cell ? cell.y : Math.floor(y);
+  const sz = cell ? cell.z : GROUND_Z;
+  let slide = ctx.matter.info(sx, sy, sz)?.slide ?? 0.02;
+  for (const id of SHOWN_STATES) {
+    const to = ctx.content.matterStates[id].slide;
+    if (to === undefined) continue;
+    const w = ctx.matter.get(id, sx, sy, sz) / 255;
+    if (w > 0 && to > slide) slide += (to - slide) * w;
+  }
+  return slide;
+}
+
 function standsOnWater(info: TileInfo): boolean {
   return info.level && !info.liquid;
 }
@@ -182,8 +199,8 @@ export const physicsSystem: SimSystem = (ctx: SimContext) => {
       e.z = floor;
       e.vz = 0;
       if (!e.actor) {
-        // Things slide a long way on slick ground (ice).
-        const f = Math.pow(tiles.info(e.pos.x, e.pos.y).slide ?? 0.02, dt);
+        // Things slide a long way on slick ground (ice, frost).
+        const f = Math.pow(slideAt(ctx, e.pos.x, e.pos.y, e.z), dt);
         e.vel.x *= f;
         e.vel.y *= f;
         if (Math.abs(e.vel.x) + Math.abs(e.vel.y) < 0.05) {

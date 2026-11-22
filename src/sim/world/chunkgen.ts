@@ -19,6 +19,7 @@ export function emptyChunk(cx: number, cy: number): Chunk {
     fuel: new Uint16Array(CHUNK_AREA),
     oil: new Uint8Array(CHUNK_AREA),
     soot: new Uint8Array(CHUNK_AREA),
+    frost: new Uint8Array(CHUNK_AREA),
     door: new Uint8Array(CHUNK_AREA),
     height: new Float32Array((CHUNK_SIZE + 1) * (CHUNK_SIZE + 1)),
     level: new Float32Array(CHUNK_AREA),

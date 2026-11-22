@@ -56,8 +56,12 @@ export interface RulesDef {
   /** The item used as money. */
   currency: ItemId;
   reactions: { heat: ReactionDef; soak: ReactionDef; chill: ReactionDef };
-  /** Tile ids that wet ground (a floor) or a wet cell (a block) freezes into when chilled; dry ones are left alone. */
-  frozen: { floor: string; block: string };
+  /**
+   * Cold freezes the wetness in ground and cells into frost (an overlay: the stuff stays what it is). Only spots at least
+   * `wetNeeded` wet (0..255, rain on open ground counts) freeze; dry ones are just cold. Frost holds `lasts` ticks per unit of
+   * chill, then gives back `fade` of its ice as wet every 10 ticks until it is gone. Heat thaws it at once.
+   */
+  frost: { wetNeeded: number; lasts: number; fade: number };
   combat: {
     /** Guarding just before a blow lands staggers the attacker and shoves them back. */
     parry: { status: StatusId; ticks: number; shove: number };

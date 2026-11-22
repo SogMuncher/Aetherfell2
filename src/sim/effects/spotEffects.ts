@@ -1,7 +1,4 @@
-import { type DamageKind, type Effect, type EffectRequest, GROUND_Z, type SimContext, packKey, unpackSpot } from '../../types';
-
-/** Frozen tiles (ice from a frost rune) last this long (plus a little randomness). */
-export const ICE_TICKS = 20 * 50;
+import { type DamageKind, type Effect, type EffectRequest, GROUND_Z, type SimContext, spotKey, unpackSpot } from '../../types';
 
 /** Blunt and magical force batters structures even without a swing (a bursting barrel, a thunder rune). */
 export function batters(e: Effect): boolean {
@@ -24,6 +21,10 @@ export function applyToSpot(ctx: SimContext, x: number, y: number, z: number, r:
   for (const eff of r.effects) {
     switch (eff.type) {
       case 'heat': {
+        if (matter.get('frost', x, y, z) > 0) {
+          thawSpot(ctx, x, y, z, 255);
+          break;
+        }
         if (inf.meltsInto !== undefined) {
           melt(ctx, x, y, z);
           break;
@@ -45,20 +46,21 @@ export function applyToSpot(ctx: SimContext, x: number, y: number, z: number, r:
           matter.set('fire', x, y, z, 0);
           ctx.emit({ type: 'doused', x, y, z });
         }
-        // Water freezes; anything else freezes only while it is wet (dry ground and walls are just cold).
-        let into = inf.freezesInto;
-        if (into === undefined && !inf.liquid && inf.meltsInto === undefined && matter.wetness(x, y, z) > 0.2) {
-          const id = ctx.content.rules.frozen[inf.shape === 'block' ? 'block' : 'floor'];
-          if (inf.shape === 'floor' || inf.shape === 'block') into = ctx.content.tileIds[id];
-        }
-        if (into !== undefined) {
-          matter.setKind(x, y, z, into);
+        // Water turns to ice (a new material you can walk on, which melts back). Anything else keeps its material: the wet
+        // in it freezes into frost over it, and dry stuff is just cold.
+        const frost = ctx.content.rules.frost;
+        const until = state.tick + Math.round((frost.lasts + ctx.rng.int(200)) * Math.min(2, eff.amount * scale));
+        if (inf.freezesInto !== undefined) {
+          matter.setKind(x, y, z, inf.freezesInto);
+          ctx.emit({ type: 'froze', x, y, z });
+        } else if (inf.meltsInto === undefined) {
+          const wet = inf.liquid ? 0 : matter.wetness(x, y, z);
+          if (wet < frost.wetNeeded) break;
+          matter.set('frost', x, y, z, Math.min(255, wet));
           matter.set('wet', x, y, z, 0);
-          ctx.emit({ type: 'froze', x, y });
+          ctx.emit({ type: 'froze', x, y, z });
         }
-        if (ground && (into !== undefined || inf.meltsInto !== undefined)) {
-          state.thaw.set(packKey(x, y), state.tick + Math.round((ICE_TICKS + ctx.rng.int(200)) * Math.min(2, eff.amount * scale)));
-        }
+        state.thaw.set(spotKey(x, y, z), Math.max(state.thaw.get(spotKey(x, y, z)) ?? 0, until));
         break;
       }
       case 'coat': {
@@ -142,21 +144,35 @@ export function ignite(ctx: SimContext, x: number, y: number, z: number, amount:
   return true;
 }
 
+/** Ice (a material) melts back into what it froze from. */
 export function melt(ctx: SimContext, x: number, y: number, z: number = GROUND_Z): void {
   const into = ctx.matter.info(x, y, z)?.meltsInto;
   if (into !== undefined) ctx.matter.setKind(x, y, z, into);
-  ctx.state.thaw.delete(packKey(x, y));
-  ctx.emit({ type: 'thawed', x, y });
+  ctx.state.thaw.delete(spotKey(x, y, z));
+  ctx.emit({ type: 'thawed', x, y, z });
 }
 
+/** Up to `amount` of a spot's frost turns back into the wet it froze from; the stuff beneath was never changed. */
+export function thawSpot(ctx: SimContext, x: number, y: number, z: number, amount: number): void {
+  const { matter } = ctx;
+  const f = matter.get('frost', x, y, z);
+  const d = Math.min(f, amount);
+  matter.set('frost', x, y, z, f - d);
+  if (matter.info(x, y, z)) matter.set('wet', x, y, z, Math.min(255, matter.get('wet', x, y, z) + d));
+  if (f - d > 0) return;
+  ctx.state.thaw.delete(spotKey(x, y, z));
+  ctx.emit({ type: 'thawed', x, y, z });
+}
+
+/** Frozen spots whose time is up thaw: frost fades back into wet bit by bit, ice melts. */
 export function thaw(ctx: SimContext): void {
-  const { state } = ctx;
+  const { state, matter } = ctx;
   if (state.thaw.size === 0 || state.tick % 10 !== 0) return;
   for (const [key, at] of state.thaw) {
     if (at > state.tick) continue;
-    const x = Math.floor(key / 2097152) - 1048576;
-    const y = (key % 2097152) - 1048576;
-    if (ctx.tiles.info(x, y).meltsInto !== undefined) melt(ctx, x, y);
+    const { x, y, z } = unpackSpot(key);
+    if (matter.get('frost', x, y, z) > 0) thawSpot(ctx, x, y, z, ctx.content.rules.frost.fade);
+    else if (matter.info(x, y, z)?.meltsInto !== undefined) melt(ctx, x, y, z);
     else state.thaw.delete(key);
   }
 }
