@@ -14,6 +14,8 @@ export interface ReactionDef {
   byFlammability?: boolean;
   /** Lasts `factor` times longer while the body already has this status (wet things freeze stiff). */
   longerWhile?: { status: StatusId; factor: number };
+  /** A body that already has `while` is turned to `status` for `ticks` as well (wet things freeze solid; dry ones are only chilled). */
+  freezes?: { while: StatusId; status: StatusId; ticks: number };
 }
 
 /** What one way of swinging does (rules.combat.swings). Lengths are in sim ticks (20 per second). */
@@ -54,6 +56,8 @@ export interface RulesDef {
   /** The item used as money. */
   currency: ItemId;
   reactions: { heat: ReactionDef; soak: ReactionDef; chill: ReactionDef };
+  /** Tile ids that wet ground (a floor) or a wet cell (a block) freezes into when chilled; dry ones are left alone. */
+  frozen: { floor: string; block: string };
   combat: {
     /** Guarding just before a blow lands staggers the attacker and shoves them back. */
     parry: { status: StatusId; ticks: number; shove: number };

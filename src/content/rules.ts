@@ -10,8 +10,9 @@ export const RULES: RulesDef = {
   reactions: {
     heat: { status: 'burning', ticks: 60, byFlammability: true },
     soak: { status: 'wet', ticks: 300 },
-    chill: { status: 'chilled', ticks: 100, longerWhile: { status: 'wet', factor: 2 } },
+    chill: { status: 'chilled', ticks: 100, longerWhile: { status: 'wet', factor: 2 }, freezes: { while: 'wet', status: 'frozen', ticks: 60 } },
   },
+  frozen: { floor: 'frost', block: 'iceBlock' },
   combat: {
     parry: { status: 'staggered', ticks: 26, shove: 4 },
     block: { status: 'staggered', ticks: 3, damage: 0.25, stamina: 10 },

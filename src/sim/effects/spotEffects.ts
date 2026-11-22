@@ -24,8 +24,8 @@ export function applyToSpot(ctx: SimContext, x: number, y: number, z: number, r:
   for (const eff of r.effects) {
     switch (eff.type) {
       case 'heat': {
-        if (ground && inf.meltsInto !== undefined) {
-          melt(ctx, x, y);
+        if (inf.meltsInto !== undefined) {
+          melt(ctx, x, y, z);
           break;
         }
         ignite(ctx, x, y, z, eff.amount * scale);
@@ -45,11 +45,18 @@ export function applyToSpot(ctx: SimContext, x: number, y: number, z: number, r:
           matter.set('fire', x, y, z, 0);
           ctx.emit({ type: 'doused', x, y, z });
         }
-        if (ground && (inf.freezesInto !== undefined || inf.meltsInto !== undefined)) {
-          if (inf.freezesInto !== undefined) {
-            tiles.setKind(x, y, inf.freezesInto);
-            ctx.emit({ type: 'froze', x, y });
-          }
+        // Water freezes; anything else freezes only while it is wet (dry ground and walls are just cold).
+        let into = inf.freezesInto;
+        if (into === undefined && !inf.liquid && inf.meltsInto === undefined && matter.wetness(x, y, z) > 0.2) {
+          const id = ctx.content.rules.frozen[inf.shape === 'block' ? 'block' : 'floor'];
+          if (inf.shape === 'floor' || inf.shape === 'block') into = ctx.content.tileIds[id];
+        }
+        if (into !== undefined) {
+          matter.setKind(x, y, z, into);
+          matter.set('wet', x, y, z, 0);
+          ctx.emit({ type: 'froze', x, y });
+        }
+        if (ground && (into !== undefined || inf.meltsInto !== undefined)) {
           state.thaw.set(packKey(x, y), state.tick + Math.round((ICE_TICKS + ctx.rng.int(200)) * Math.min(2, eff.amount * scale)));
         }
         break;
@@ -135,9 +142,9 @@ export function ignite(ctx: SimContext, x: number, y: number, z: number, amount:
   return true;
 }
 
-export function melt(ctx: SimContext, x: number, y: number): void {
-  const into = ctx.tiles.info(x, y).meltsInto;
-  if (into !== undefined) ctx.tiles.setKind(x, y, into);
+export function melt(ctx: SimContext, x: number, y: number, z: number = GROUND_Z): void {
+  const into = ctx.matter.info(x, y, z)?.meltsInto;
+  if (into !== undefined) ctx.matter.setKind(x, y, z, into);
   ctx.state.thaw.delete(packKey(x, y));
   ctx.emit({ type: 'thawed', x, y });
 }

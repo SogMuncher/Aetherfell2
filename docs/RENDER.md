@@ -9,6 +9,7 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 - `raycaster/`: `terrainRenderer.ts` column marcher (near live tiles, far cached LOD blocks: `terrainLod.ts`,
   `lodLooks.ts`, ~7 km), `volumeRenderer.ts` ray casts 3D-layer bricks, `tileBillboards.ts`, `sky.ts` (ray-marched clouds,
   sun, stars), `cloudShadow.ts`, `camera.ts`. Clouds and ground mist follow the world's moisture (`airMoisture` in `content/skyField.ts`, set by `Simulation`; layer `wet`); both renderers share the density rules.
+- LOD blocks of every level (incl. the 1 m one the GPU textured levels fade into) get changed tiles painted over them (`terrainLod.paintChanges`); the GPU refills its fine levels when `lod.painted` moves.
 - `materials/` paints surfaces into textures; wet/soot/wear shading.
 - `entities/`: creatures posed from parts (`bodyArt.ts`, `bodyMath.ts`, `bodyPaint.ts`, `creatures.ts`), objects grown
   from forms (`formArt.ts`, `props.ts`), items (`itemArt.ts`), billboards (`spriteRenderer.ts`). Colour regions are filled from
