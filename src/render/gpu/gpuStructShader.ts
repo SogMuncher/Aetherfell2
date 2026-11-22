@@ -57,16 +57,24 @@ uvec2 cellAt(int slot, ivec3 l){
   return texelFetch(uAtlas, ivec2((slot % 32) * 64 + (l.z & 3) * 16 + l.x, (slot / 32) * 64 + (l.z >> 2) * 16 + l.y), 0).rg;
 }
 int fdiv(int a, int b){ return (a - (((a % b) + b) % b)) / b; }
+/** Shape and material of the world cell q (0 shape = empty or not loaded), whichever brick holds it. */
+uvec2 cellWorld(ivec3 q){
+  ivec3 g = ivec3(fdiv(q.x, 16) - uGrid0.x, fdiv(q.y, 16) - uGrid0.y, fdiv(q.z, 16) + ${GRID.zLow});
+  if (g.x < 0 || g.y < 0 || g.x >= ${GW} || g.y >= ${GW} || g.z < 0 || g.z >= ${GRID.zCount}) return uvec2(0u);
+  int slot = int(texelFetch(uPage, ivec2(g.y * ${GW} + g.x, g.z), 0).r);
+  return slot > 0 ? cellAt(slot - 1, ivec3(q.x & 15, q.y & 15, q.z & 15)) : uvec2(0u);
+}
 /** Is there anything solid in this cell or straight above it, so the sun cannot reach? */
 bool covered(ivec3 c){
-  for (int k = 0; k <= 24; k++){
-    ivec3 q = c + ivec3(0, 0, k);
-    ivec3 g = ivec3(fdiv(q.x, 16) - uGrid0.x, fdiv(q.y, 16) - uGrid0.y, fdiv(q.z, 16) + ${GRID.zLow});
-    if (g.x < 0 || g.y < 0 || g.x >= ${GW} || g.y >= ${GW} || g.z < 0 || g.z >= ${GRID.zCount}) continue;
-    int slot = int(texelFetch(uPage, ivec2(g.y * ${GW} + g.x, g.z), 0).r);
-    if (slot > 0 && cellAt(slot - 1, ivec3(q.x & 15, q.y & 15, q.z & 15)).r != 0u) return true;
-  }
+  for (int k = 0; k <= 24; k++) if (cellWorld(c + ivec3(0, 0, k)).r != 0u) return true;
   return false;
+}
+/** The surface of the cell one step e along a face (one further along the face's own slope if that is empty), times that cell's tint; this cell's if both are empty. */
+vec3 nextFace(ivec3 c, ivec3 e, vec3 n, ivec3 dom, int own, vec3 t, float tint, bool wall, vec2 uv){
+  float k = dot(n, vec3(e)); ivec3 q = c + e; uvec2 sm = cellWorld(q);
+  if (sm.x == 0u && abs(k) > 0.05){ q -= int(sign(k)) * dom; sm = cellWorld(q); }
+  if (sm.x == 0u) return t * tint;
+  return (int(sm.y) == own ? t : surf(int(sm.y), wall, uv)) * (0.93 + 0.14 * h3(vec3(q)));
 }
 void main(){
   vec2 nd = gl_FragCoord.xy / uRes.xy * 2.0 - 1.0;
@@ -108,16 +116,28 @@ void main(){
   // Far buildings dissolve into the ground's own raised blocks (the terrain pass ramps those in over the same band), so a town never pops.
   float away = smoothstep(uFade.x, uFade.y, length(w.xy - uEye.xy));
   if (away > fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;
-  vec3 col; vec2 suv;
-  if (abs(n.z) > 0.6) { suv = w.xy * 16.0; col = surf(mat, false, suv); }
-  else { float across = abs(n.x) > abs(n.y) ? w.y : w.x; float nh = abs(n.z) > 0.05 ? max(0.35, sqrt(1.0 - n.z * n.z)) : 1.0; suv = vec2(across * 16.0, -w.z * 10.0 / nh); col = surf(mat, true, suv); }
+  // Texture coords, where in its cell this texel is (f, texels per cell tx), the face's two steps to neighbour cells and its normal axis.
+  vec2 suv, f, tx; ivec3 ea, eb, dom; bool wall = abs(n.z) <= 0.6;
+  if (!wall) { suv = w.xy * 16.0; f = fract((floor(suv) + 0.5) / 16.0); tx = vec2(16.0); ea = ivec3(1, 0, 0); eb = ivec3(0, 1, 0); dom = ivec3(0, 0, n.z < 0.0 ? -1 : 1); }
+  else {
+    bool xFace = abs(n.x) > abs(n.y); float across = xFace ? w.y : w.x; float nh = abs(n.z) > 0.05 ? max(0.35, sqrt(1.0 - n.z * n.z)) : 1.0;
+    suv = vec2(across * 16.0, -w.z * 10.0 / nh); f = vec2(fract((floor(suv.x) + 0.5) / 16.0), fract(-(floor(suv.y) + 0.5) * nh / 10.0)); tx = vec2(16.0, 10.0 / nh);
+    ea = xFace ? ivec3(0, 1, 0) : ivec3(1, 0, 0); eb = ivec3(0, 0, 1); dom = xFace ? ivec3(n.x < 0.0 ? -1 : 1, 0, 0) : ivec3(0, n.y < 0.0 ? -1 : 1, 0);
+  }
   bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // from the middle of the cell, not the exact pixel, so a wall face is lit evenly
   float tint = 0.93 + 0.14 * h3(vec3(cell));
+  // Neighbour cells meet by the ground's one edge rule (edgeLean), same material too, so each cell's tint fades into the next.
+  vec3 t0 = surf(mat, wall, suv), col = t0 * tint; vec2 lean = edgeLean(f, tx);
+  if (lean.x + lean.y > 0.0) {
+    ivec3 sa = ea * (f.x < 0.5 ? -1 : 1), sb = eb * (f.y < 0.5 ? -1 : 1);
+    col = mix(mix(col, nextFace(cell, sa, n, dom, mat, t0, tint, wall, suv), lean.x), mix(nextFace(cell, sb, n, dom, mat, t0, tint, wall, suv), nextFace(cell, sa + sb, n, dom, mat, t0, tint, wall, suv), lean.x), lean.y);
+  }
+  col = surfPatches(col, w.xy + w.z * vec2(1.7, -1.3), length(w - uEye));
   // What has happened to this cell (the same matter states the sim's rules use), blended over its own surface.
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2((slot % 32) * 64 + (cell.z - origin.z & 3) * 16 + (cell.x - origin.x), (slot / 32) * 64 + ((cell.z - origin.z) >> 2) * 16 + (cell.y - origin.y)), suv, open ? uRainWet : 0.0, 0.75 + 0.25 * sin(uTime * 40.0 + float(cell.x) * 1.7 + float(cell.y) * 2.3 + float(cell.z)), glow);
-  surfaceOut(col * tint, n, 1.0);
+  surfaceOut(col, n, 1.0);
   float f = min(0.97, 1.0 - exp(-length(w - uEye) / uFogDist));
-  o = vec4(col * tint * glow * (1.0 - f) + uFog * f, 1.0);
+  o = vec4(col * glow * (1.0 - f) + uFog * f, 1.0);
   vec4 cp = uVP * vec4(w, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;
 }`;
