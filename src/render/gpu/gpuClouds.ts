@@ -16,7 +16,7 @@ import { compile, loc, makeTexture } from './glUtil';
 import type { CamBasis } from './glUtil';
 
 /** Most cells a ray walks. */
-const MAXS = 224;
+const MAXS = 320;
 
 const VS = `#version 300 es
 void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
@@ -63,7 +63,8 @@ void main(){
   vec3 q0 = vec3(uEye.xy - uDrift, cz);
   vec2 sun = vec2(cos(uSunAz), sin(uSunAz));
   float silver = pow(max(0.0, dot(normalize(d.xy + 1e-6), sun)), 6.0);
-  // A fixed per-pixel threshold (4x4 ordered dither) cross-fades each level into the next over the last part of its reach.
+  // A fixed per-pixel threshold (4x4 ordered dither) cross-fades each level into the next over a whole doubling of
+  // distance, so the air is always part one level and part the next and never settles on one block size.
   ivec2 bq = ivec2(gl_FragCoord.xy) & 3;
   float dith = BAYER[bq.y * 4 + bq.x] / 16.0;
   vec3 sc = vec3(uSCell); vec3 sLo = uSW.xyz * uSCell; vec3 sHi = sLo + vec3(float(SN), float(SN), float(ST)) * uSCell;
@@ -71,7 +72,7 @@ void main(){
   bool inC = false; float cd = 0.0; float cs = 0.0; float gap = 0.0;
   for (int i = 0; i < ${MAXS}; i++){
     if (t >= t1) break;
-    int k = int(max(0.0, ceil(log2(max(1.0, t) / (uCell * uLod)) - 0.3 * dith)));
+    int k = int(max(0.0, ceil(log2(max(1.0, t) / (uCell * uLod)) - dith)));
     float tp = t + max(0.01, t * 2e-5);
     vec3 p = q0 + d * tp;
     vec3 c; vec2 a = airAt(p, k, c);
@@ -103,7 +104,7 @@ void main(){
     // A clump is one solid shape: its look (face shade, light, thickness) is fixed where the ray enters it from clear
     // air and stays the same right through it, so cells inside a clump never show as faces or seams. A sliver of clear
     // air (a ray slipping along the edge where two cells meet) does not end the clump.
-    if (a.r < CUT){ gap += seg; if (gap > 0.2 * min(c.x, c.z)) inC = false; continue; }
+    if (a.r < CUT){ gap += seg; if (gap > 0.5 * min(c.x, c.z)) inC = false; continue; }
     gap = 0.0;
     if (!inC){
       inC = true; cd = clamp(a.r * 2.5, 0.3, 1.0);

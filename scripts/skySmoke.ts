@@ -221,7 +221,7 @@ for (const l of SKY.layers) {
   for (let a = 0; a < 144; a++) for (const z of [300, 450, 1550]) if (air.sample(w, 5000 + Math.cos(a / 22.9) * SKY.cloudRange * 0.9, 3000 + Math.sin(a / 22.9) * SKY.cloudRange * 0.9, z) > 0) farCloud++;
   check('far clouds come from coarse cells (no hole toward the horizon)', farCloud > 5, `${farCloud} cloudy spots 36 km out`);
   const before = air.filled;
-  air.update(w, 5000 + SKY.air.cell * 10, 3000, 300, 0.1, 1e9);
+  air.update(w, 5000 + SKY.air.cell * (air.n / 8 + 1), 3000, 300, 0.1, 1e9);
   const step = air.filled - before;
   check('a short walk fills only the cells that came into reach', step > 0 && step <= air.n * air.n * air.tall / 4, `${step} cells`);
   // Weather: rain falls only under storm cloud, and the air above holds that cloud.
