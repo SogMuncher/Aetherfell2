@@ -16,7 +16,7 @@ import { GPU_STRUCT } from './gpuStructures';
 import { SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
 
 /** All numbers live here. */
-export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, recolourEvery: 15, texLevels: 2, texFade: [30, 90], sink: 0.03, grit: 0.09 } as const;
+export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, recolourEvery: 15, texLevels: 2, texFade: [30, 90], blend: 2, sink: 0.03, grit: 0.09 } as const;
 const N = GPU_TERRAIN.cells;
 const V = N + 1;
 
@@ -41,19 +41,31 @@ ${SURFACE_SHADER}
 ${SURFACE_OUT}
 ${STATE_SHADER}
 uniform vec3 uEye; uniform vec3 uFog; uniform float uFogDist;
-uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade;
+uniform vec4 uHole; uniform float uGrit; uniform usampler2D uCode; uniform vec2 uOrigin; uniform float uCell; uniform float uTexOn; uniform vec2 uTexFade; uniform float uBlend;
 uniform float uRainWet; uniform vec3 uHorizon; uniform float uDay, uTime;
 in vec3 vPos; in vec3 vCol; flat in float vA; layout(location = 0) out vec4 o;
 float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// A neighbour cell's floor at this texel (its own texture if the neighbour is the same tile or colour only).
+vec3 nextFloor(ivec2 c, uint own, vec3 t, vec2 uv){ uint k = texelFetch(uCode, clamp(c, ivec2(0), textureSize(uCode, 0) - 1), 0).r; return k == own || k == 255u ? t : surf(int(k), false, uv); }
 void main(){
   if (vPos.x > uHole.x && vPos.x < uHole.z && vPos.y > uHole.y && vPos.y < uHole.w) discard;
   vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos))); if (n.z < 0.0) n = -n;
   float d = length(vPos - uEye);
   vec3 base = vCol;
   if (uTexOn > 0.5) {
-    uint code = texelFetch(uCode, ivec2(floor((vPos.xy - uOrigin) / uCell)), 0).r;
-    if (code != 255u) base = mix(surf(int(code), false, vPos.xy * 16.0), base, smoothstep(uTexFade.x, uTexFade.y, d));
+    // Any two tiles meet in a blend uBlend texels to either side of their edge (half and half on it); centres stay pure.
+    vec2 uv = vPos.xy * 16.0, cf = ((floor(uv) + 0.5) / 16.0 - uOrigin) / uCell, f = fract(cf);
+    ivec2 ci = ivec2(floor(cf)); uint code = texelFetch(uCode, ci, 0).r;
+    if (code != 255u) {
+      vec3 t = surf(int(code), false, uv);
+      vec2 w = max(vec2(0.0), 0.5 - 0.5 * min(f, 1.0 - f) * uCell * 16.0 / uBlend);
+      if (w.x + w.y > 0.0) {
+        ivec2 s = ivec2(f.x < 0.5 ? -1 : 1, f.y < 0.5 ? -1 : 1);
+        t = mix(mix(t, nextFloor(ci + ivec2(s.x, 0), code, t, uv), w.x), mix(nextFloor(ci + ivec2(0, s.y), code, t, uv), nextFloor(ci + s, code, t, uv), w.x), w.y);
+      }
+      base = mix(t, base, smoothstep(uTexFade.x, uTexFade.y, d));
+    }
   }
   // Grit: per-metre speckle that fades with distance (the near ground never looks flat).
   base *= 1.0 + (hash(floor(vPos.xy)) - 0.5) * uGrit * 2.0 * (1.0 - smoothstep(20.0, 120.0, d));
@@ -224,6 +236,7 @@ export class GpuTerrain {
     gl.uniform1i(loc(gl, p, 'uCode'), 2);
     gl.uniform1i(loc(gl, p, 'uSurf'), 3);
     gl.uniform2f(loc(gl, p, 'uTexFade'), GPU_TERRAIN.texFade[0], GPU_TERRAIN.texFade[1]);
+    gl.uniform1f(loc(gl, p, 'uBlend'), GPU_TERRAIN.blend);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this.surf);
     gl.uniform3f(loc(gl, p, 'uHorizon'), env.horizon[0] / 255, env.horizon[1] / 255, env.horizon[2] / 255);

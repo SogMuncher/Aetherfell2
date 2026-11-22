@@ -144,7 +144,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (123) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
-- `gpuTerrain.ts` (260) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, far lift + canopy, depth fog
+- `gpuTerrain.ts` (274) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (~45) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (~70) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
 - `gpuStructures.ts` (~165) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
