@@ -33,7 +33,7 @@ Read-only review. Nothing was fixed. Evidence is from `check:sim` (502 PASS, 0 F
    `mesh`/`viewModel` (polygon, already being replaced). One parts-to-sprite painter fed by data.
 8. **Entities are never slept (perf, M).** 130 entities for a normal seed is fine, but ecology/site fill scales with how
    many places are near any player; 4 players in different directions multiply the cost. Same fix as 1.
-9. **No chain runner (tests, S).** `check:sim` is a 2 KB `&&` chain of 19 scripts; one failure hides the rest and the
+9. **DONE (`scripts/check.mjs`).** **No chain runner (tests, S).** `check:sim` is a 2 KB `&&` chain of 19 scripts; one failure hides the rest and the
    line is easy to break. A runner that globs `scripts/*Smoke.ts` and reports all failures is smaller and safer.
 10. **Autosave and save are main-thread work (perf, S).** 82-92 ms stringify+zlib for a small world, grows with it.
     Autosave every 5 min is a visible hitch for everyone. Split by region or save in a worker.

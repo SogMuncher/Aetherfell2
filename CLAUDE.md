@@ -14,11 +14,13 @@ traits, never ids. No theme packs, no per-feature special cases. Free to change 
 1. Do exactly what was asked, at the detail asked. Light way over heavy way. No bonus features, no new subsystems.
    Unsure -> one short question first.
 2. Before adding code, find the existing system/type. Extend data, not code. Needs a new system -> say so, get approval.
-3. Read only: this file + the ONE area doc below + `docs/CODE-MAP.md`. Then grep, then read only the lines you need.
+3. Read only: this file + the ONE area doc below. Find files with `grep -i <word> docs/CODE-MAP.md` (don't read it whole),
+   then grep code and read only the lines you need.
    Never read whole big files or whole data tables.
-4. Files stay under ~300 lines, one purpose each. New file -> add a line to CODE-MAP. Touching a file over 300: split it first.
+4. Files stay under ~300 lines, one purpose each, first line a `//` comment saying its purpose (CODE-MAP copies it).
+   Touching a file over 300 (`npm run codemap` lists them): split it first.
 5. Keep this file and `docs/ARCHITECTURE.md` short. Changed an area -> update its doc in a few lines.
-6. Run only the checks for the area you changed; `npx tsc --noEmit` before finishing; the full `check:sim` is CI's job (PR).
+6. Check with `npm run check <area>` (tsc + that area's checks, failures only; also refreshes CODE-MAP). Full run is CI's.
 7. Several threads share this folder: stay in your area. Two threads at most; one task per thread.
 8. Open a PR; CI runs the full check and builds `play.html` on merge (`docs/PIPELINE.md`). Never rebuild or commit `play.html`.
 9. Finish with a short plain-language report (what you can now do in the game), not jargon.
@@ -30,19 +32,25 @@ Strict TS, no `any`. Flow `input -> sim (20 Hz fixed, Commands) -> render (read-
 never `Math.random()`/clock in sim. `SimState` is plain data. All art/audio generated at runtime. New mechanic = a check in
 `scripts/*Smoke.ts` on ground *and* on a 3D cell. Content variety touches only `src/content/`.
 
-## Area docs (read the one you need)
-| Working on | Doc |
-| --- | --- |
-| shared systems, layers, tick order, anti-drift checklist | `docs/ARCHITECTURE.md` |
-| where every file is, with one-line purposes | `docs/CODE-MAP.md` |
-| definition tables, thing traits, recipes for adding content | `docs/CONTENT.md` |
-| terrain, water, roads, places, cities | `docs/WORLD.md` |
-| 3D layer, buildings, realms, underworld | `docs/REALMS.md` |
-| effects, melee, magic, armour | `docs/COMBAT.md` |
-| player, skills, creatures, social, saves, cheats | `docs/RPG.md` |
-| drawing: terrain, sprites, particles | `docs/RENDER.md` |
-| HUD, windows, input, settings | `docs/UI.md` |
-| sound and music | `docs/AUDIO.md` |
-| co-op networking | `docs/MULTIPLAYER.md` |
+## Area docs (read the one you need) and its check
+| Working on | Doc | `npm run check ...` |
+| --- | --- | --- |
+| shared systems, layers, tick order, anti-drift checklist | `docs/ARCHITECTURE.md` | `all` |
+| definition tables, thing traits, recipes for adding content | `docs/CONTENT.md` | `content` |
+| terrain, water, roads, places, cities | `docs/WORLD.md` | `world` |
+| 3D layer, buildings, realms, underworld | `docs/REALMS.md` | `realms` |
+| effects, melee, magic, armour | `docs/COMBAT.md` | `combat` |
+| player, skills, creatures, social, saves, cheats | `docs/RPG.md` | `rpg` |
+| drawing: terrain, sprites, particles | `docs/RENDER.md` | `render` |
+| HUD, windows, input, settings | `docs/UI.md` | `ui` (tsc only) |
+| sound and music | `docs/AUDIO.md` | `audio` |
+| co-op networking | `docs/MULTIPLAYER.md` | `multiplayer` |
+One script also works: `npm run check gearSmoke`. Packages install themselves at session start.
+
+## Ship it (same every thread, no exploring)
+1. `npm run check <area>` green -> `git add -A && git commit -m "<what changed>" && git push -u origin <branch>`.
+2. GitHub MCP: `create_pull_request` (base `main`; body = the two attribution lines + 2-4 plain lines), then
+   `update_pull_request` assignees `[SogMuncher]`, then reviewers `[SogMuncher]`, then `enable_pr_auto_merge` (squash),
+   then `subscribe_pr_activity`. Fix only what CI reports.
 
 Sock: plain experience-first language, no jargon. Sock has no Node.js and plays the single-file `play.html`.
