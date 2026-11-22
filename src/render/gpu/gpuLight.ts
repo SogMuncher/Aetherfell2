@@ -22,7 +22,7 @@ import type { GpuFarShade } from './gpuFarShade';
  * rays walk `sunSteps` cells of the solid field; `ao` rays of `aoLen` m; the sky ray `skyLen` m up; `indoor` = ambient
  * where the sky ray is blocked (x times ambient + y).
  */
-export const GPU_LIGHT = { bin: 4, span: 96, perBin: 16, maxPerPixel: 8, steps: 40, sunSteps: 72, ao: 4, aoLen: 1.2, aoDark: 0.16, skyLen: 14, indoor: [0.9, 0.09] } as const;
+export const GPU_LIGHT = { bin: 4, span: 96, perBin: 16, maxPerPixel: 8, steps: 24, sunSteps: 48, ao: 4, aoLen: 1.2, aoDark: 0.16, skyLen: 10, indoor: [0.9, 0.09] } as const;
 const BINS = GPU_LIGHT.span / GPU_LIGHT.bin;
 const K = GPU_LIGHT.perBin;
 
@@ -42,6 +42,7 @@ void main(){
   vec4 al = texelFetch(uAlb, px, 0);
   if (al.a < 0.25) { o = vec4(0.0); return; }
   vec4 nr = texelFetch(uNrm, px, 0); vec3 n = normalize(nr.xyz * 2.0 - 1.0); bool sprite = al.a < 0.75;
+  int self = sprite ? int(nr.r * 255.0 + 0.5) + int(nr.g * 255.0 + 0.5) * 256 - 1 : -1; // which sprite this pixel is on: it never shades itself
   vec2 nd = gl_FragCoord.xy / uSize * 2.0 - 1.0; vec3 r = uFwd + uRight * nd.x * uTan.x + uUp * nd.y * uTan.y;
   float zn = texelFetch(uDepth, px, 0).r * 2.0 - 1.0; float zv = 2.0 * uNear * uFar / (uFar + uNear - zn * (uFar - uNear));
   vec3 p = uEye + r * zv; float dist = length(p - uEye);
@@ -68,23 +69,23 @@ void main(){
     vec3 to = L.xyz - from; float d = length(to); vec3 dir = to / max(d, 1e-4);
     float ndl = sprite ? 1.0 : max(0.0, dot(n, dir)); if (ndl <= 0.0) continue;
     float f = 1.0 - dd[i] / L.w; float k = f * f * (sprite ? 1.0 : 0.35 + 0.65 * ndl);
-    if (d > 0.7) k *= shadowRay(from, dir, d - 0.6, ${GPU_LIGHT.steps}, true);
+    if (d > 0.7) k *= shadowRay(from, dir, d - 0.6, ${GPU_LIGHT.steps}, true, self);
     lit += c * k;
   }
   // Sky light: open sky above or a roof, and the corners and creases near the point (ambient occlusion).
-  float sky = shadowRay(from, vec3(0.0, 0.0, 1.0), ${GPU_LIGHT.skyLen.toFixed(1)}, ${GPU_LIGHT.skyLen + 2}, false);
+  float sky = shadowRay(from, vec3(0.0, 0.0, 1.0), ${GPU_LIGHT.skyLen.toFixed(1)}, ${GPU_LIGHT.skyLen + 2}, false, -1);
   vec3 tA = normalize(abs(n.z) < 0.9 ? cross(n, vec3(0.0, 0.0, 1.0)) : cross(n, vec3(1.0, 0.0, 0.0))); vec3 tB = cross(n, tA);
   float spin = fract(sin(dot(vec2(px), vec2(12.9898, 78.233))) * 43758.5453) * 6.2832; float ao = 1.0;
   if (!sprite) for (int i = 0; i < ${GPU_LIGHT.ao}; i++){
     float an = spin + float(i) * 1.5708; vec3 dir = normalize(n + 0.9 * (cos(an) * tA + sin(an) * tB));
-    ao -= ${GPU_LIGHT.aoDark.toFixed(2)} * (1.0 - shadowRay(from, dir, ${GPU_LIGHT.aoLen.toFixed(2)}, 4, false));
+    ao -= ${GPU_LIGHT.aoDark.toFixed(2)} * (1.0 - shadowRay(from, dir, ${GPU_LIGHT.aoLen.toFixed(2)}, 3, false, -1));
   }
   vec3 L = (sky > 0.5 ? uAmb : uAmb * ${GPU_LIGHT.indoor[0].toFixed(2)} + ${GPU_LIGHT.indoor[1].toFixed(2)}) * ao + lit;
   // The sun or moon: through the near field (walls, cells, every sprite), then over the land far off, then the clouds.
   vec3 sd = normalize(uSunDir);
   float ndl = sprite ? 0.25 + 0.55 * max(0.0, sd.z) : max(0.0, dot(n, sd));
   if (ndl > 0.0) {
-    float vis = sd.z > 0.0 ? shadowRay(from, sd, 200.0, ${GPU_LIGHT.sunSteps}, true) : 1.0;
+    float vis = sd.z > 0.0 ? shadowRay(from, sd, 200.0, ${GPU_LIGHT.sunSteps}, true, self) : 1.0;
     if (vis > 0.0 && sd.z > 0.0) vis *= landSun(from, sd);
     L += uSun * ndl * vis * cloudShade(p.xy);
   }

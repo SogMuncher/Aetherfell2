@@ -18,18 +18,18 @@ const STRIDE = 20;
 const VS = `#version 300 es
 uniform mat4 uVP; uniform vec3 uRight;
 in vec4 aPos; in vec4 aRect; in vec4 aTint; in vec4 aFx; in vec4 aSize;
-out vec2 vUv; flat out vec4 fRect; flat out vec4 fTint; flat out vec4 fFx; flat out vec3 fBase; out vec3 vWorld;
+out vec2 vUv; flat out int fId; flat out vec4 fRect; flat out vec4 fTint; flat out vec4 fFx; flat out vec3 fBase; out vec3 vWorld;
 void main(){
   vec2 q = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1));
   vec3 p = aPos.xyz + uRight * (q.x - 0.5) * aSize.x + vec3(0.0, 0.0, q.y * aSize.y);
-  vUv = vec2(aFx.w > 0.5 ? 1.0 - q.x : q.x, 1.0 - q.y); fRect = aRect; fTint = aTint; fFx = aFx; fBase = aPos.xyz; vWorld = p;
+  fId = gl_InstanceID; vUv = vec2(aFx.w > 0.5 ? 1.0 - q.x : q.x, 1.0 - q.y); fRect = aRect; fTint = aTint; fFx = aFx; fBase = aPos.xyz; vWorld = p;
   gl_Position = uVP * vec4(p, 1.0);
 }`;
 const FS = `#version 300 es
 precision highp float;
 uniform sampler2D uAtlas; uniform vec3 uEye, uFog; uniform float uFogDist;
 ${SURFACE_OUT}
-in vec2 vUv; flat in vec4 fRect; flat in vec4 fTint; flat in vec4 fFx; flat in vec3 fBase; in vec3 vWorld; layout(location = 0) out vec4 o;
+in vec2 vUv; flat in int fId; flat in vec4 fRect; flat in vec4 fTint; flat in vec4 fFx; flat in vec3 fBase; in vec3 vWorld; layout(location = 0) out vec4 o;
 const float BAYER[16] = float[16](0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.);
 void main(){
   ivec2 px = ivec2(gl_FragCoord.xy);
@@ -40,7 +40,7 @@ void main(){
   // Burning and hit flashes glow on their own; the light pass lights the rest.
   vec3 alb = c.rgb * fTint.rgb;
   vec3 emit = alb * (vec3(fFx.x, fFx.x * 0.45, fFx.x * 0.1) + vec3(fFx.y * 2.0, fFx.y * 0.4, fFx.y * 0.4));
-  surfaceOut(alb, vec3(0.0, 0.0, 1.0), 0.5);
+  spriteOut(alb, fId);
   float f = min(0.97, 1.0 - exp(-length(vWorld - uEye) / uFogDist));
   o = vec4(emit * (1.0 - f) + uFog * f, 1.0);
 }`;

@@ -31,3 +31,5 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 `npm run check:boot` boots the bundle in a browser (not in CI; run it before reporting renderer or startup changes).
 A new `Renderer` is made on every world swap (join, load): always `dispose()` the old one first.
 `scripts/artSmoke.ts`, `skySmoke.ts`; `npx tsc --noEmit`.
+
+Sprite views (8-way creatures, props) and left/right facing are picked from where the camera STANDS relative to the thing (`sideFrom` in raycaster/camera.ts), never from where it is turned.

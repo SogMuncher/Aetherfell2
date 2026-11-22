@@ -1,7 +1,7 @@
 import type { Entity, LookDef } from '../../types';
 import { CONTENT } from '../../content';
 import { rhash } from '../color';
-import type { Projection } from '../raycaster/camera';
+import { sideFrom, type Projection } from '../raycaster/camera';
 import { BodyBank, POSE_FRAMES, VIEW_DIRS, individual } from './bodyArt';
 import type { Pose } from './bodyArt';
 import type { Sprite } from './sprites';
@@ -68,8 +68,9 @@ export class CreatureSprites {
 
     // Which side of it the camera sees.
     const a = moving ? Math.atan2(e.vel.y, e.vel.x) : e.angle;
-    const rf = p.RX * Math.cos(a) + p.RY * Math.sin(a);
-    const rs = -p.RX * Math.sin(a) + p.RY * Math.cos(a);
+    const { rx, ry } = sideFrom(p, e.pos.x, e.pos.y);
+    const rf = rx * Math.cos(a) + ry * Math.sin(a);
+    const rs = -rx * Math.sin(a) + ry * Math.cos(a);
     const psi = Math.atan2(rs, rf);
     const dir = Math.round((psi / (Math.PI * 2)) * VIEW_DIRS);
 

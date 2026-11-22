@@ -1,6 +1,6 @@
 import type { Entity, FormDef } from '../../types';
 import { rhash } from '../color';
-import type { Projection } from '../raycaster/camera';
+import { sideFrom, type Projection } from '../raycaster/camera';
 import { FormBank, formColours, formVariants } from './formArt';
 import { VIEW_DIRS } from './bodyArt';
 import type { Sprite } from './sprites';
@@ -42,8 +42,9 @@ export class PropSprites {
     if (bank.nviews > 1) {
       // Each prop sits at its own angle; the side seen is that angle against the camera's right.
       const a = e.angle + rhash(e.id, 2, 211) * Math.PI * 2;
-      const rf = p.RX * Math.cos(a) + p.RY * Math.sin(a);
-      const rs = -p.RX * Math.sin(a) + p.RY * Math.cos(a);
+      const { rx, ry } = sideFrom(p, e.pos.x, e.pos.y);
+      const rf = rx * Math.cos(a) + ry * Math.sin(a);
+      const rs = -rx * Math.sin(a) + ry * Math.cos(a);
       dir = Math.round((Math.atan2(rs, rf) / (Math.PI * 2)) * VIEW_DIRS);
     }
     if (time - this.lastPrune > 5) {
