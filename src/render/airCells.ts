@@ -27,6 +27,8 @@ export interface AirLevel {
   oz: number;
   version: number;
   builtAt: number;
+  /** Each layer's cover and the rain when it was last built whole (a refresh waits until the weather really changed). */
+  built: number[];
   /** Density and brightness 0..255 per cell, slot ((z mod tall) × count + (y mod count)) × count + (x mod count), 2 bytes each. */
   data: Uint8Array;
 }
@@ -80,7 +82,7 @@ export class AirCells {
     const capZ = Math.max(a.cell, (band[1] - band[0]) / a.tall);
     this.lo = band[0];
     this.hi = band[1];
-    for (let k = 0; k < count; k++) this.levels.push({ k, cell: a.cell * 2 ** k, cellZ: Math.min(a.cell * 2 ** k, capZ), ox: NaN, oy: NaN, oz: NaN, version: 0, builtAt: -1e9, data: new Uint8Array(a.count * a.count * a.tall * 2) });
+    for (let k = 0; k < count; k++) this.levels.push({ k, cell: a.cell * 2 ** k, cellZ: Math.min(a.cell * 2 ** k, capZ), ox: NaN, oy: NaN, oz: NaN, version: 0, builtAt: -1e9, built: [], data: new Uint8Array(a.count * a.count * a.tall * 2) });
   }
 
   /** The drifting frame: a world point minus this is where its air sits in the grid. */
@@ -101,7 +103,10 @@ export class AirCells {
         lv.ox = j.ox;
         lv.oy = j.oy;
         lv.oz = j.oz;
-        if (j.full) lv.builtAt = time;
+        if (j.full) {
+          lv.builtAt = time;
+          lv.built = [...j.covers, j.w.rain];
+        }
         lv.version++;
         this.job = null;
       }
@@ -141,6 +146,12 @@ export class AirCells {
     return [Math.floor((ex - dx) / lv.cell) - this.n / 2, Math.floor((ey - dy) / lv.cell) - this.n / 2, oz];
   }
 
+  /** Has the weather moved any layer's cover (or the rain) by more than `air.change` since the level was built? */
+  private changed(lv: AirLevel, w: WeatherState): boolean {
+    const now = [...this.sky.layers.map((l) => layerCover(l, w)), w.rain];
+    return now.some((v, i) => Math.abs(v - (lv.built[i] ?? -1)) > this.sky.air.change);
+  }
+
   private pick(w: WeatherState, ex: number, ey: number, ez: number, time: number): Job | null {
     const n = this.n;
     const T = this.tall;
@@ -151,7 +162,8 @@ export class AirCells {
       const moved = Math.abs(tx - lv.ox) >= n / 8 || Math.abs(ty - lv.oy) >= n / 8 || Math.abs(tz - lv.oz) >= T / 8;
       // Empty first (coarse before fine), then left behind by the eye (fine before coarse), then old.
       const age = time - lv.builtAt;
-      const s = lv.version === 0 ? 3000 + lv.k : moved ? 2000 - lv.k : age >= this.sky.air.refresh * (lv.k + 1) ? 1000 + age / 1e6 : 0;
+      const stale = age >= this.sky.air.refresh * (lv.k + 1) && this.changed(lv, w);
+      const s = lv.version === 0 ? 3000 + lv.k : moved ? 2000 - lv.k : stale ? 1000 + age / 1e6 : 0;
       if (s > score) {
         score = s;
         best = lv;

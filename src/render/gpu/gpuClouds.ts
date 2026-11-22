@@ -27,17 +27,26 @@ uniform sampler2D uDepth; uniform sampler2DArray uAir; uniform sampler3D uSmokeT
 uniform vec3 uFwd, uRight, uUp, uEye, uHaze, uLit; uniform vec2 uTan, uSize, uDrift;
 uniform float uRange, uHazeDist, uNear, uFar, uRain, uSunAz, uFlash, uCell, uCapZ, uLod, uExt, uLo, uHi, uSCell, uSExt;
 uniform vec4 uSW; uniform vec3 uSmoke; // smoke box corner in whole cells (x, y, z), on (w); smoke colour
-uniform vec4 uW[${nl}]; // window corner of each level in whole cells (x, y, z), filled (w)
+uniform vec4 uW[${nl}]; // window corner of each level in whole cells (x, y, z); w = its slot + 1 (0 = empty)
+uniform vec4 uP[${nl}]; // the level's previous build, the same way, while it fades out
+uniform float uB[${nl}]; // how far each level has faded from its previous build to its new one (0..1)
 const int N = ${n}; const int T = ${tall}; const float CUT = 0.08; const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0); const int SN = ${sn}; const int ST = ${st};
 // Density and brightness of the cell holding p (drifting frame) at level k, or at the first coarser level holding it.
-vec2 airAt(vec3 p, int k, out vec3 c){
+// A rebuilt level dithers in over its previous build (per pixel, by dith), so a rebuild never pops.
+vec2 airAt(vec3 p, int k, float dith, out vec3 c){
   for (; k < ${nl}; k++){
-    float w = uCell * exp2(float(k)); c = vec3(w, w, min(w, uCapZ)); vec4 W = uW[k];
+    float w = uCell * exp2(float(k)); c = vec3(w, w, min(w, uCapZ));
+    ivec3 g = ivec3(floor(p / c));
+    vec4 W = uW[k]; vec4 P = uP[k];
+    if (P.w > 0.5 && dith >= uB[k]){
+      ivec3 r = g - ivec3(P.xyz);
+      if (r.x >= 0 && r.y >= 0 && r.z >= 0 && r.x < N && r.y < N && r.z < T) W = P;
+    }
     if (W.w < 0.5) continue;
-    ivec3 g = ivec3(floor(p / c)); ivec3 r = g - ivec3(W.xyz);
+    ivec3 r = g - ivec3(W.xyz);
     if (r.x < 0 || r.y < 0 || r.z < 0 || r.x >= N || r.y >= N || r.z >= T) continue;
     ivec3 m = ivec3(((g.x % N) + N) % N, ((g.y % N) + N) % N, ((g.z % T) + T) % T);
-    return texelFetch(uAir, ivec3(k * N + m.x, m.y, m.z), 0).rg;
+    return texelFetch(uAir, ivec3(k * N + m.x, m.y, m.z + (int(W.w) - 1) * T), 0).rg;
   }
   float w = uCell * exp2(float(${nl - 1})); c = vec3(w, w, min(w, uCapZ)); return vec2(0.0);
 }
@@ -68,19 +77,18 @@ void main(){
   ivec2 bq = ivec2(gl_FragCoord.xy) & 3;
   float dith = BAYER[bq.y * 4 + bq.x] / 16.0;
   vec3 sc = vec3(uSCell); vec3 sLo = uSW.xyz * uSCell; vec3 sHi = sLo + vec3(float(SN), float(SN), float(ST)) * uSCell;
-  float trans = 1.0; vec3 acc = vec3(0.0); float t = t0; int face = t0 > 0.0 ? 2 : 3;
+  float trans = 1.0; vec3 acc = vec3(0.0); float t = t0;
   bool inC = false; float cd = 0.0; float cs = 0.0; float gap = 0.0;
   for (int i = 0; i < ${MAXS}; i++){
     if (t >= t1) break;
     int k = int(max(0.0, ceil(log2(max(1.0, t) / (uCell * uLod)) - dith)));
     float tp = t + max(0.01, t * 2e-5);
     vec3 p = q0 + d * tp;
-    vec3 c; vec2 a = airAt(p, k, c);
+    vec3 c; vec2 a = airAt(p, k, dith, c);
     vec3 lo = floor(p / c) * c;
     vec3 tt = vec3(d.x > 0.0 ? (lo.x + c.x - p.x) / d.x : d.x < 0.0 ? (lo.x - p.x) / d.x : 1e9,
                    d.y > 0.0 ? (lo.y + c.y - p.y) / d.y : d.y < 0.0 ? (lo.y - p.y) / d.y : 1e9,
                    d.z > 0.0 ? (lo.z + c.z - p.z) / d.z : d.z < 0.0 ? (lo.z - p.z) / d.z : 1e9);
-    int ax = tt.x <= tt.y && tt.x <= tt.z ? 0 : (tt.y <= tt.z ? 1 : 2);
     float tc = min(tt.x, min(tt.y, tt.z));
     // Inside the smoke box the walk also stops at every smoke cell, so smoke is drawn cell by cell.
     float sm = 0.0; float ts = 1e9;
@@ -93,8 +101,7 @@ void main(){
       ts = min(st.x, min(st.y, st.z));
     }
     float tn = min(tp + min(tc, ts), t1);
-    float seg = tn - t; int f = face; t = tn;
-    if (tc <= ts) face = ax;
+    float seg = tn - t; t = tn;
     float fade = smoothstep(0.0, 2.0, t) * (1.0 - smoothstep(uRange * 0.7, uRange, t));
     float haze = 1.0 - exp(-t / uHazeDist);
     if (sm > 0.004){
@@ -108,8 +115,14 @@ void main(){
     gap = 0.0;
     if (!inC){
       inC = true; cd = clamp(a.r * 2.5, 0.3, 1.0);
+      // The face it came in by, from the cell's own box (the side the ray crossed last), not from the step before:
+      // a step that cuts a corner would otherwise light a side like a top and leave a bright line along every edge.
+      vec3 tin = vec3(d.x > 0.0 ? (lo.x - p.x) / d.x : d.x < 0.0 ? (lo.x + c.x - p.x) / d.x : -1e9,
+                      d.y > 0.0 ? (lo.y - p.y) / d.y : d.y < 0.0 ? (lo.y + c.y - p.y) / d.y : -1e9,
+                      d.z > 0.0 ? (lo.z - p.z) / d.z : d.z < 0.0 ? (lo.z + c.z - p.z) / d.z : -1e9);
+      int f = t0 > 0.0 || i > 0 ? (tin.x >= tin.y && tin.x >= tin.z ? 0 : (tin.y >= tin.z ? 1 : 2)) : 3;
       float fs = f == 2 ? (d.z < 0.0 ? 1.06 + 0.2 * silver : 0.62) : f == 0 ? 0.8 - 0.16 * sign(d.x) * sun.x : f == 1 ? 0.8 - 0.16 * sign(d.y) * sun.y : 0.86;
-      vec3 cu; float above = airAt(p + vec3(0.0, 0.0, c.z), k, cu).r;
+      vec3 cu; float above = airAt(p + vec3(0.0, 0.0, c.z), k, dith, cu).r;
       cs = a.g * fs * (1.0 - 0.3 * above) * (1.0 - 0.2 * uRain);
     }
     float al = (1.0 - exp(-uExt * cd * seg)) * fade;
@@ -136,6 +149,9 @@ export class GpuClouds {
   private readonly atlas: WebGLTexture;
   private readonly uploaded: number[];
   private readonly win: Float32Array;
+  private readonly prev: Float32Array;
+  private readonly blend: Float32Array;
+  private readonly since: Float64Array;
   private readonly lo: number;
   private readonly hi: number;
   private readonly capZ: number;
@@ -153,6 +169,9 @@ export class GpuClouds {
     this.fbo = gl.createFramebuffer() as WebGLFramebuffer;
     this.tex = makeTexture(gl, gl.RGBA8, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE);
     this.win = new Float32Array(nl * 4);
+    this.prev = new Float32Array(nl * 4);
+    this.blend = new Float32Array(nl).fill(1);
+    this.since = new Float64Array(nl);
     this.uploaded = air.levels.map(() => 0);
     this.lo = air.lo;
     this.hi = air.hi;
@@ -160,7 +179,7 @@ export class GpuClouds {
     // Every level is one n-wide strip of the atlas; heights are the layers of the array.
     this.atlas = gl.createTexture() as WebGLTexture;
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.atlas);
-    gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RG8, n * nl, n, air.tall);
+    gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.RG8, n * nl, n, air.tall * 2);
     for (const pn of [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER]) gl.texParameteri(gl.TEXTURE_2D_ARRAY, pn, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -171,16 +190,23 @@ export class GpuClouds {
   }
 
   /** Uploads every level the air cells finished since the last frame, with its window. */
-  private upload(): void {
+  private upload(time: number): void {
     const gl = this.gl;
     const n = this.air.n;
     this.air.levels.forEach((lv, i) => {
-      if (lv.version === this.uploaded[i]) return;
-      this.uploaded[i] = lv.version;
-      gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.atlas);
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, i * n, 0, 0, n, n, this.air.tall, gl.RG, gl.UNSIGNED_BYTE, lv.data);
-      this.win.set([lv.ox, lv.oy, lv.oz, 1], i * 4);
+      if (lv.version !== this.uploaded[i]) {
+        // Two slots per level: the new build goes in the free one and dithers in over the old.
+        this.uploaded[i] = lv.version;
+        const was = this.win[i * 4 + 3] ?? 0;
+        const slot = was === 1 ? 2 : 1;
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.atlas);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, i * n, 0, (slot - 1) * this.air.tall, n, n, this.air.tall, gl.RG, gl.UNSIGNED_BYTE, lv.data);
+        this.prev.set(this.win.subarray(i * 4, i * 4 + 4), i * 4);
+        this.win.set([lv.ox, lv.oy, lv.oz, slot], i * 4);
+        this.since[i] = time;
+      }
+      this.blend[i] = (this.prev[i * 4 + 3] ?? 0) > 0 ? Math.min(1, (time - (this.since[i] ?? 0)) / CONTENT.sky.air.blend) : 1;
     });
     const sm = this.smoke;
     if (sm.version !== this.smokeVersion && Number.isFinite(sm.ox)) {
@@ -203,7 +229,7 @@ export class GpuClouds {
     const cloudy = CONTENT.sky.layers.some((l) => layerCover(l, weather) > 0);
     if (!cloudy && !this.smoke.active) return;
     if (cloudy) this.air.update(weather, eye.x, eye.y, eye.z, time);
-    this.upload();
+    this.upload(time);
     const gl = this.gl;
     if (w !== this.w || h !== this.h) {
       this.w = w;
@@ -250,6 +276,8 @@ export class GpuClouds {
     gl.uniform1f(loc(gl, p, 'uSunAz'), env.sunAz);
     gl.uniform1f(loc(gl, p, 'uFlash'), env.flash * 0.45);
     gl.uniform4fv(loc(gl, p, 'uW'), this.win);
+    gl.uniform4fv(loc(gl, p, 'uP'), this.prev);
+    gl.uniform1fv(loc(gl, p, 'uB'), this.blend);
     const sm = this.smoke;
     const S = CONTENT.sky.smoke;
     gl.activeTexture(gl.TEXTURE3);
