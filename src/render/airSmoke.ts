@@ -125,7 +125,7 @@ export class AirSmoke {
     let any = false;
     for (const key of burning) {
       const { x, y } = unpackKey(key);
-      any = this.add(w, x + 0.5, y + 0.5, tiles.ground(x + 0.5, y + 0.5) + 1.5, (tiles.fire(x, y) / 255) * per) || any;
+      any = this.add(w, x + 0.5, y + 0.5, tiles.ground(x + 0.5, y + 0.5) + 0.5, (tiles.fire(x, y) / 255) * per) || any;
     }
     for (const key of volume.burningCells) {
       const { x, y, z } = unpackSpot(key);
@@ -157,7 +157,7 @@ export class AirSmoke {
       for (let y = y0; y <= y1; y++) {
         for (let x = x0; x <= x1; x++) {
           const v = (get(x, y, z) * keep + get(x, y, z - 1) * up + (get(x - 1, y, z) + get(x + 1, y, z) + get(x, y - 1, z) + get(x, y + 1, z)) * side) * thin;
-          const c = v < 0.004 ? 0 : v;
+          const c = v < 0.001 ? 0 : v;
           t[this.slot(x, y, z)] = c;
           if (c > 0) nb = nb[0]! > nb[1]! ? [x, x, y, y, z, z] : [Math.min(nb[0]!, x), Math.max(nb[1]!, x), Math.min(nb[2]!, y), Math.max(nb[3]!, y), Math.min(nb[4]!, z), Math.max(nb[5]!, z)];
         }
