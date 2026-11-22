@@ -39,6 +39,8 @@ export interface StateLookDef {
   glow?: readonly [number, number, number];
   /** Light it casts on its surroundings at full strength (a burning spot or a burning creature), like any other light. */
   light?: LightDef;
+  /** Smoke it puts into the air cells above it each second at full strength (render/airSmoke.ts). */
+  smoke?: number;
   /** Rain adds this much strength to stuff open to the sky. */
   rain?: number;
   /** Things resting on it keep this much of their speed each second when it is full strength (frost is slick). */

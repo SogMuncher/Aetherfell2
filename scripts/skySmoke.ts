@@ -4,6 +4,9 @@ import { Simulation, createState } from '../src/sim';
 import { CONTENT, airAt, airColumn, airMoisture, cloudDensity3, setAirMoisture, layerCover, layerDensity, rainAt, sunThrough, validateContent } from '../src/content';
 import type { WeatherState } from '../src/types';
 import { AirCells } from '../src/render/airCells';
+import { AirSmoke } from '../src/render/airSmoke';
+import { packKey, spotKey } from '../src/types';
+import type { ReadonlyTiles, ReadonlyVolume } from '../src/types';
 import { computeEnv } from '../src/render/env';
 import { emptyInput } from '../src/types';
 
@@ -68,7 +71,7 @@ for (const l of SKY.layers) {
     for (let i = 0; i < 200; i++) {
       const x = i * 173;
       const y = i * 91;
-      if (Math.abs(layerDensity(l, a, cv, x, y) - layerDensity(l, b, cv, x + 500 * l.speed, y - 200 * l.speed)) < 1e-4) same++;
+      if (Math.abs(layerDensity(l, a, cv, x, y) - layerDensity(l, b, cv, x + 500, y - 200)) < 1e-4) same++;
     }
     check('clouds move with the wind', same === 200, `${same}/200`);
   }
@@ -251,6 +254,27 @@ for (const l of SKY.layers) {
       check('standing in a cloud shortens the sight', inside.fogDist < clear.fogDist * 0.5, `${inside.fogDist.toFixed(0)} vs ${clear.fogDist.toFixed(0)} m`);
     } else check('found a thick spot of low cloud to stand in', false);
   }
+}
+
+// Smoke: burning ground and a burning 3D cell put smoke into the air cells above them; it rises, thins, and the wind
+// carries it; with nothing burning there is none.
+{
+  const w = weather(0.2, 0);
+  const tiles = { ground: () => 10, fire: (x: number, y: number) => (x === 3 && y === 4 ? 255 : 0) } as unknown as ReadonlyTiles;
+  const cellFire = (on: boolean): ReadonlyVolume => ({ burningCells: new Set(on ? [spotKey(40, 4, 30)] : []), cellGet: () => 255 }) as unknown as ReadonlyVolume;
+  const none = new AirSmoke();
+  for (let i = 0; i < 30; i++) none.update(0.1, w, 0, 0, 12, tiles, new Set(), cellFire(false));
+  check('no fire, no smoke', !none.active);
+  const sm = new AirSmoke();
+  for (let i = 0; i < 40; i++) sm.update(0.1, w, 0, 0, 12, tiles, new Set([packKey(3, 4)]), cellFire(true));
+  const low = sm.at(w, 3.5, 4.5, 12);
+  const high = sm.at(w, 3.5, 4.5, 16);
+  check('a burning tile smokes and the smoke rises', low > 0.05 && high > 0.01, `${low.toFixed(2)} at the fire, ${high.toFixed(2)} 4 m up`);
+  check('a burning 3D cell smokes too', sm.at(w, 40.5, 4.5, 32) > 0.05);
+  const blown = { ...w, drift: { x: 6, y: 0 } };
+  check('the wind carries the smoke downwind', Math.abs(sm.at(blown, 9.5, 4.5, 16) - high) < 1e-6);
+  for (let i = 0; i < 400; i++) sm.update(0.1, w, 0, 0, 12, tiles, new Set(), cellFire(false));
+  check('smoke thins away once the fire is out', !sm.active);
 }
 
 if (failed) throw new Error(`${failed} sky check(s) failed`);

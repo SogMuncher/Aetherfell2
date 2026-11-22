@@ -16,5 +16,5 @@ export const MATTER_STATES: Readonly<Record<ShownState, StateLookDef>> = {
   // The wetness in it, frozen: rime over the stuff, glittering, and slick underfoot.
   frost: { cover: { amount: 0.8, surface: 'frost' }, glint: { share: 0.04, amount: 0.3 }, slide: 0.3 },
   // Flames make what burns glow.
-  fire: { glow: [1.4, 0.6, 0.15], light: { r: 1.1, g: 0.55, b: 0.18, radius: 5, flicker: 0.4 } },
+  fire: { glow: [1.4, 0.6, 0.15], smoke: 2.5, light: { r: 1.1, g: 0.55, b: 0.18, radius: 5, flicker: 0.4 } },
 };

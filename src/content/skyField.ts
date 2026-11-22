@@ -130,8 +130,8 @@ function colDens(layer: CloudLayerDef, w: WeatherState, t: number, x: number, y:
   const p = cloudPattern(layer);
   const s = layer.stretch ?? 1;
   // Stretch along the wind: turn into the wind's frame (fixed direction east-west is fine for wisps).
-  const u = ((x - (w.drift?.x ?? 0) * layer.speed) / (layer.scale * s)) * (N / 4);
-  const v = ((y - (w.drift?.y ?? 0) * layer.speed) / layer.scale) * (N / 4);
+  const u = ((x - (w.drift?.x ?? 0)) / (layer.scale * s)) * (N / 4);
+  const v = ((y - (w.drift?.y ?? 0)) / layer.scale) * (N / 4);
   // Two looks at the pattern at unrelated sizes, so its repeat never shows across the sky.
   const k = (mixed(p, u, v) - t) / Math.max(0.01, layer.softness);
   return k <= 0 ? 0 : k >= 1 ? 1 : k * k * (3 - 2 * k);
@@ -256,8 +256,8 @@ function shape(layer: CloudLayerDef, w: WeatherState, t: number, x: number, y: n
   const tower = layer.tower ?? 0;
   const p = cloudPattern(layer);
   const s = layer.stretch ?? 1;
-  const u = ((x - (w.drift?.x ?? 0) * layer.speed) / (layer.scale * s)) * (N / 4) * 2.7 + hf * 31;
-  const v = ((y - (w.drift?.y ?? 0) * layer.speed) / layer.scale) * (N / 4) * 2.7 - hf * 17;
+  const u = ((x - (w.drift?.x ?? 0)) / (layer.scale * s)) * (N / 4) * 2.7 + hf * 31;
+  const v = ((y - (w.drift?.y ?? 0)) / layer.scale) * (N / 4) * 2.7 - hf * 17;
   const bump = (sample(p, u, v) - 0.5) * (layer.billow ?? 0.6);
   // The height this spot rises to: all the way where the cloud is thick, only a little at its edge.
   const top = 1 - tower + tower * d;
