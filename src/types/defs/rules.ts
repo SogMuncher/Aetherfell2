@@ -1,10 +1,27 @@
-import type { DamageKind } from '../effects';
+import type { DamageKind, Effect } from '../effects';
+import type { MatterField } from '../matter';
 import type { FactionId, ItemId, MaterialId, RuneId, StatusId, ThingId } from './ids';
 import type { ItemStack } from '../items';
 import type { SkillId } from '../entities';
 import type { SwingDir } from '../input';
 import type { ItemCategory } from './items';
 
+
+/**
+ * What a body gets from what it stands in or on: the ground tile or the 3D cell under its feet, read the
+ * same way (a burning floor upstairs scorches like burning grass), plus deep water and falling rain.
+ */
+export interface TouchDef {
+  /** A matter state of the spot underfoot; 'water' = how deep it wades (metres, ground water or a liquid cell); 'rain' = rain on it under open sky (0..1). */
+  from: MatterField | 'water' | 'rain';
+  /** Least amount that counts. */
+  min: number;
+  /** Checked every this many ticks (bodies take turns). */
+  every: number;
+  effects: Effect[];
+  /** Effects grow with the amount (harder rain soaks faster). */
+  scaled?: boolean;
+}
 
 /** How a body reacts to heat, water and cold: which status it gets and for how long. */
 export interface ReactionDef {
@@ -57,6 +74,8 @@ export interface RulesDef {
   /** The item used as money. */
   currency: ItemId;
   reactions: { heat: ReactionDef; soak: ReactionDef; chill: ReactionDef };
+  /** What standing in or on stuff does to a body (sim/effects/touch.ts). */
+  touch: TouchDef[];
   /**
    * Temperature of ground and cells, in degrees above (or below) their surroundings. A `heat` effect adds `perHeat` per
    * unit, a `chill` takes `perChill` (and up to `jitter` more). Heat first lifts a cold spot back to 0, then melts frost (`meltPerDegree` of it per degree), then

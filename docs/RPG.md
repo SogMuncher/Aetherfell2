@@ -7,6 +7,8 @@
 - `rpg/rpgSystem.ts`: skills grow by doing, pick up/use/drop/wear items, shared party quest log. Bag layout is UI-only.
 - `ai/` : one thinking loop for every creature. `behaviours.ts` is the library (`BehaviourDef` in `types/defs/brains.ts`);
   a creature's brain is an ordered data list in `content/living.ts`. Villagers are creatures with a brain + role.
+  Sensing counts height and needs a clear line eye to eye (`matter.clearLine`: ground, walls, doors, 3D cells); an attacker
+  is noticed anyway. Night eyesight and wildlife both ask `isDark` (content/day.ts): the underworld is always dark.
 - `ecology/`: wildlife comes and goes by habitat and time of day; factions remember what the party did.
 - `social/`: dialogue, trade, quests from `content/roles.ts` templates. Topics are code for now (known gap).
 - `interaction/`: the world's own rules (fire spread, drying, rain, traps, doors, containers) over `ctx.matter`.
@@ -19,4 +21,4 @@
 - Villager job: `roles` entry listed in a site's `villagers`.
 
 ## Checks
-`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`.
+`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`.

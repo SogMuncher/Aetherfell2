@@ -1,4 +1,4 @@
-import type { DayRules } from '../types';
+import type { Content, DayRules, RealmId } from '../types';
 
 /**
  * The one day-and-night clock. Times are a share of the day: 0 is midnight, 0.25 six in the
@@ -21,6 +21,11 @@ export function sunAngle(day: DayRules, time: number): number {
 /** Night for creatures and people: from nightFrom until nightUntil. */
 export function isNight(day: DayRules, time: number): boolean {
   return time >= day.nightFrom || time < day.nightUntil;
+}
+
+/** Is it dark here right now? Night under the sky; always under rock (a realm without sky). Creatures and wildlife ask this. */
+export function isDark(content: Pick<Content, 'rules' | 'realms'>, realm: RealmId, time: number): boolean {
+  return content.realms[realm]?.sky === false || isNight(content.rules.day, time);
 }
 
 export function dayPart(day: DayRules, time: number): DayPart {

@@ -164,6 +164,20 @@ export class Matter implements MatterAccess {
     }
   }
 
+  clearLine(ax: number, ay: number, az: number, bx: number, by: number, bz: number): boolean {
+    const steps = Math.ceil(Math.hypot(bx - ax, by - ay, bz - az) / 0.5);
+    for (let i = 1; i < steps; i++) {
+      const t = i / steps;
+      const x = ax + (bx - ax) * t;
+      const y = ay + (by - ay) * t;
+      const z = az + (bz - az) * t;
+      if (z < this.tiles.surface(x, y)) return false;
+      if (this.tiles.blocked(x, y) && z < this.tiles.ground(x, y) + 2) return false;
+      if (this.vol.solidBetween(x, y, z - 0.01, z + 0.01)) return false;
+    }
+    return true;
+  }
+
   cellAt(x: number, y: number, z: number): { x: number; y: number; z: number } | null {
     if (this.vol.bricks.size === 0) return null;
     if (!this.vol.solidBetween(x, y, z - 0.01, z + 0.01)) return null;

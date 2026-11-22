@@ -204,12 +204,6 @@ export const physicsSystem: SimSystem = (ctx: SimContext) => {
     }
     if (e.actor) e.actor.onGround = e.z <= floor + 0.05;
 
-    // In water: soaked, fire out.
-    const surf = tiles.waterLevel(e.pos.x, e.pos.y);
-    if (tiles.ground(e.pos.x, e.pos.y) < surf - 0.3 && e.z < surf + 0.2 && !standsOnWater(tiles.info(e.pos.x, e.pos.y)) && state.tick % 5 === 0) {
-      state.queues.effects.push({ target: { kind: 'entity', id: e.id }, effects: [{ type: 'soak', amount: 1 }], source: null, from: null });
-    }
-
     struck = impacts(ctx, e, d, struck, speed0, thrower);
   }
 

@@ -9,7 +9,7 @@ import { isPanicking, looksDangerous, spellFor, spellKey, thingDef } from '../..
  * a turn. Behaviours never check what kind of creature they belong to, only what it senses.
  */
 
-/** Someone the creature can see. */
+/** Someone the creature can see (in range in 3D, with a clear line from eye to eye). */
 export interface Seen {
   e: Entity;
   d: number;
@@ -59,12 +59,18 @@ export function sense(ctx: SimContext, me: Creature, brain: BrainDef, night: boo
   }
   const feels: Readonly<Record<FactionId, number>> = state.factions[me.faction] ?? {};
   const seen: Seen[] = [];
+  const eye = me.z + thingDef(ctx.content, me.def).body.height * 0.85;
   for (const o of ctx.query.near(me.pos.x, me.pos.y, range)) {
     if (o === me || o.dead || !o.actor) continue;
     if (o.player && o.player.downed > 0) continue;
-    const d = Math.hypot(o.pos.x - me.pos.x, o.pos.y - me.pos.y);
+    // Height counts (a foe on a rampart above is farther than its shadow), and walls, floors and hills hide
+    // what is behind them. Whoever just hurt it is noticed anyway.
+    const oz = o.z + thingDef(ctx.content, o.def).body.height * 0.85;
+    const d = Math.hypot(o.pos.x - me.pos.x, o.pos.y - me.pos.y, oz - eye);
     if (d > range) continue;
-    seen.push({ e: o, d, feeling: o.faction === me.faction ? 1 : (feels[o.faction] ?? 0), provoked: me.actor.lastAttacker === o.id });
+    const provoked = me.actor.lastAttacker === o.id;
+    if (!provoked && !ctx.matter.clearLine(me.pos.x, me.pos.y, eye, o.pos.x, o.pos.y, oz)) continue;
+    seen.push({ e: o, d, feeling: o.faction === me.faction ? 1 : (feels[o.faction] ?? 0), provoked });
   }
   seen.sort((a, b) => a.d - b.d);
   return { ctx, me, brain, night, range, fire, seen };

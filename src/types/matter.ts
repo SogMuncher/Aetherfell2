@@ -77,6 +77,8 @@ export interface MatterAccess {
   wetness(x: number, y: number, z: number): number;
   /** Spots that touch this one: fire, heat and damp creep along them. `weight` is how strongly (fire climbs). */
   forNeighbours(x: number, y: number, z: number, fn: (x: number, y: number, z: number, weight: number) => void): void;
+  /** Can you see from A to B? False if ground, a wall, a closed door or a cell of the 3D layer is in the way (sampled every half metre). */
+  clearLine(ax: number, ay: number, az: number, bx: number, by: number, bz: number): boolean;
   /** The cell of the 3D layer at a point in space, if it holds something there (shapes count where they really fill). */
   cellAt(x: number, y: number, z: number): { x: number; y: number; z: number } | null;
   /** Every spot with fire in it. */

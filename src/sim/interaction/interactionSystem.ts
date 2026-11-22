@@ -3,7 +3,6 @@ import { GROUND_Z, countItem, packKey, removeItem, unpackSpot } from '../../type
 import { rainAt, rollLoot, thingDef } from '../../content';
 
 const HEAT: readonly Effect[] = [{ type: 'heat', amount: 1 }];
-const RAIN: readonly Effect[] = [{ type: 'soak', amount: 0.4 }];
 
 /**
  * The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
@@ -114,12 +113,6 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
         });
       }
     }
-    // Anything standing in the flames feels the heat.
-    if (step % 8 === key % 8) {
-      for (const o of ctx.query.near(x + 0.5, y + 0.5, 0.9)) {
-        if (ground ? o.z < top + 1.2 : Math.abs(o.z + 0.5 - (z + 0.5)) < 1.4) state.queues.effects.push({ target: { kind: 'entity', id: o.id }, effects: HEAT, source: null, from: null });
-      }
-    }
   }
 
   // Damp stuff dries out over time (not while it rains on it; under a roof it dries even in a storm).
@@ -136,11 +129,6 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
   for (const e of state.entities.values()) {
     if (e.dead) continue;
     const def = thingDef(content, e.def);
-    // Rain soaks everyone out in the open.
-    if (w.rain > 0.3 && step % 20 === e.id % 20 && def.health && !def.body.ghost) {
-      const here = rainAt(content.sky, w, e.pos.x, e.pos.y);
-      if (here > 0.3 && state.volume.openSky(e.pos.x, e.pos.y, e.z + 1)) state.queues.effects.push({ target: { kind: 'entity', id: e.id }, effects: RAIN, source: null, from: null, scale: here });
-    }
     // Motes ride the wind and do their thing where they land.
     const m = def.mote;
     if (m) {
