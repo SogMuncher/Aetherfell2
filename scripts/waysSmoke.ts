@@ -151,13 +151,14 @@ check('most places that keep a way are linked to another', wayPlaces === 0 || re
       const nj = Math.floor(s.cy / PITCH);
       const ox = ni * PITCH + 8;
       const oy = nj * PITCH + 8;
-      if (latticeSpot(seed, ox, oy) === 'hall' && latticeSpot(seed, ox + u.hall, oy + u.hall) === 'hall' && latticeSpot(seed, ox + u.hall + 1, oy) !== 'hall') halls++;
+      // A place with a cavern opens a whole cave round its middle (realmSmoke checks those); the rest have their great hall.
+      if (u.cavern ? latticeSpot(seed, ox, oy) === 'cavern' && latticeSpot(seed, ox + u.hall, oy + u.hall) === 'cavern' : latticeSpot(seed, ox, oy) === 'hall' && latticeSpot(seed, ox + u.hall, oy + u.hall) === 'hall' && latticeSpot(seed, ox + u.hall + 1, oy) !== 'hall') halls++;
       const found = hallsInChunk(seed, Math.floor(ox / CHUNK_SIZE), Math.floor(oy / CHUNK_SIZE)).find((h) => h.cx === ox && h.cy === oy);
       if (found?.site === s.kind) tagged++;
     }
   }
   check('an artery is open exactly beneath every way', total > 0 && open / total > 0.99, `${open}/${total}`);
-  check('a great hall lies under each place that has an undercroft', hallsWanted > 0 && halls / hallsWanted > 0.95, `${halls}/${hallsWanted}`);
+  check('a great hall (or a cave) lies under each place that has an undercroft', hallsWanted > 0 && halls / hallsWanted > 0.95, `${halls}/${hallsWanted}`);
   check('those halls know which place is above them (for their scatter)', hallsWanted > 0 && tagged / hallsWanted > 0.95, `${tagged}/${hallsWanted}`);
 }
 

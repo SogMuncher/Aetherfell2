@@ -150,7 +150,8 @@ export class GpuTileBlocks {
     gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.uniform1f(loc(gl, p, 'uFogDist'), env.fogDist);
     gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK);
+    // The view maps the world mirrored (x east, y south, z up), so faces wound counter-clockwise from outside show clockwise: cull FRONT, or every wall is drawn by its far face a metre too deep.
+    gl.cullFace(gl.FRONT);
     gl.drawElementsInstanced(gl.TRIANGLES, INDICES.length, gl.UNSIGNED_BYTE, 0, this.count);
     gl.disable(gl.CULL_FACE);
   }

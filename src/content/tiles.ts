@@ -96,6 +96,7 @@ const BASE: Record<string, TileEntry> = {
   plaster: { durability: 260, breaksInto: 'rubble', name: 'plaster', floor: 'plaster', wall: 'plaster', material: 'stone', far: [200, 190, 162] },
   // The living rock of the underworld: you cannot dig through it, nor climb over it.
   caveRock: { name: 'living rock', floor: 'rock', wall: 'rock', material: 'stone', shape: 'block', solid: true, height: 30, far: [38, 34, 40] },
+  caveFloor: { name: 'cave floor', floor: 'rock', material: 'stone', far: [52, 48, 54] },
   peat: { name: 'peat bog', floor: 'peat', material: 'peat', flammability: 0.2, fuel: 255 },
 };
 

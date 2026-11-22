@@ -4,9 +4,15 @@
 // rock overhead keeps the rain off; a wipe below sends the survivors up; saving keeps both worlds.
 import { Simulation, createState } from '../src/sim';
 import { CONTENT, validateContent } from '../src/content';
-import { latticeSpot, PITCH } from '../src/sim/world/underworld';
+import { generateLatticeChunk, latticeSpot, PITCH, roofLatticeChunk } from '../src/sim/world/underworld';
+import { underAt } from '../src/sim/world/underSpot';
+import { landOf } from '../src/sim/world/terrain';
+import { wayHit } from '../src/sim/world/roads';
+import { VolumeStore } from '../src/sim/world/volume';
+import { TILES } from '../src/content/tiles';
+import type { SiteLayout } from '../src/sim/world/sites';
 import type { Entity, InputSnapshot, SimEvent } from '../src/types';
-import { GROUND_Z, Tile, emptyInput } from '../src/types';
+import { CHUNK_SIZE, GROUND_Z, Tile, emptyInput } from '../src/types';
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = ''): void {
@@ -21,7 +27,7 @@ check('content validates (realms, portals, habitats)', validateContent(CONTENT).
   const N = 12 * PITCH;
   const open = new Set<number>();
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (latticeSpot(seed, x, y) !== 'rock') open.add(y * N + x);
-  check('the underworld is mostly rock with halls in it', open.size > N * N * 0.1 && open.size < N * N * 0.5, `${((open.size / (N * N)) * 100).toFixed(0)}% open`);
+  check('the underworld is rock with halls, caves and water in it', open.size > N * N * 0.1 && open.size < N * N * 0.7, `${((open.size / (N * N)) * 100).toFixed(0)}% open`);
   // Flood from one tile: most of the open floor is reachable (a network, not scattered cells).
   const start = open.values().next().value as number;
   const seen = new Set<number>([start]);
@@ -40,6 +46,80 @@ check('content validates (realms, portals, habitats)', validateContent(CONTENT).
     }
   }
   check('the halls form one great network', seen.size > open.size * 0.7, `${((seen.size / open.size) * 100).toFixed(0)}% reachable`);
+}
+
+// ---- the land read from below: caves under places, water under water, decks under crossings, a sealed roof ----------
+{
+  const seed = 4242;
+  const land = landOf(seed);
+  const floor = CONTENT.realms['underworld']?.floor ?? 2;
+  const sites: SiteLayout[] = [];
+  for (let y = -3000; y <= 3000; y += 512) for (let x = -3000; x <= 3000; x += 512) for (const t of land.sitesNear(x, y)) if (!sites.includes(t)) sites.push(t);
+  const caved = sites.filter((t) => CONTENT.sites[t.kind]?.under?.cavern);
+  const opened = caved.filter((t) => { const u = underAt(seed, Math.floor(t.cx), Math.floor(t.cy)); return u.spot === 'cavern' && u.ceil >= (CONTENT.sites[t.kind]?.under?.cavern?.height[0] ?? 99); });
+  check('a tall cave opens under every place that has one', caved.length > 3 && opened.length === caved.length, `${opened.length}/${caved.length}`);
+  // Water under water, and where a way crosses it, a deck in the 3D layer (the way's own bridge deck) flush with the floor.
+  let wet = 0, under = 0, crossings = 0, decked = 0;
+  let deckAt: { x: number; y: number } | null = null;
+  for (let y = -1500; y < 1500 && (wet < 400 || crossings < 3); y += 3) {
+    for (let x = -1500; x < 1500; x += 3) {
+      const ws = land.waterSpotAt(x + 0.5, y + 0.5);
+      if (!ws || ws.edge > -1) continue;
+      wet++;
+      const u = underAt(seed, x, y);
+      if (u.spot === 'water' || u.spot === 'bridge') under++;
+      if (wayHit(land, x + 0.5, y + 0.5) && crossings < 40) {
+        crossings++;
+        if (u.spot === 'bridge' && u.deck !== null) { decked++; deckAt ??= { x, y }; }
+      }
+    }
+  }
+  check('rivers and lakes run on below the land', wet > 50 && under / wet > 0.97, `${under}/${wet}`);
+  check('where a way crosses water, it crosses below on a deck', crossings > 0 && decked / crossings > 0.9, `${decked}/${crossings}`);
+  if (deckAt) {
+    const v = new VolumeStore();
+    const cx = Math.floor(deckAt.x / CHUNK_SIZE), cy = Math.floor(deckAt.y / CHUNK_SIZE);
+    const c = generateLatticeChunk(seed, cx, cy);
+    roofLatticeChunk(v, seed, cx, cy);
+    const k = (deckAt.y - cy * CHUNK_SIZE) * CHUNK_SIZE + deckAt.x - cx * CHUNK_SIZE;
+    check('the water below is water (a tile with its level), with the deck cell over it', TILES[c.kind[k] ?? 0]?.liquid === true && (c.level[k] ?? 0) < floor && v.shapeAt(deckAt.x, deckAt.y, floor - 1) > 0);
+  }
+  // Sealed: from the floor of every open spot, flood the air; it must never get above a roof (around a place's cave and its tunnels).
+  const t = opened[0];
+  if (t) {
+    const S = 96, Z = 34;
+    const x0 = Math.floor(t.cx) - S / 2 - Math.floor(t.radius), y0 = Math.floor(t.cy) - S / 2;
+    const v = new VolumeStore();
+    const solidTile = new Uint8Array(S * S);
+    for (let cy = Math.floor(y0 / CHUNK_SIZE); cy * CHUNK_SIZE < y0 + S; cy++) {
+      for (let cx = Math.floor(x0 / CHUNK_SIZE); cx * CHUNK_SIZE < x0 + S; cx++) {
+        const c = generateLatticeChunk(seed, cx, cy);
+        roofLatticeChunk(v, seed, cx, cy);
+        for (let k = 0; k < CHUNK_SIZE * CHUNK_SIZE; k++) {
+          const x = cx * CHUNK_SIZE + (k % CHUNK_SIZE) - x0, y = cy * CHUNK_SIZE + Math.floor(k / CHUNK_SIZE) - y0;
+          if (x >= 0 && y >= 0 && x < S && y < S) solidTile[y * S + x] = TILES[c.kind[k] ?? 0]?.solid && (TILES[c.kind[k] ?? 0]?.height ?? 0) > 20 ? 1 : 0;
+        }
+      }
+    }
+    const seen = new Uint8Array(S * S * Z);
+    const todo: number[] = [];
+    for (let i = 0; i < S * S; i++) if (!solidTile[i]) { seen[i * Z + floor] = 1; todo.push(i * Z + floor); }
+    let above = 0;
+    while (todo.length) {
+      const n = todo.pop() as number;
+      const z = n % Z, i = Math.floor(n / Z), x = i % S, y = Math.floor(i / S);
+      for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]] as const) {
+        const nx = x + dx, ny = y + dy, nz = z + dz;
+        if (nx < 0 || ny < 0 || nx >= S || ny >= S || nz < floor || nz >= Z) continue;
+        const ni = ny * S + nx;
+        if (solidTile[ni] || seen[ni * Z + nz] || v.shapeAt(x0 + nx, y0 + ny, nz) > 0) continue;
+        seen[ni * Z + nz] = 1;
+        for (let zz = floor; zz < nz; zz++) if (v.shapeAt(x0 + nx, y0 + ny, zz) > 0) { above++; break; }
+        todo.push(ni * Z + nz);
+      }
+    }
+    check('the rock overhead is whole: no air above any roof can be reached from the floor', above === 0, `${above} cells above a roof reached`);
+  }
 }
 
 function world(seed = 4242): { sim: Simulation; me: Entity; friend: Entity } {

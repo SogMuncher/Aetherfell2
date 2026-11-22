@@ -91,8 +91,22 @@ export interface RealmDef {
   scatter?: { thing: ThingId; chance: number; at: 'middle' | 'corner' | 'wall'; under?: SiteId[] }[];
   /** A lamp every traveller carries here, so the dark can be explored (colour, reach in metres, flicker). */
   glow?: { r: number; g: number; b: number; radius: number; flicker: number };
-  /** The roof laid over open floor: clear height above the floor in corridors, in halls, and the tile id it is made of. */
-  ceiling?: { corridor: number; hall: number; tile: string };
+  /**
+   * How a lattice realm reads the land above (sim/world/underSpot.ts). `tile`: the unbreakable rock of the roof, `shell` cells thick. Clear heights over
+   * corridors and halls. Under ways: an artery the way's half-width plus `widen`, its height by the way's rank (1 trail…3 highroad).
+   * Under rivers and lakes: water `sink` m below the floor and up to `depth` deep, an open shore `bank` m wide, clear `height`
+   * over the shore and `rise` m more per metre out over the water, up to `max`.
+   */
+  lattice?: {
+    tile: string;
+    shell: number;
+    corridor: number;
+    hall: number;
+    way: { widen: number; height: readonly number[] };
+    water: { bank: number; height: number; rise: number; max: number; sink: number; depth: number };
+  };
+  /** The land's places that have a cavern beneath them are places here too, named by this pattern (`{name}` = the place above). */
+  places?: { name: string };
   /** Where a travelling party appears when it comes here (relative to the way in), and which thing is placed there so it can go back. */
   arrival?: { thing: ThingId };
   /** Where a party wipe in this realm sends the survivors. */

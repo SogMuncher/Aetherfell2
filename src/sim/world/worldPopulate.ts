@@ -23,6 +23,7 @@ export function furnishHalls(ctx: SimContext, players: Entity[]): void {
         for (const h of hallsInChunk(state.seed, pcx + i, pcy + j)) {
           scatter.forEach((s, n) => {
             if (s.under && !(h.site !== undefined && s.under.includes(h.site))) return;
+            if (s.at === 'wall' && !h.walled) return;
             const roll = (h.roll * 9973 + n * 0.6180339) % 1;
             if (!(roll < s.chance)) return;
             let x = h.cx + 0.5;
@@ -73,15 +74,17 @@ export const BUILDS_PER_TICK = 3;
 /** A very large place (a megacity) goes up faster, so it is standing within about half a minute. */
 export const BUILDS_FULL_IN = 600;
 
-/** Raises the next few planned structures of a place; true once all of them stand. */
-export function raise(ctx: SimContext, loc: Location, site: SiteLayout): boolean {
+/** Raises the next few planned structures of a place (fallen at least `ruin`, 0..1); true once all of them stand. */
+export function raise(ctx: SimContext, loc: Location, site: SiteLayout, ruin = 0): boolean {
   const total = site.plan.length;
   let n = loc.built ?? 0;
   const perTick = Math.max(BUILDS_PER_TICK, Math.ceil(total / BUILDS_FULL_IN));
   for (let k = 0; k < perTick && n < total; k++, n++) {
     const s = site.plan[n];
-    const def = s ? ctx.content.structures[s.id] : undefined;
-    if (!s || !def) continue;
+    const plain = s ? ctx.content.structures[s.id] : undefined;
+    if (!s || !plain) continue;
+    // Fallen further where the place says so (the same building, as a ruin under the land).
+    const def = ruin > (plain.decay ?? 0) ? { ...plain, decay: ruin } : plain;
     const report = ctx.build(def, { x: s.x, y: s.y, rot: s.rot, size: [s.w, s.d], ground: (x, y) => ctx.tiles.ground(x, y) }, s.seed);
     furnish(ctx, loc, report);
   }

@@ -123,7 +123,7 @@ export function validateContent(c: Content): string[] {
     const w = `realm '${id}'`;
     if (r.arrival !== undefined) need(r.arrival.thing in c.things, w, `arrival thing '${r.arrival.thing}'`);
     if (r.wipe !== undefined) need(r.wipe in c.realms, w, `wipe realm '${r.wipe}'`);
-    if (r.ceiling !== undefined) need(r.ceiling.tile in c.tileIds, w, `ceiling tile '${r.ceiling.tile}'`);
+    if (r.lattice !== undefined) need(r.lattice.tile in c.tileIds, w, `lattice tile '${r.lattice.tile}'`);
     for (const sc of r.scatter ?? []) for (const u of sc.under ?? []) need(u in c.sites, w, `scatter site '${u}'`);
   }
   for (const [id, t] of Object.entries(c.things)) if (t.portal !== undefined) need(t.portal.to in c.realms, `thing '${id}'`, `realm '${t.portal.to}'`);

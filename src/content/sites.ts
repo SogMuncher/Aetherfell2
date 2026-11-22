@@ -25,7 +25,7 @@ export const SITES: Record<SiteId, SiteDef> = {
     rumour: 'a village called {name}',
     mood: { settlement: 1 },
     way: { grade: 'road', links: 3 },
-    under: { hall: 5, reach: 52, density: 0.9 },
+    under: { hall: 5, reach: 52, density: 0.9, cavern: { size: 0.9, height: [6, 14] } },
     verb: 'came upon the village of',
     villagers: ['elder', 'smith', 'trader', 'brewer', 'farmer', 'farmer', 'trader', 'farmer'],
     population: [
@@ -54,7 +54,7 @@ export const SITES: Record<SiteId, SiteDef> = {
     rumour: 'old ruins, {base}, where something still keeps torches lit over a chest no one has opened',
     mood: { ruin: 1 },
     way: { grade: 'trail', links: 2 },
-    under: { hall: 7, reach: 44, density: 0.95 },
+    under: { hall: 7, reach: 44, density: 0.95, cavern: { size: 1.2, height: [12, 18] }, ruin: 0.75 },
     verb: 'found the',
     population: [
       // A locked chest at the heart, its key sealed in one of the urns, the way guarded by fire plates.
@@ -153,7 +153,7 @@ export const SITES: Record<SiteId, SiteDef> = {
     rumour: 'the empty cottages of old {base}; nobody says why they left',
     mood: { ruin: 0.7, murk: 0.2 },
     way: { grade: 'trail', links: 2 },
-    under: { hall: 5, reach: 44, density: 0.9 },
+    under: { hall: 5, reach: 44, density: 0.9, cavern: { size: 0.8, height: [6, 12] } },
     verb: 'wandered into',
     population: [
       { thing: 'urn', count: 2, chance: 0.7, place: { at: 'ring', min: 6, max: 36 } },
@@ -223,7 +223,7 @@ export const SITES: Record<SiteId, SiteDef> = {
     rumour: 'the great walled city of {name}, with a keep in its heart and a hundred chimneys',
     mood: { settlement: 1, wonder: 0.3 },
     way: { grade: 'highroad', links: 4 },
-    under: { hall: 7, reach: 130, density: 0.97 },
+    under: { hall: 7, reach: 130, density: 0.97, cavern: { size: 1.15, height: [16, 26] }, ruin: 0.6 },
     verb: 'came to the gates of',
     villagers: ['elder', 'trader', 'smith', 'brewer', 'farmer', 'trader', 'farmer'],
     population: [
@@ -352,7 +352,7 @@ export const SITES: Record<SiteId, SiteDef> = {
     rumour: 'the vast city of {name}, a dozen quarters wide, where a stranger can walk a day and not see the same street twice',
     mood: { settlement: 1, wonder: 0.3 },
     way: { grade: 'highroad', links: 5 },
-    under: { hall: 7, reach: 215, density: 0.97 },
+    under: { hall: 7, reach: 215, density: 0.97, cavern: { size: 1.1, height: [16, 26] }, ruin: 0.6 },
     verb: 'beheld the vastness of',
     villagers: ['elder', 'trader', 'smith', 'brewer', 'farmer', 'trader', 'farmer'],
     population: [
