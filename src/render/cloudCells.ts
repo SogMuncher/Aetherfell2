@@ -1,5 +1,5 @@
 /**
- * Cloud cells: the sky's cloud layers kept as 3D cells around the eye, the way structures are cells. Each layer (any
+ * Air cells: the sky's layers (clouds up high, mist down low) kept as 3D cells around the eye, the way structures are cells. Each layer (any
  * entry in content/sky.ts) gets a stack of levels: a square of `count` × `count` columns, `slices` cells through the
  * layer's thickness, every level twice the cell size of the one below it, until the coarsest reaches `cloudRange`. Near
  * clouds keep their billows, far ones cost almost nothing, and all of them come from the one density rule
@@ -7,7 +7,7 @@
  *
  * Cells sit in each layer's own drifting frame (clouds move with the wind without refilling). A level is refilled a few
  * rows per frame (`cells.budget`) when the eye has moved an eighth of its width, when it is older than `cells.refresh`
- * seconds (weather changes), or first of all when it is empty (coarse first, so the sky fills in quickly). A finished
+ * seconds × (level + 1) (weather changes; far blocks are refreshed less often), or first of all when it is empty (coarse first, so the sky fills in quickly). A finished
  * level is swapped in whole; `version` tells the drawer to upload it. Render-side data only: the sim never sees it.
  */
 import { CONTENT, cloudColumn, layerCover } from '../content';
@@ -67,8 +67,9 @@ export class CloudCells {
     const defs = [...sky.layers].sort((a, b) => b.height - a.height);
     for (const def of defs) {
       const thick = Math.max(FLAT, def.thickness ?? 0);
-      const cell0 = def.scale / c.perShape;
-      const slices = Math.max(2, Math.min(c.slices, Math.ceil((thick / cell0) * 2)));
+      const cell0 = def.cell ?? def.scale / c.perShape;
+      // Cells about as tall as they are wide, so the layer reads as stacked blocks.
+      const slices = Math.max(2, Math.min(c.slices, Math.round(thick / cell0)));
       const count = Math.max(1, Math.ceil(Math.log2(sky.cloudRange / (CLOUD_REACH * c.count * cell0))) + 1);
       const li = this.layers.length;
       this.layers.push({ def, first: this.levels.length, count, slices, cell0, base: def.height, thick });
@@ -145,7 +146,7 @@ export class CloudCells {
       const c = this.centre(L, lv, w, ex, ey);
       const off = Math.max(Math.abs(c[0] - lv.ox), Math.abs(c[1] - lv.oy)) / lv.cell;
       // Empty first (coarse before fine), then left behind by the eye (fine before coarse), then old.
-      const s = lv.version === 0 ? 3000 + lv.level : off >= n / 8 ? 2000 - lv.level : time - lv.builtAt >= this.sky.cells.refresh ? 1000 + (time - lv.builtAt) / 1e6 : 0;
+      const s = lv.version === 0 ? 3000 + lv.level : off >= n / 8 ? 2000 - lv.level : time - lv.builtAt >= this.sky.cells.refresh * (lv.level + 1) ? 1000 + (time - lv.builtAt) / 1e6 : 0;
       if (s > score) {
         score = s;
         best = lv;

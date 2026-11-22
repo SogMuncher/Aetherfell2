@@ -1,8 +1,8 @@
 /**
- * GPU clouds: the cloud cells (render/cloudCells.ts: every layer of content/sky.ts as 3D cells around the eye, finer near,
- * coarser far) in one texture array, marched per pixel and cut off at the nearest surface, so you can fly above, around
- * and through them and see them to the far horizon. Each step reads the finest level that holds the spot and steps one
- * of its cells, so far clouds cost no more than near ones. Clouds are lit by the same light as the overcast sky (`Env.cloudLit`)
+ * GPU clouds and mist: the air cells (render/cloudCells.ts: every layer of content/sky.ts as 3D cells around the eye,
+ * finer near, merged into bigger blocks far) in one texture array, walked cell by cell per pixel and cut off at the
+ * nearest surface, so you can fly above, around and through them and see them to the far horizon. Cells are drawn as
+ * whole blocks shaded by the face you see (lit tops, dark bases, sides by the sun), so far clouds cost no more than near ones. Clouds are lit by the same light as the overcast sky (`Env.cloudLit`)
  * and fade into the horizon colour over the same fog distance as the land (× `sky.haze`, the clearer air up high).
  */
 import { CONTENT, layerCover } from '../../content';
@@ -14,7 +14,7 @@ import type { CamBasis } from './glUtil';
 
 /** Levels per row of the texture atlas; most steps a ray takes through one layer. */
 const TX = 8;
-const MAXS = 64;
+const MAXS = 128;
 
 const VS = `#version 300 es
 void main(){ vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0); }`;
@@ -29,21 +29,23 @@ uniform vec4 uC[${nl}]; // tint, belly
 uniform vec4 uL[${nl}]; // first level, level count, slices, finest cell
 uniform float uOn[${nl}];
 uniform vec4 uV[${nv}]; // level corner in the drifting frame (x, y), atlas corner (x, y)
-const float REACH = ${(CLOUD_REACH * n).toFixed(3)};
-// Density at a spot of the layer's drifting frame, from the finest level that holds it.
-float cellDens(int li, vec2 q, float hf, float s){
+uniform float uLod;
+// Density of the cell holding p (drifting frame x, y; height above the layer base) at level k, or at the first coarser
+// level that holds it; w = that cell's width. Cells are read whole (no blending), so they draw as blocks.
+float cellAt(int li, vec3 p, int k, out float w){
   vec4 L = uL[li]; int first = int(L.x); int cnt = int(L.y);
-  for (int k = int(max(0.0, ceil(log2(max(1.0, s) / (L.w * REACH))))); k < cnt; k++){
-    vec4 V = uV[first + k]; vec2 g = (q - V.xy) / (L.w * exp2(float(k)));
-    if (g.x < 1.0 || g.y < 1.0 || g.x > ${n - 1}.0 || g.y > ${n - 1}.0) continue;
-    vec2 uv = (V.zw + g) / uAtlas;
-    float z = clamp(hf * L.z - 0.5, 0.0, L.z - 1.0); float z0 = floor(z);
-    float a = texture(uCells, vec3(uv, z0)).r, b = texture(uCells, vec3(uv, min(z0 + 1.0, L.z - 1.0))).r;
-    return mix(a, b, z - z0);
+  for (; k < cnt; k++){
+    w = L.w * exp2(float(k)); vec4 V = uV[first + k];
+    ivec2 g = ivec2(floor(p.xy / w) - round(V.xy / w));
+    if (g.x < 0 || g.y < 0 || g.x >= ${n} || g.y >= ${n}) continue;
+    int z = clamp(int(floor(p.z * L.z / uA[li].y)), 0, int(L.z) - 1);
+    return texelFetch(uCells, ivec3(ivec2(V.zw) + g, z), 0).r;
   }
-  return 0.0;
+  w = L.w * exp2(float(cnt - 1)); return 0.0;
 }
-// Marches the ray through one layer. dir = horizontal unit direction, e = rise per horizontal metre, sh = horizontal distance to the nearest surface.
+// Walks the ray through one layer cell by cell (a coarser level, bigger blocks, every uLod cells of distance).
+// dir = horizontal unit direction, e = rise per horizontal metre, sh = horizontal distance to the nearest surface.
+// Each block is shaded by the face the ray came in through: lit top, sun-facing or shaded side, dark base.
 vec4 slab(int li, vec2 dir, float e, float sh, float az){
   vec4 A = uA[li], C = uC[li], L = uL[li];
   float zb = A.x, th = A.y, zt = zb + th, cz = uEye.z; float s0, s1;
@@ -53,25 +55,32 @@ vec4 slab(int li, vec2 dir, float e, float sh, float az){
   s1 = min(s1, min(uRange, sh));
   if (s1 <= s0) return vec4(0.0);
   vec2 q0 = uEye.xy - uDrift * A.z;
-  float kappa = (A.w * 3.2) / max(60.0, th);
-  float vstep = th / L.z / max(1e-3, abs(e));
+  vec3 D = vec3(dir, e); float ch = th / L.z; float sl = sqrt(1.0 + e * e);
+  vec2 sun = vec2(cos(uSunAz), sin(uSunAz));
   float silver = pow(max(0.0, cos(az - uSunAz)), 6.0);
   float dark = C.w * (0.55 + uRain * 0.45);
-  float trans = 1.0; vec3 acc = vec3(0.0); float s = s0; float skip = 1.0;
+  float trans = 1.0; vec3 acc = vec3(0.0); float s = s0; int face = s0 > 0.0 ? 2 : 3;
   for (int k = 0; k < ${MAXS}; k++){
     if (s >= s1) break;
-    float lv = max(0.0, ceil(log2(max(1.0, s) / (L.w * REACH))));
-    float ds = min(min(L.w * exp2(lv), vstep) * 1.3 * skip, s1 - s);
-    float sm = s + ds * 0.5; s += ds;
-    float hf = clamp((cz + e * sm - zb) / th, 0.0, 1.0);
-    float dn = cellDens(li, q0 + dir * sm, hf, sm);
-    if (dn < 0.004){ skip = min(skip * 1.5, 3.0); continue; }
-    skip = 1.0;
-    float a = (1.0 - exp(-kappa * dn * ds * sqrt(1.0 + e * e))) * smoothstep(0.0, 60.0, sm) * (1.0 - smoothstep(uRange * 0.7, uRange, sm));
+    int lv = int(max(0.0, ceil(log2(max(1.0, s) / (L.w * uLod)))));
+    float sp = s + max(0.02, s * 3e-5);
+    vec3 p = vec3(q0 + dir * sp, cz + e * sp - zb);
+    float w; float dn = cellAt(li, p, lv, w);
+    vec3 sz = vec3(w, w, ch); vec3 lo = floor(p / sz) * sz;
+    vec3 tt = vec3(D.x > 0.0 ? (lo.x + w - p.x) / D.x : D.x < 0.0 ? (lo.x - p.x) / D.x : 1e9,
+                   D.y > 0.0 ? (lo.y + w - p.y) / D.y : D.y < 0.0 ? (lo.y - p.y) / D.y : 1e9,
+                   D.z > 0.0 ? (lo.z + ch - p.z) / D.z : D.z < 0.0 ? (lo.z - p.z) / D.z : 1e9);
+    int ax = tt.x <= tt.y && tt.x <= tt.z ? 0 : (tt.y <= tt.z ? 1 : 2);
+    float sn = min(sp + min(tt.x, min(tt.y, tt.z)), s1);
+    float seg = sn - s; int f = face; s = sn; face = ax;
+    if (dn < 0.08) continue;
+    float a = A.w * (1.0 - exp(-3.0 * dn * seg * sl / L.w)) * smoothstep(0.0, 30.0, s) * (1.0 - smoothstep(uRange * 0.7, uRange, s));
     if (a < 0.002) continue;
-    float up = hf * hf * (3.0 - 2.0 * hf);
-    float shade = (1.0 - dark * (1.0 - up) * (0.5 + 0.5 * dn)) * (1.0 + 0.25 * silver * (1.0 - dn * 0.6));
-    vec3 col = mix(C.rgb * uLit * shade, uHaze, 1.0 - exp(-sm / uHazeDist));
+    // Shade of the block's face: top, base, or a side turned toward or away from the sun.
+    float fs = f == 2 ? (e < 0.0 ? 1.06 + 0.2 * silver : 0.6) : f == 0 ? 0.8 - 0.16 * sign(D.x) * sun.x : f == 1 ? 0.8 - 0.16 * sign(D.y) * sun.y : 0.82;
+    float hf = clamp((lo.z + ch * 0.5) / th, 0.0, 1.0); float up = hf * hf * (3.0 - 2.0 * hf);
+    float shade = (1.0 - dark * (1.0 - up) * (0.5 + 0.5 * dn)) * fs;
+    vec3 col = mix(C.rgb * uLit * shade, uHaze, 1.0 - exp(-s / uHazeDist));
     acc += col * trans * a; trans *= 1.0 - a; if (trans < 0.03) break;
   }
   float alpha = 1.0 - trans; if (alpha < 0.01) return vec4(0.0);
@@ -145,8 +154,8 @@ export class GpuClouds {
     this.atlas = gl.createTexture() as WebGLTexture;
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.atlas);
     gl.texStorage3D(gl.TEXTURE_2D_ARRAY, 1, gl.R8, this.aw, this.ah, depth);
-    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
@@ -216,6 +225,7 @@ export class GpuClouds {
     gl.uniform2f(loc(gl, p, 'uSize'), w, h);
     gl.uniform2f(loc(gl, p, 'uDrift'), weather.drift?.x ?? 0, weather.drift?.y ?? 0);
     gl.uniform1f(loc(gl, p, 'uRange'), CONTENT.sky.cloudRange);
+    gl.uniform1f(loc(gl, p, 'uLod'), Math.min(CONTENT.sky.cells.lod, CLOUD_REACH * this.cells.n));
     gl.uniform1f(loc(gl, p, 'uHazeDist'), env.fogDist * CONTENT.sky.haze);
     gl.uniform1f(loc(gl, p, 'uNear'), near);
     gl.uniform1f(loc(gl, p, 'uFar'), far);

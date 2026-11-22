@@ -43,6 +43,8 @@ export interface CloudLayerDef {
   rain?: boolean;
   /** Pattern seed, so layers never line up with each other. */
   seed: number;
+  /** Width of one air cell (metres) at the finest level: the size of the blocks the layer is drawn as. Default `scale / cells.perShape`. */
+  cell?: number;
 }
 
 /** The sky as data: cloud layers, sky colours by time of day, sun, moon, stars and aurora. */
@@ -67,9 +69,10 @@ export interface SkyDef {
    * Clouds are kept as 3D cells around the eye, fine near and coarser with distance (each level twice the cell size,
    * like the land's far detail), so even far clouds are cheap. `perShape`: cells across one cloud shape (a layer's `scale`)
    * at the finest level; `count`: cells along each side of a level; `slices`: most cells through a layer's thickness;
-   * `budget`: cells refilled per frame; `refresh`: seconds before a level is refilled for a change of weather.
+   * `budget`: cells refilled per frame; `refresh`: seconds before the finest level is refilled for a change of weather
+   * (level k waits (k + 1) times as long); `lod`: cells along a view before they merge into blocks twice as wide.
    */
-  cells: { perShape: number; count: number; slices: number; budget: number; refresh: number };
+  cells: { perShape: number; count: number; slices: number; budget: number; refresh: number; lod: number };
 }
 
 /** Floating motes in the air (dust, pollen, ash): a cheap way to make depth felt. Ambient per biome and realm. */
