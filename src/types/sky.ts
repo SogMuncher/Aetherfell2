@@ -64,8 +64,8 @@ export interface SkyDef {
   /**
    * The air is one grid of cubic cells around the eye that every layer writes its cloud into (render/airCells.ts), so
    * all clouds and mist draw in one pass, nearest first. `cell`: width of the finest cells (metres); `count`: cells along
-   * each side of a level; `tall`: cells from bottom to top of a level; `lod`: cells along a view before they merge into
-   * cells twice as wide (the next level); `ext`: how much a metre of full-density air hides (per metre); `budget`: cells
+   * each side of a level; `tall`: cells from bottom to top of a level; `lod`: cells along a view before they start to merge into
+   * cells twice as wide (the next level; each level dithers into the next over a whole doubling of distance); `ext`: how much a metre of full-density air hides (per metre); `budget`: cells
    * filled per frame; `refresh`: seconds before the finest level is refilled for a change of weather (level k waits
    * (k + 1) times as long). Moving only fills the cells that came into reach.
    */

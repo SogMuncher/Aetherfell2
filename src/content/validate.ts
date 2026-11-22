@@ -32,7 +32,7 @@ export function validateContent(c: Content): string[] {
     if (!(l.detail >= 1 && l.detail <= 6)) out.push(`${w}: detail runs from 1 to 6`);
   }
   const ai = c.sky.air;
-  if (!(ai.cell > 0 && ai.count >= 16 && ai.count % 8 === 0 && ai.tall >= 8 && ai.tall % 8 === 0 && ai.tall <= 64 && ai.budget > 0 && ai.ext > 0 && ai.lod >= 2 && ai.lod <= ai.count * 0.35)) out.push('sky air: positive cell, ext and budget, count a multiple of 8 (>= 16), tall a multiple of 8 (8..64), lod 2..count × 0.35');
+  if (!(ai.cell > 0 && ai.count >= 16 && ai.count % 8 === 0 && ai.tall >= 8 && ai.tall % 8 === 0 && ai.tall <= 64 && ai.budget > 0 && ai.ext > 0 && ai.lod >= 2 && ai.lod <= ai.count * 0.1875)) out.push('sky air: positive cell, ext and budget, count a multiple of 8 (>= 16), tall a multiple of 8 (8..64), lod 2..count × 0.1875 (twice lod must fit in a level that lags the eye)');
   const sm = c.sky.smoke;
   if (!(sm.cell > 0 && sm.count >= 16 && sm.tall >= 8 && sm.step > 0 && sm.rise >= 0 && sm.spread >= 0 && sm.spread <= 0.2 && sm.fade >= 0 && sm.ext > 0)) out.push('sky smoke: positive cell, step and ext, count >= 16, tall >= 8, spread 0..0.2');
   out.push(...validateShapes());
