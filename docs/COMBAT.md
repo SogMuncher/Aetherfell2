@@ -19,7 +19,7 @@
   Thrown items take a blow when they strike (`physics/impacts.ts`). G (`throwHeld`) throws the held item or drops it when looking down.
 - Magic (`sim/magic`, `content/spellcraft.ts`, `runes.ts`): up to 3 runes (>=1 essence, <=1 shape) compose a spell;
   casters in creatures use a brain `cast` behaviour and the same code as the player.
-- Fire (`interactionSystem`, numbers in `rules.fire`): spread chance/beat, fuel-left damping, max fires, `sleep` (fires far from players burn out but
+- Fire (`interactionSystem`, numbers in `rules.fire`): spread chance/beat, fuel-left damping, no world cap (a cap once stopped all fire after big blazes), `sleep` (fires far from players burn out but
   stop spreading), sparks. Sound: `rules.fire.audio` + the audio engine's shared voice budget. Look: palette + budget in `rules.fire.vfx`,
   drawn by `render/vfx/fireEmitter.ts` as pooled hard-pixel motes. Measure with `scripts/fireBench.ts` (not in CI).
 - Temperature (`sim/effects/temperature.ts`, numbers in `rules.temperature`): every ground tile and 3D cell has a `temp`

@@ -106,7 +106,6 @@ export function mendWear(ctx: SimContext): void {
 /** Fire needs fuel (or oil) and dryness, wherever it is. Amount below 1 is a chance. */
 export function ignite(ctx: SimContext, x: number, y: number, z: number, amount: number): boolean {
   const { state, matter } = ctx;
-  if (matter.count().burning >= ctx.content.rules.fire.max) return false;
   const inf = matter.info(x, y, z);
   if (!inf) return false;
   if (matter.get('fire', x, y, z) > 0) return false;
