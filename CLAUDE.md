@@ -50,7 +50,7 @@ One script also works: `npm run check gearSmoke`. Packages install themselves at
 ## Ship it (same every thread, no exploring)
 1. `npm run check <area>` green -> `git add -A && git commit -m "<what changed>" && git push -u origin <branch>`.
 2. GitHub MCP: `create_pull_request` (base `main`; body = the two attribution lines + 2-4 plain lines), then
-   `update_pull_request` assignees `[SogMuncher]`, then reviewers `[SogMuncher]`, then `enable_pr_auto_merge` (squash),
-   then `subscribe_pr_activity`. Fix only what CI reports.
+   `issue_write` update assignees `[SogMuncher]` (skip the review request: PRs count as Sock's, GitHub refuses it),
+   `enable_pr_auto_merge` (SQUASH), `subscribe_pr_activity`. Fix only what CI reports.
 
 Sock: plain experience-first language, no jargon. Sock has no Node.js and plays the single-file `play.html`.
