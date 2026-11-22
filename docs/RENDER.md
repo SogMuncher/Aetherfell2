@@ -32,4 +32,4 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 A new `Renderer` is made on every world swap (join, load): always `dispose()` the old one first.
 `scripts/artSmoke.ts`, `skySmoke.ts`; `npx tsc --noEmit`.
 
-Sprite views (8-way creatures, props) and left/right facing are picked from where the camera STANDS relative to the thing (`sideFrom` in raycaster/camera.ts), never from where it is turned.
+Sprite views (8-way creatures, props) and left/right facing are picked from where the camera STANDS relative to the thing (`sideFrom` in raycaster/camera.ts), never from where it is turned. Each billboard quad also turns to face the camera's position (gpuSprites VS), so turning or tilting the view never swings it round.

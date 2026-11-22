@@ -16,12 +16,15 @@ export const GPU_SPRITES = { atlas: 2048, max: 4096 } as const;
 const STRIDE = 20;
 
 const VS = `#version 300 es
-uniform mat4 uVP; uniform vec3 uRight;
+uniform mat4 uVP; uniform vec3 uRight, uEye;
 in vec4 aPos; in vec4 aRect; in vec4 aTint; in vec4 aFx; in vec4 aSize;
 out vec2 vUv; flat out int fId; flat out vec4 fRect; flat out vec4 fTint; flat out vec4 fFx; flat out vec3 fBase; out vec3 vWorld;
 void main(){
   vec2 q = vec2(float(gl_VertexID & 1), float(gl_VertexID >> 1));
-  vec3 p = aPos.xyz + uRight * (q.x - 0.5) * aSize.x + vec3(0.0, 0.0, q.y * aSize.y);
+  // Each sprite turns to face the camera's POSITION (upright), so turning or tilting the view never swings it round.
+  vec2 to = aPos.xy - uEye.xy; float tl = length(to);
+  vec3 right = tl > 1e-3 ? vec3(-to.y / tl, to.x / tl, 0.0) : uRight;
+  vec3 p = aPos.xyz + right * (q.x - 0.5) * aSize.x + vec3(0.0, 0.0, q.y * aSize.y);
   fId = gl_InstanceID; vUv = vec2(aFx.w > 0.5 ? 1.0 - q.x : q.x, 1.0 - q.y); fRect = aRect; fTint = aTint; fFx = aFx; fBase = aPos.xyz; vWorld = p;
   gl_Position = uVP * vec4(p, 1.0);
 }`;
