@@ -355,4 +355,19 @@ function visit(sim: Simulation, me: Entity, s: SiteLayout): void {
   check('no wall loop inside a city', inner === 0, `${inner} inner wall pieces`);
 }
 
+// ---- Ruins (dungeon entrances) ---------------------------------------------------------------
+{
+  const { sim, me } = world();
+  const r = find(sim, 'ruin');
+  check('a ruin is a plan of 3D structures', !!r && r.plan.length >= 6, `${r?.plan.length ?? 0} pieces`);
+  if (r) {
+    visit(sim, me, r);
+    run(sim, 80);
+    const loc = sim.state.locations.find((l) => l.kind === 'ruin' && l.pos.x === r.cx && l.pos.y === r.cy);
+    check('the ruin goes up and is populated', !!loc && (loc.built ?? 0) >= r.plan.length && loc.populated, `${loc?.built}/${r.plan.length}`);
+    const way = [...sim.state.entities.values()].find((e) => e.site === loc?.id && e.def === 'descent');
+    check('the stair down stands free of the walls', !!way && sim.state.volume.topAt(way.pos.x, way.pos.y) <= sim.tiles.ground(way.pos.x, way.pos.y) + 0.05);
+  }
+}
+
 if (failed > 0) throw new Error(`${failed} settlement check(s) failed`);

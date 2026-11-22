@@ -22,6 +22,10 @@
 - `RealmDef.scatter` lines what lies in each hall (`under` limits it to halls under given places); `habitats[].realm`
   says where a creature lives. There is one dungeon: every way down reaches the same network.
 
+## Ruins
+Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with weighted `styles` (ring, street, cross, scatter) over decayed recipes
+(`ruinedKeep|Tower|Hall|Cottage`, `brokenWall`, `brokenGate`), so they share the builder, wall faces and far LOD. Their `descent` sits in the courtyard.
+
 ## Add / change
 - New realm: a `REALMS` entry + portals/habitats naming it; new ground kind only if needed (ground generator).
 - New building: `structures` recipe. New shape: append to `shapes.ts` (never renumber).
