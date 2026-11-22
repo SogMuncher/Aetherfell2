@@ -117,7 +117,8 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `color.ts` (50) packed pixel colour helpers
 - `env.ts` (147) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
 - `lighting.ts` (~150) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); Classic grid; re-exports Env
-- `airCells.ts` (~200) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
+- `airSmoke.ts` (~170) smoke: the live level of the air cells; burning spots feed it, it rises, spreads and thins in steps
+- `airCells.ts` (~220) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
 - `stateLooks.ts` (~70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (60) adaptive pixel size from frame time
@@ -158,7 +159,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `gpuParticles.ts` (~140) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (~55) held item buffer composited on top
 - `gpuSky.ts` (~70) full-screen sky: gradient, sun, moon, stars, aurora
-- `gpuClouds.ts` (~215) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
+- `gpuClouds.ts` (~260) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
 - `gpuPost.ts` (98) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (71) shader/texture helpers, camera basis and view-projection

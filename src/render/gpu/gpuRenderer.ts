@@ -46,6 +46,8 @@ export interface GpuFrame {
   /** Lights each pixel takes (setting). */
   lightsPerPixel: number;
   tiles: ReadonlyTiles;
+  /** Burning ground spots (smoke sources; the 3D layer's are in `volume`). */
+  burning: ReadonlySet<number>;
   billboards: readonly Billboard[];
   motes: readonly Particle[];
   shadow: CloudShadow;
@@ -168,7 +170,7 @@ export class GpuRenderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.litTarget);
     this.light.draw(cam, f.eye, f.env, f.lightsPerPixel, s.alb, s.nrm, this.post.depthTexture, this.solid, this.casters, this.farShade, w, h, NEAR, FAR);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.sceneTarget);
-    this.clouds.draw(cam, f.eye, f.env, f.weather, f.time, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR);
+    this.clouds.draw(cam, f.eye, f.env, f.weather, f.time, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR, { tiles: f.tiles, burning: f.burning, volume: f.volume });
     gl.viewport(0, 0, w, h);
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;

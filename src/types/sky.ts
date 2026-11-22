@@ -12,8 +12,6 @@ export interface CloudLayerDef {
   /** Size of one cloud shape (metres). `stretch` > 1 draws them out along the wind (wisps, streaks). */
   scale: number;
   stretch?: number;
-  /** How fast it drifts, as a share of the wind (high layers run faster). */
-  speed: number;
   /** Share of sky covered: `base` + `perCloud` × cloud cover + `perRain` × storminess (each 0..1). */
   cover: { base: number; perCloud: number; perRain: number };
   /** How soft the edges are (0.05 crisp puffs … 0.4 hazy sheets). */
@@ -72,6 +70,13 @@ export interface SkyDef {
    * (k + 1) times as long). Moving only fills the cells that came into reach.
    */
   air: { cell: number; count: number; tall: number; lod: number; ext: number; budget: number; refresh: number };
+  /**
+   * Smoke: a live level of air cells (`cell` wide, `count` × `count` × `tall`, round the eye) that burning stuff puts
+   * smoke into (matter state look `smoke`). Every `step` seconds smoke rises (`rise` m/s), spreads to its sides
+   * (`spread`, share per step) and thins (`fade`, share per second); the wind carries it like all the air. `ext`: how
+   * much a metre of full smoke hides; `colour`: its colour in full light.
+   */
+  smoke: { cell: number; count: number; tall: number; step: number; rise: number; spread: number; fade: number; ext: number; colour: readonly [number, number, number] };
 }
 
 /** Floating motes in the air (dust, pollen, ash): a cheap way to make depth felt. Ambient per biome and realm. */
