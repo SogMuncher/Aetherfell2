@@ -117,19 +117,19 @@ void main(){
   float away = smoothstep(uFade.x, uFade.y, length(w.xy - uEye.xy));
   if (away > fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;
   // Texture coords, where in its cell this texel is (f, texels per cell tx), the face's two steps to neighbour cells and its normal axis.
-  vec2 suv, f, tx; ivec3 ea, eb, dom; bool wall = abs(n.z) <= 0.6;
-  if (!wall) { suv = w.xy * 16.0; f = fract((floor(suv) + 0.5) / 16.0); tx = vec2(16.0); ea = ivec3(1, 0, 0); eb = ivec3(0, 1, 0); dom = ivec3(0, 0, n.z < 0.0 ? -1 : 1); }
+  vec2 suv, fc, tx; ivec3 ea, eb, dom; bool wall = abs(n.z) <= 0.6;
+  if (!wall) { suv = w.xy * 16.0; fc = fract((floor(suv) + 0.5) / 16.0); tx = vec2(16.0); ea = ivec3(1, 0, 0); eb = ivec3(0, 1, 0); dom = ivec3(0, 0, n.z < 0.0 ? -1 : 1); }
   else {
     bool xFace = abs(n.x) > abs(n.y); float across = xFace ? w.y : w.x; float nh = abs(n.z) > 0.05 ? max(0.35, sqrt(1.0 - n.z * n.z)) : 1.0;
-    suv = vec2(across * 16.0, -w.z * 10.0 / nh); f = vec2(fract((floor(suv.x) + 0.5) / 16.0), fract(-(floor(suv.y) + 0.5) * nh / 10.0)); tx = vec2(16.0, 10.0 / nh);
+    suv = vec2(across * 16.0, -w.z * 10.0 / nh); fc = vec2(fract((floor(suv.x) + 0.5) / 16.0), fract(-(floor(suv.y) + 0.5) * nh / 10.0)); tx = vec2(16.0, 10.0 / nh);
     ea = xFace ? ivec3(0, 1, 0) : ivec3(1, 0, 0); eb = ivec3(0, 0, 1); dom = xFace ? ivec3(n.x < 0.0 ? -1 : 1, 0, 0) : ivec3(0, n.y < 0.0 ? -1 : 1, 0);
   }
   bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // from the middle of the cell, not the exact pixel, so a wall face is lit evenly
   float tint = 0.93 + 0.14 * h3(vec3(cell));
   // Neighbour cells meet by the ground's one edge rule (edgeLean), same material too, so each cell's tint fades into the next.
-  vec3 t0 = surf(mat, wall, suv), col = t0 * tint; vec2 lean = edgeLean(f, tx);
+  vec3 t0 = surf(mat, wall, suv), col = t0 * tint; vec2 lean = edgeLean(fc, tx);
   if (lean.x + lean.y > 0.0) {
-    ivec3 sa = ea * (f.x < 0.5 ? -1 : 1), sb = eb * (f.y < 0.5 ? -1 : 1);
+    ivec3 sa = ea * (fc.x < 0.5 ? -1 : 1), sb = eb * (fc.y < 0.5 ? -1 : 1);
     col = mix(mix(col, nextFace(cell, sa, n, dom, mat, t0, tint, wall, suv), lean.x), mix(nextFace(cell, sb, n, dom, mat, t0, tint, wall, suv), nextFace(cell, sa + sb, n, dom, mat, t0, tint, wall, suv), lean.x), lean.y);
   }
   col = surfPatches(col, w.xy + w.z * vec2(1.7, -1.3), length(w - uEye));

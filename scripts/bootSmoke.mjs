@@ -24,6 +24,7 @@ try {
   const p = await b.newPage({ viewport: { width: 800, height: 450 } });
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
+  p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); }); // a caught failure (a shader that will not build) still shows a black screen
   await p.addInitScript(() => localStorage.setItem('aetherfell2.settings', JSON.stringify({})));
   await p.goto(`http://localhost:${PORT}/`);
   await p.waitForSelector('[data-a=solo]', { timeout: 15000 }).catch(() => fail('menu did not appear', b));
