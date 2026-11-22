@@ -112,8 +112,8 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
 // ---- Fire climbs: a burning floor lights the wall above, not the other way round as easily ----------
 {
   const { sim } = world();
-  const X = 6200;
-  const Y = 6200;
+  const X = 6210;
+  const Y = 6210;
   flatten(sim, X, Y, 8, Tile.Flagstone);
   const z = gz(sim, X, Y);
   for (let k = 0; k < 4; k++) sim.state.volume.set(X, Y, z + k, CUBE, THATCH);
