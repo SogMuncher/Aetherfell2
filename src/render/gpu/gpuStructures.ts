@@ -20,7 +20,7 @@ const INDICES = new Uint8Array([0, 2, 1, 1, 2, 3, 4, 5, 6, 5, 7, 6, 0, 1, 4, 1, 
 
 interface Resident {
   slot: number;
-  /** Volume version this brick was last checked at. */
+  /** The brick's `rev` when it was last copied (-1 = never): its cells and their states (wet, frost, fire…). */
   version: number;
   /** What the atlas holds for it (to upload only real changes). */
   copy: Uint8Array;
@@ -158,11 +158,11 @@ export class GpuStructures {
         this.resident.set(key, r);
       }
       // New bricks come first (their own budget); changed ones are re-checked a few a frame, so a busy world never starves new walls.
-      if (r.version < 0 ? fresh > 0 : r.version !== vol.version && budget > 0) {
+      if (r.version < 0 ? fresh > 0 : r.version !== b.rev && budget > 0) {
         if (r.version < 0) fresh--;
         else budget--;
         this.upload(b, r);
-        r.version = vol.version;
+        r.version = b.rev;
       }
       if (r.version < 0) continue;
       this.pageData[(gz * GW + gy) * GW + gx] = r.slot + 1;

@@ -123,8 +123,6 @@ export interface RulesDef {
     beat: number;
     /** The weakest a dying fire spreads, as a share of full (a fire with little fuel left barely spreads). */
     dying: number;
-    /** At most this many spots burn at once; further fires do not catch. */
-    max: number;
     /** Fires farther than this (m) from every player burn out but no longer spread (they sleep). */
     sleep: number;
     /** Sparks on the wind: chance per burning spot per tick (+ per m/s of wind), and how many may fly at once. */

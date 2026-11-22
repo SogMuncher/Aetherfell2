@@ -7,7 +7,7 @@ import { shapeId } from '../src/content/shapes';
 import { tileCode } from '../src/content/tiles';
 import { VolumeStore } from '../src/sim/world/volume';
 import type { Entity, InputSnapshot, SimEvent } from '../src/types';
-import { GROUND_Z, Tile, emptyInput, shapeByte, spotKey, unpackSpot } from '../src/types';
+import { GROUND_Z, Tile, brickKey, emptyInput, shapeByte, spotKey, unpackSpot } from '../src/types';
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = ''): void {
@@ -161,6 +161,17 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   check('what is wet dries again', sim.matter.get('wet', X, Y, z + 3) < before, `${before} → ${sim.matter.get('wet', X, Y, z + 3)}`);
 }
 
+// ---- However much burns, fire still catches -------------------------------------------------------
+{
+  const { sim } = world();
+  for (let i = 0; i < 1200; i++) sim.tiles.setKind(7000 + (i % 40), 7000 + Math.floor(i / 40), Tile.Brush);
+  for (let i = 0; i < 1200; i++) sim.matter.set('fire', 7000 + (i % 40), 7000 + Math.floor(i / 40), GROUND_Z, 100);
+  flatten(sim, 7200, 7200, 3, Tile.Brush);
+  sim.state.queues.effects.push({ target: { kind: 'tile', x: 7200.5, y: 7200.5 }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
+  sim.step();
+  check('a torch still lights brush while a huge blaze burns elsewhere', sim.matter.get('fire', 7200, 7200, GROUND_Z) > 0);
+}
+
 // ---- Frost and oil work on walls too -------------------------------------------------------------
 {
   const { sim } = world();
@@ -285,9 +296,13 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   sim.state.volume.set(X + 3, Y, z, CUBE, STONE);
   chill(X + 3, Y, z);
   check('a dry wall is not frozen', sim.matter.info(X + 3, Y, z)?.id === 'stoneWall' && sim.matter.get('frost', X + 3, Y, z) === 0);
+  const brick = (): number => sim.state.volume.bricks.get(brickKey((X + 3) >> 4, Y >> 4, z >> 4))?.rev ?? -1;
+  const rev0 = brick();
   sim.matter.set('wet', X + 3, Y, z, 255);
+  const rev1 = brick();
   chill(X + 3, Y, z);
   check('a wet wall frosts over and stays a stone wall', sim.matter.info(X + 3, Y, z)?.id === 'stoneWall' && sim.matter.get('frost', X + 3, Y, z) > 200);
+  check('wetting and frosting a wall tell the renderer to redraw its brick', rev1 > rev0 && brick() > rev1, `${rev0} ${rev1} ${brick()}`);
   // It was chilled twice, so it takes two torches: the first only brings it back up to the cold of the air.
   for (let i = 0; i < 2; i++) {
     sim.state.queues.effects.push({ target: { kind: 'cell', x: X + 3, y: Y, z }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });

@@ -1,49 +1,12 @@
-import type { BrickMatter, BrickMatterField, Volume, VolumeBrick, VolumeBrickData } from '../../types';
+import type { BrickMatterField, Volume, VolumeBrick, VolumeBrickData } from '../../types';
 import { BRICK_CELLS, brickKey, cellIndex, spotKey } from '../../types';
 import { SHAPE_BOTTOM, SHAPE_SAMPLES, SHAPE_TOP, sampleAt } from '../../content/shapes';
+import { FIELD_MAX, newMatter, packBrick, unpackMatter, unpackShape } from './brickData';
 
 const SAMPLE_CELLS = SHAPE_SAMPLES * SHAPE_SAMPLES;
 
 function columnKey(x: number, y: number): number {
   return (x + 1048576) * 2097152 + (y + 1048576);
-}
-
-/** Packs a list into runs: [count, value, count, value…]. */
-function pack(a: ArrayLike<number>): number[] {
-  const out: number[] = [];
-  let i = 0;
-  while (i < a.length) {
-    const v = a[i] ?? 0;
-    let n = 1;
-    while (i + n < a.length && a[i + n] === v) n++;
-    out.push(n, v);
-    i += n;
-  }
-  return out;
-}
-
-function unpack(runs: readonly number[], into: Uint8Array | Uint16Array): void {
-  let at = 0;
-  for (let i = 0; i + 1 < runs.length; i += 2) {
-    const n = runs[i] ?? 0;
-    const v = runs[i + 1] ?? 0;
-    into.fill(v, at, Math.min(into.length, at + n));
-    at += n;
-  }
-}
-
-const FIELD_MAX: Record<BrickMatterField, number> = { wet: 255, fire: 255, oil: 255, soot: 255, frost: 255, spent: 65535, wear: 65535 };
-
-function newMatter(): BrickMatter {
-  return {
-    wet: new Uint8Array(BRICK_CELLS),
-    fire: new Uint8Array(BRICK_CELLS),
-    oil: new Uint8Array(BRICK_CELLS),
-    soot: new Uint8Array(BRICK_CELLS),
-    frost: new Uint8Array(BRICK_CELLS),
-    spent: new Uint16Array(BRICK_CELLS),
-    wear: new Uint16Array(BRICK_CELLS),
-  };
 }
 
 /**
@@ -138,7 +101,7 @@ export class VolumeStore implements Volume {
     if (old === shape && (shape === 0 || oldMat === mat)) return false;
     if (!b) {
       if (shape === 0) return false;
-      b = { bx: x >> 4, by: y >> 4, bz: z >> 4, shape: new Uint8Array(BRICK_CELLS), mat: new Uint8Array(BRICK_CELLS), matter: null, count: 0, dirty: false, box: new Uint8Array([15, 15, 15, 0, 0, 0]) };
+      b = { bx: x >> 4, by: y >> 4, bz: z >> 4, shape: new Uint8Array(BRICK_CELLS), mat: new Uint8Array(BRICK_CELLS), matter: null, count: 0, dirty: false, rev: 0, box: new Uint8Array([15, 15, 15, 0, 0, 0]) };
       this.bricks.set(key, b);
       this.lowBrick = Math.min(this.lowBrick, b.bz);
     }
@@ -176,6 +139,7 @@ export class VolumeStore implements Volume {
 
   private touch(b: VolumeBrick): void {
     b.dirty = true;
+    b.rev++;
     this.dirtyList.add(b);
   }
 
@@ -267,35 +231,14 @@ export class VolumeStore implements Volume {
   }
 
   exportBrick(b: VolumeBrick): VolumeBrickData {
-    const m = b.matter;
-    const out: VolumeBrickData = { bx: b.bx, by: b.by, bz: b.bz, shape: pack(b.shape), mat: pack(b.mat) };
-    if (m) out.state = { wet: pack(m.wet), fire: pack(m.fire), oil: pack(m.oil), soot: pack(m.soot), frost: pack(m.frost), spent: pack(m.spent), wear: pack(m.wear) };
-    return out;
+    return packBrick(b);
   }
 
   /** Lays a received brick over whatever was there (an empty brick removes it). */
   importBrick(d: VolumeBrickData): void {
     const key = brickKey(d.bx, d.by, d.bz);
     const old = this.bricks.get(key);
-    const shape = new Uint8Array(BRICK_CELLS);
-    const mat = new Uint8Array(BRICK_CELLS);
-    unpack(d.shape, shape);
-    unpack(d.mat, mat);
-    let count = 0;
-    const box = new Uint8Array([15, 15, 15, 0, 0, 0]);
-    for (let i = 0; i < BRICK_CELLS; i++) {
-      if (shape[i] === 0) continue;
-      count++;
-      const lx = i & 15;
-      const ly = (i >> 4) & 15;
-      const lz = i >> 8;
-      box[0] = Math.min(box[0] ?? 15, lx);
-      box[1] = Math.min(box[1] ?? 15, ly);
-      box[2] = Math.min(box[2] ?? 15, lz);
-      box[3] = Math.max(box[3] ?? 0, lx + 1);
-      box[4] = Math.max(box[4] ?? 0, ly + 1);
-      box[5] = Math.max(box[5] ?? 0, lz + 1);
-    }
+    const { shape, mat, count, box } = unpackShape(d);
     // Column tops over this brick's footprint are recomputed from scratch.
     if (old) this.forColumns(old, (x, y, z) => this.set(x, y, z, 0, 0));
     // The old brick's burning/damp cells are gone with it (set() wiped them); the new state is read below.
@@ -303,18 +246,8 @@ export class VolumeStore implements Volume {
       this.version++;
       return;
     }
-    let matter: BrickMatter | null = null;
-    if (d.state) {
-      matter = newMatter();
-      unpack(d.state.wet, matter.wet);
-      unpack(d.state.fire, matter.fire);
-      unpack(d.state.oil, matter.oil);
-      unpack(d.state.soot, matter.soot);
-      if (d.state.frost) unpack(d.state.frost, matter.frost);
-      unpack(d.state.spent, matter.spent);
-      unpack(d.state.wear, matter.wear);
-    }
-    const b: VolumeBrick = { bx: d.bx, by: d.by, bz: d.bz, shape, mat, matter, count, dirty: false, box };
+    const matter = unpackMatter(d);
+    const b: VolumeBrick = { bx: d.bx, by: d.by, bz: d.bz, shape, mat, matter, count, dirty: false, rev: (old?.rev ?? 0) + 1, box };
     this.bricks.set(key, b);
     if (matter) {
       for (let i = 0; i < BRICK_CELLS; i++) {

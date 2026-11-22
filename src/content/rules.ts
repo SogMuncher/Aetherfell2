@@ -63,7 +63,6 @@ export const RULES: RulesDef = {
     spread: 0.08,
     beat: 6,
     dying: 0.35,
-    max: 700,
     sleep: 110,
     spark: { chance: 0.0006, wind: 0.0008, max: 10 },
     vfx: { palette: [0xfff4b0, 0xffd23c, 0xff8a28, 0xd2441c, 0x74261a], smoke: [0x56504c, 0x3c3836, 0x2a2826], budget: 220, flame: 5, smokeRate: 0.7, ember: 0.6, range: 70, pixel: 3 },

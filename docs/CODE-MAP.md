@@ -272,7 +272,8 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `sites.ts` (266) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
 - `terrain.ts` (216) The shape of the land: continents, rolling hills, ridged mountains, a moisture field for biomes,
 - `underworld.ts` (256) The ground of the underworld: a lattice of halls joined by corridors, laid on a 16 m grid exactly
-- `volume.ts` (347) VolumeStore: sparse 3D brick store (C)
+- `volume.ts` (282) VolumeStore: sparse 3D brick store (C)
+- `brickData.ts` (87) a brick as data: run-packing for saves/network, fresh cell-state arrays
 - `water.ts` (217) Rivers and lakes: a pure function of the seed that reads no places (cities and roads read it, never the other way).
 - `wayParts.ts` (135) way types, site neighbours, nets
 - `wayRoute.ts` (193) route cost, bridging, way between two places

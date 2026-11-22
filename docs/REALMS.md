@@ -4,7 +4,8 @@
 **Never:** write `if (state.realm === 'underworld')` in a system. A realm is only *which* tiles/cells/things are loaded.
 
 ## 3D layer (`types/volume.ts`, `types/structures.ts`, `sim/world/volume.ts`)
-- Sparse 1 m cells in 16^3 bricks: shape byte (shape + quarter turn) + material byte (a tile kind).
+- Sparse 1 m cells in 16^3 bricks: shape byte (shape + quarter turn) + material byte (a tile kind). Each brick's `rev`
+  goes up on any cell or state change (wet, frost, fire…); the GPU re-copies a brick by its own `rev`.
 - Shapes are data (`content/shapes.ts`, ledger `SHAPE_LEDGER`, add numbers at the end). Faces come from the material tile's
   `wall`/`floor` surfaces. Ground tile and 3D cell are one "spot" (`GROUND_Z` = ground) in `ctx.matter`.
 - Builder (`sim/structures/builder.ts` + `builder/placer|house|arch.ts`) snaps shapes from recipes

@@ -58,6 +58,8 @@ export interface VolumeBrick {
   count: number;
   /** Changed since it was last saved or sent. */
   dirty: boolean;
+  /** Goes up whenever a cell or its state (wet, fire, frost…) changes, so a renderer knows to re-copy just this brick. */
+  rev: number;
   /** Box (in cells within the brick) that holds everything ever put here: x0,y0,z0,x1,y1,z1 (end exclusive). */
   readonly box: Uint8Array;
 }
