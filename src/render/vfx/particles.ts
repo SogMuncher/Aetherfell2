@@ -3,10 +3,7 @@ import { CONTENT, heldLight, itemDef, spellFor, thingDef } from '../../content';
 import type { Env } from '../lighting';
 import { emitFire, type FireSink } from './fireEmitter';
 import { KINDS, type KindMote, MAX, type Particle, TAU, fx } from './particleKinds';
-import type { Projection } from '../raycaster/camera';
 import { TILES } from '../../content/tiles';
-import type { Viewport } from '../viewport';
-import { pack } from '../color';
 
 
 export type { ParticleKind };
@@ -22,13 +19,12 @@ export type { ParticleKind };
  */
 export class Particles implements FireSink {
   private list: Particle[] = [];
-  /** The live motes, for a drawer that is not the CPU one. */
+  /** The live motes (the GPU draws them). */
   get motes(): readonly Particle[] {
     return this.list;
   }
   /** Dead motes wait here to be reused, so a long fire makes no garbage. */
   private pool: Particle[] = [];
-  private rainSeed = 0;
   private time = 0;
 
   /** A world mote of one of the fixed kinds. */
@@ -458,116 +454,5 @@ export class Particles implements FireSink {
       list[w++] = p;
     }
     list.length = w;
-  }
-
-  draw(vp: Viewport, proj: Projection, env: Env): void {
-    const { W, H, F, HOR, FX, FY, RX, RY } = proj;
-    const cx = proj.cam.x;
-    const cy = proj.cam.y;
-    const cz = proj.cam.z;
-    const px = vp.pixels;
-    const depth = vp.depth;
-    const amb = 0.35 + env.day * 0.65;
-    for (const p of this.list) {
-      const dx = p.x - cx;
-      const dy = p.y - cy;
-      const fwd = dx * FX + dy * FY;
-      if (fwd < 0.2) continue;
-      const right = dx * RX + dy * RY;
-      const sx = W * 0.5 + (F * right) / fwd + proj.cam.shakeX;
-      const sy = HOR - (F * (p.z - cz)) / fwd;
-      const s = Math.max(1, (p.size * F) / fwd);
-      if (sx + s < 0 || sx - s >= W || sy + s < 0 || sy - s >= H) continue;
-      const t = p.life / p.max;
-      const x0 = Math.max(0, Math.floor(sx - s / 2));
-      const x1 = Math.min(W - 1, Math.floor(sx + s / 2));
-      const y0 = Math.max(0, Math.floor(sy - s / 2));
-      const y1 = Math.min(H - 1, Math.floor(sy + s / 2));
-      const fog = Math.min(0.95, 1 - Math.exp(-fwd / env.fogDist));
-      const rad = s / 2;
-      const r2 = rad * rad + 0.25;
-      // Colour fades from birth to death colour.
-      const u = 1 - t;
-      let pr = p.r + (p.r2 - p.r) * u;
-      let pg = p.g + (p.g2 - p.g) * u;
-      let pb = p.b + (p.b2 - p.b) * u;
-      // Blaze motes: a few hard colour steps from the palette, flickering out in a dither.
-      const pal = p.pal;
-      let dither = false;
-      if (pal && pal.length > 0) {
-        const c = pal[Math.min(pal.length - 1, Math.floor(u * pal.length))] ?? 0;
-        pr = (c >> 16) & 255;
-        pg = (c >> 8) & 255;
-        pb = c & 255;
-        dither = t < 0.3;
-      }
-      const flick = dither ? Math.floor(this.time * 14) : 0;
-      // Light it adds (glowing part)…
-      const k = (pal ? 1 : t) * (1 - fog) * p.glow;
-      const ar = pr * k;
-      const ag = pg * k;
-      const ab = pb * k;
-      // …and how much it covers (solid part), lit by the sky and fogged with distance.
-      const cover = (1 - p.glow) * (0.85 + (t * 0.5 - 0.85) * p.soft);
-      const cr = pr * amb + (env.fog[0] - pr * amb) * fog;
-      const cg = pg * amb + (env.fog[1] - pg * amb) * fog;
-      const cb = pb * amb + (env.fog[2] - pb * amb) * fog;
-      const soft = p.soft;
-      for (let y = y0; y <= y1; y++) {
-        const ddy = y + 0.5 - sy;
-        for (let x = x0; x <= x1; x++) {
-          const ddx = x + 0.5 - sx;
-          const d2 = ddx * ddx + ddy * ddy;
-          if (!pal && d2 > r2) continue;
-          if (dither && ((x + y + flick) & 1) === 0) continue;
-          const o = y * W + x;
-          if ((depth[o] ?? 0) < fwd) continue;
-          const fall = pal ? 1 : 1 - d2 / r2;
-          const edge = 1 - soft + soft * fall;
-          const c = px[o] ?? 0;
-          let R = c & 255;
-          let G = (c >>> 8) & 255;
-          let B = (c >>> 16) & 255;
-          if (cover > 0) {
-            const aa = cover * edge;
-            R += (cr - R) * aa;
-            G += (cg - G) * aa;
-            B += (cb - B) * aa;
-          }
-          if (k > 0) {
-            R += ar * fall;
-            G += ag * fall;
-            B += ab * fall;
-          }
-          px[o] = pack(R, G, B);
-        }
-      }
-    }
-  }
-
-  /** Screen-space rain streaks slanted by wind relative to where you look. */
-  drawRain(vp: Viewport, proj: Projection, env: Env, windX: number, windY: number, time: number): void {
-    if (env.rain < 0.05) return;
-    const W = vp.width;
-    const H = vp.height;
-    const px = vp.pixels;
-    const side = windX * proj.RX + windY * proj.RY;
-    const slant = Math.max(-1.5, Math.min(1.5, side * 0.12));
-    const n = Math.floor(env.rain * W * 0.9);
-    this.rainSeed = (this.rainSeed + 1) % 100000;
-    const light = 0.45 + env.day * 0.4;
-    for (let i = 0; i < n; i++) {
-      const hx = ((i * 7919 + Math.floor(time * 37) * 104729) % (W * 13)) / 13;
-      const hy = (((i * 15485863) % H) + time * 420 * (1 + (i % 3) * 0.3)) % H;
-      const len = 4 + (i % 4);
-      for (let k = 0; k < len; k++) {
-        const x = Math.floor(hx + slant * k);
-        const y = Math.floor(hy + k);
-        if (x < 0 || x >= W || y < 0 || y >= H) continue;
-        const o = y * W + x;
-        const c = px[o] ?? 0;
-        px[o] = pack((c & 255) * 0.75 + 190 * light * 0.25, ((c >>> 8) & 255) * 0.75 + 200 * light * 0.25, ((c >>> 16) & 255) * 0.75 + 225 * light * 0.25);
-      }
-    }
   }
 }

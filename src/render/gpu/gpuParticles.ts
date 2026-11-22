@@ -73,7 +73,7 @@ export class GpuParticles {
     this.rainVao = gl.createVertexArray() as WebGLVertexArrayObject;
   }
 
-  /** Motes: colours worked out as Classic does (birth to death fade, palette steps, sky light, fog). */
+  /** Motes: colours worked out on the CPU (birth to death fade, palette steps, sky light, fog). */
   drawMotes(vp: Float32Array, cam: CamBasis, eye: { x: number; y: number; z: number }, env: Env, list: readonly Particle[], time: number, height: number): void {
     const n = Math.min(GPU_FX.maxMotes, list.length);
     if (n === 0) return;

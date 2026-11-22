@@ -22,7 +22,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `skySmoke.ts` (163) Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
 - `torchSmoke.ts` (94) Headless checks for torches: the wall-mounted kind in buildings and halls, and the one you hold
 - `viewmodelShot.ts` (151) renders held-weapon PNGs (owned by the viewmodel thread)
-- `volumeSmoke.ts` (359) The 3D layer: shapes, the brick store, standing on stairs and ramps, bumping heads, buildings
+- `volumeSmoke.ts` (289) The 3D layer: shapes, the brick store, standing on stairs and ramps, bumping heads, buildings
 - `waterSmoke.ts` (385) check: rivers, lakes, bridges, piers, harbours
 - `waysSmoke.ts` (166) WAYS: roads, paths and trails join the places of the world, and the underworld follows them.
 - `worldSmoke.ts` (257) Headless checks for data-driven world generation and the far-away terrain: biomes come from
@@ -116,14 +116,14 @@ Search this first, then open only the file you need. Update the entry (and line 
 ## src/render/
 - `color.ts` (50) packed pixel colour helpers
 - `env.ts` (147) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
-- `lighting.ts` (~150) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); Classic grid; re-exports Env
+- `lighting.ts` (~150) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); 1 m grid for the held item; re-exports Env
 - `airSmoke.ts` (~170) smoke: the live level of the air cells; burning spots feed it, it rises, spreads and thins in steps
 - `airCells.ts` (~220) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
 - `stateLooks.ts` (~70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (60) adaptive pixel size from frame time
-- `renderer.ts` (149) frame orchestration: terrain, volume, sky, sprites, vfx, post
-- `viewport.ts` (47) The low-resolution retro frame. Everything is drawn into `pixels` (one Uint32 per pixel) with a
+- `renderer.ts` (~150) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `viewport.ts` (~35) the low-resolution frame size; the GPU canvas lies over it
 
 ## src/render/entities/
 - `bodyArt.ts` (249) creature sprites: poses, individuals, BodyBank
@@ -138,7 +138,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 - `itemVessel.ts` (157) flasks, bottles, vials, jugs, pots
 - `mesh.ts` (402) tiny 3D painter for the held weapon (being replaced)
 - `props.ts` (55) props grown from forms
-- `spriteRenderer.ts` (217) depth-tested billboards, dithered
+- `spriteRenderer.ts` (~145) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (794) held weapon as small 3D scene (being replaced by sprites)
 
@@ -167,19 +167,13 @@ Search this first, then open only the file you need. Update the entry (and line 
 ## src/render/materials/
 - `textures.ts` (172) tileable procedural textures from surface layers
 
-## src/render/post/
-- `post.ts` (66) ordered dither to reduced palette, vignette
-
 ## src/render/raycaster/
 - `camera.ts` (47) per-frame projection values
 - `cloudShadow.ts` (73) cloud shadows on the land
 - `lodLooks.ts` (57) far colours of biomes
-- `sky.ts` (295) ray-marched cloud slabs, sun, moon, stars, aurora
 - `terrainLod.ts` (263) cached LOD pyramid for far land (C)
 - `terrainLodPaint.ts` (184) paints changed chunks (tiles, matter states) over a LOD block's seed picture
-- `terrainRenderer.ts` (416) voxel-space column marcher (C)
 - `tileBillboards.ts` (171) tree/rock billboards from tiles
-- `volumeRenderer.ts` (407) ray-casts 3D-layer bricks (C)
 
 ## src/render/ui/
 - `bag.ts` (476) BagWindow: draggable inventory window (C)
@@ -192,7 +186,7 @@ Search this first, then open only the file you need. Update the entry (and line 
 
 ## src/render/vfx/
 - `particleKinds.ts` (88) particle kinds, physics, mote look tables
-- `particles.ts` (556) Particles: visual effects from events and state (C)
+- `particles.ts` (458) Particles: visual effects from events and state (C)
 
 ## src/settings/
 - `settings.ts` (196) settings as data + localStorage store

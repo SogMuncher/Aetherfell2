@@ -57,7 +57,6 @@ export const SETTINGS: readonly SettingDef[] = [
   { id: 'muteInBackground', group: 'Sound', label: 'Quiet when in the background', help: 'Fades the sound out while you are in another window or tab.', kind: 'toggle', value: true },
 
   // Video
-  { id: 'renderDistance', group: 'Video', label: 'View distance', help: 'How far you can see. Shorter is faster on slow computers.', kind: 'slider', min: 0.5, max: 7, step: 0.5, value: 7, format: (v) => `${v} km` },
   {
     id: 'resolution',
     group: 'Video',
@@ -103,18 +102,6 @@ export const SETTINGS: readonly SettingDef[] = [
   },
   { id: 'screenShake', group: 'Video', label: 'Screen shake', help: 'The view jolts when you are hit or land hard.', kind: 'toggle', value: true },
   { id: 'headBob', group: 'Video', label: 'Head bob', help: 'The view bobs a little as you walk.', kind: 'toggle', value: true },
-  {
-    id: 'renderer',
-    group: 'Video',
-    label: 'Graphics engine',
-    help: 'Classic draws on the processor. The graphics card engine draws everything on the GPU and is being compared with Classic.',
-    kind: 'choice',
-    value: 'classic',
-    options: [
-      { value: 'classic', label: 'Classic' },
-      { value: 'gpu', label: 'Graphics card (experimental)' },
-    ],
-  },
   {
     id: 'lightsPerPixel',
     group: 'Video',

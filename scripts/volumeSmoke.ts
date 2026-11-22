@@ -7,17 +7,8 @@ import { SHAPE_BOTTOM, SHAPE_HIT, SHAPE_SAMPLES, SHAPE_TOP, rayShape, shapeId } 
 import { VolumeStore } from '../src/sim/world/volume';
 import { buildStructure } from '../src/sim/structures';
 import { tileCode } from '../src/content/tiles';
-import { VolumeRenderer } from '../src/render/raycaster/volumeRenderer';
-import { project } from '../src/render/raycaster/camera';
-import { computeEnv, LightMap } from '../src/render/lighting';
-import { TerrainRenderer } from '../src/render/raycaster/terrainRenderer';
-import type { Viewport } from '../src/render/viewport';
 import type { Entity, Rng, StructureSite } from '../src/types';
 import { emptyInput, shapeByte } from '../src/types';
-
-declare const process: { env: Record<string, string | undefined> };
-const fsName = 'node:fs';
-const fs = (await import(/* @vite-ignore */ fsName)) as { writeFileSync(path: string, data: Uint8Array): void };
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = ''): void {
@@ -287,72 +278,11 @@ function flatSpot(sim: Simulation, from: Entity): { x: number; y: number; z: num
   check('events rebuild it on the other side', other.state.volume.shapeAt(1000, 1000, 5) !== 0);
 }
 
-// ---- Drawing ------------------------------------------------------------------------------
+// ---- Buildings stand tall --------------------------------------------------------------
 {
-  const W = 356;
-  const H = 200;
-  const vp = { width: W, height: H, pixels: new Uint32Array(W * H), depth: new Float32Array(W * H) } as unknown as Viewport;
   const state = createState(7);
-  state.weather.time = 0.35;
-  const v = state.volume;
-  const tower = build('tower', 21, 20, -3, 0, 0, v as unknown as VolumeStore);
-  build('gatehouse', 8, -14, -9, 0, 1, v as unknown as VolumeStore);
-  build('cottage', 3, 10, 18, 0, 2, v as unknown as VolumeStore);
-  build('hall', 6, -20, 20, 0, 0, v as unknown as VolumeStore);
-  build('ruinedKeep', 2, 40, 24, 0, 3, v as unknown as VolumeStore);
-  build('watchtower', 2, 30, -22, 0, 0, v as unknown as VolumeStore);
-  const vr = new VolumeRenderer();
-  const lm = new LightMap();
-  const floorGreen = (): void => {
-    for (let i = 0; i < W * H; i++) {
-      const y = Math.floor(i / W);
-      vp.pixels[i] = y < H / 2 ? 0xffe0b070 : 0xff3a6628;
-      vp.depth[i] = y < H / 2 ? 1e9 : 20 + (y - H / 2) * 0.8;
-    }
-  };
-  const views: { name: string; x: number; y: number; z: number; yaw: number }[] = [
-    { name: 'tower', x: -10, y: 0, z: 1.7, yaw: 0 },
-    { name: 'gate', x: -8, y: -25, z: 1.7, yaw: Math.PI / 2 + 0.3 },
-    { name: 'inside', x: 20 + 3.5, y: -3 + 1.5, z: 1.7, yaw: 0.4 },
-    { name: 'far', x: -60, y: 0, z: 6, yaw: 0.1 },
-    { name: 'empty', x: 300, y: 300, z: 1.7, yaw: 0 },
-  ];
-  for (const view of views) {
-    const cam = { x: view.x, y: view.y, z: view.z, yaw: view.yaw, pitch: 0.05, shakeX: 0, shakeY: 0 };
-    const p = project(cam, W, H, 0.5 / Math.tan((60 * Math.PI) / 360));
-    const env = computeEnv(state, 0, view.x, view.y);
-    floorGreen();
-    vr.draw(vp, p, env, lm, v);
-    let ms = Infinity;
-    const N = 20;
-    for (let k = 0; k < N; k++) {
-      floorGreen();
-      const t0 = performance.now();
-      vr.draw(vp, p, env, lm, v);
-      ms = Math.min(ms, performance.now() - t0);
-    }
-    let drawn = 0;
-    for (let i = 0; i < W * H; i++) if ((vp.depth[i] ?? 0) < 1e8 && (vp.pixels[i] ?? 0) !== 0xff3a6628 && (vp.pixels[i] ?? 0) !== 0xffe0b070) drawn++;
-    console.log(`     view '${view.name}': ${ms.toFixed(2)} ms, ${vr.traced} pixels traced, ${vr.bricksDrawn} bricks, ${drawn} pixels changed`);
-    if (view.name === 'empty') check('far from any building the 3D layer costs nothing', ms < 0.5 && vr.traced === 0);
-    else if (view.name === 'inside') check('inside a tower the frame is still fast', ms < 35 && drawn > W * H * 0.3, `${ms.toFixed(1)} ms`);
-    else check(`'${view.name}' view draws in good time and shows structures`, ms < 25 && drawn > 500, `${ms.toFixed(1)} ms, ${drawn} px`);
-    const dir = process.env.SHOT;
-    if (dir) {
-      const head = new TextEncoder().encode(`P6 ${W} ${H} 255\n`);
-      const out = new Uint8Array(head.length + W * H * 3);
-      out.set(head);
-      for (let i = 0; i < W * H; i++) {
-        const c = vp.pixels[i] ?? 0;
-        out[head.length + i * 3] = c & 255;
-        out[head.length + i * 3 + 1] = (c >>> 8) & 255;
-        out[head.length + i * 3 + 2] = (c >>> 16) & 255;
-      }
-      fs.writeFileSync(`${dir}/${view.name}.ppm`, out);
-    }
-  }
+  const tower = build('tower', 21, 20, -3, 0, 0, state.volume as unknown as VolumeStore);
   check('tower is tall enough to see from afar', tower.r.z1 > 8);
-  void TerrainRenderer;
 }
 
 if (failed) throw new Error(`${failed} volume check(s) failed`);

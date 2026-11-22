@@ -2,15 +2,13 @@ import type { Entity, ReadonlyTiles, SimEvent, SimState, WorldSampler } from '..
 import { computeEnv, LightMap, lerp } from './lighting';
 import type { Env } from './lighting';
 import { Viewport } from './viewport';
-import { TerrainRenderer } from './raycaster/terrainRenderer';
-import { drawSky } from './raycaster/sky';
-import { VolumeRenderer } from './raycaster/volumeRenderer';
+import { TerrainLod } from './raycaster/terrainLod';
+import { CloudShadow } from './raycaster/cloudShadow';
 import { project } from './raycaster/camera';
 import type { Camera, Projection } from './raycaster/camera';
 import { SpriteRenderer } from './entities/spriteRenderer';
 import { ViewModel } from './entities/viewModel';
 import { Particles } from './vfx/particles';
-import { postProcess } from './post';
 import { GpuRenderer } from './gpu/gpuRenderer';
 
 export interface FrameInput {
@@ -33,14 +31,18 @@ export interface FrameInput {
  */
 export class Renderer {
   readonly viewport: Viewport;
-  readonly terrain: TerrainRenderer;
+  /** Cached far land (LOD pyramid) the GPU terrain reads. */
+  readonly lod: TerrainLod;
+  /** Where clouds keep the sun off the land. */
+  private readonly shadow = new CloudShadow();
   private realm = 'overworld';
-  readonly volume = new VolumeRenderer();
   private sprites = new SpriteRenderer();
   readonly particles = new Particles();
   private lightmap = new LightMap();
   private viewModel = new ViewModel();
   private gpu: GpuRenderer | null = null;
+  /** WebGL2 could not start: nothing can be drawn (said once in the console). */
+  private gpuFailed = false;
   private readonly sampler: WorldSampler;
   private time = 0;
   private flash = 0;
@@ -50,13 +52,13 @@ export class Renderer {
   private hitFlash = new Map<number, number>();
   lastProjection: Projection | null = null;
   lastEnv: Env | null = null;
-  stats = { gpuMs: 0, terrainMs: 0, spritesMs: 0, totalMs: 0, lightMs: 0, skyMs: 0, volumeMs: 0, vfxMs: 0, postMs: 0 };
+  stats = { gpuMs: 0, totalMs: 0 };
   /** Look options from the settings menu (main.ts keeps these up to date). */
-  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24, gpu: false, lights: 4 };
+  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24, lights: 4 };
 
   constructor(canvas: HTMLCanvasElement, sampler: WorldSampler, tiles: ReadonlyTiles) {
     this.viewport = new Viewport(canvas, 200);
-    this.terrain = new TerrainRenderer(sampler, tiles);
+    this.lod = new TerrainLod(sampler, tiles);
     this.sampler = sampler;
   }
 
@@ -100,7 +102,7 @@ export class Renderer {
     const { state, tiles } = f;
     if (state.realm !== this.realm) {
       this.realm = state.realm;
-      this.terrain.forgetFar();
+      this.lod.forgetAll();
       this.gpu?.forget();
     }
     const me: Entity | undefined = f.localId !== null ? state.entities.get(f.localId) : undefined;
@@ -134,74 +136,34 @@ export class Renderer {
     // Under a roof no rain falls on you (the streaks and splashes stop).
     if (env.rain > 0 && !state.volume.openSky(cx, cy, cz + 0.3)) env.rain = 0;
     this.lastEnv = env;
-    if (this.options.gpu && this.renderGpu(f, p, cam, env, cx, cy, cz, me)) {
-      this.stats.totalMs = this.stats.totalMs * 0.9 + (performance.now() - t0) * 0.1;
-      this.stats.gpuMs = this.gpu?.gpuMs ?? 0;
-      return;
-    }
-    if (this.gpu) {
-      this.gpu.dispose();
-      this.gpu = null;
-    }
-    const a0 = performance.now();
-    this.lightmap.build(state, tiles, cx, cy, this.time, f.alpha);
-    this.terrain.time = this.time;
-    this.terrain.shadow.update(state.weather, cx, cy);
-    const a1 = performance.now();
-    this.terrain.draw(vp, p, env, this.lightmap);
-    const a2 = performance.now();
-    drawSky(vp, p, env, this.terrain.colTop, this.time, state.weather);
-    const a3 = performance.now();
-    this.volume.draw(vp, p, env, this.lightmap, state.volume);
-    const t1 = performance.now();
-    this.sprites.draw(vp, p, env, this.lightmap, state, tiles, f.localId, f.alpha, this.time, this.hitFlash);
-    const b0 = performance.now();
-    this.particles.emit(state, tiles, cx, cy, f.dt, env);
-    this.particles.update(f.dt);
-    this.particles.draw(vp, p, env);
-    this.particles.drawRain(vp, p, env, state.weather.wind.x, state.weather.wind.y, this.time);
-    if (me) this.viewModel.draw(vp, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: sa, dt: f.dt, time: this.time });
-    const t2 = performance.now();
-    const b1 = t2;
-    const wl = tiles.waterLevel(cx, cy);
-    const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
-    postProcess(vp, { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0 }, this.options.colourLevels);
-    vp.present();
-    const t3 = performance.now();
-    const st = this.stats;
-    const avg = (old: number, v: number): number => old * 0.9 + v * 0.1;
-    st.lightMs = avg(st.lightMs, a1 - a0);
-    st.terrainMs = avg(st.terrainMs, a2 - a1);
-    st.skyMs = avg(st.skyMs, a3 - a2);
-    st.volumeMs = avg(st.volumeMs, t1 - a3);
-    st.spritesMs = avg(st.spritesMs, b0 - t1);
-    st.vfxMs = avg(st.vfxMs, b1 - b0);
-    st.postMs = avg(st.postMs, t3 - b1);
-    this.stats.totalMs = this.stats.totalMs * 0.9 + (t3 - t0) * 0.1;
+    if (!this.renderGpu(f, p, cam, env, cx, cy, cz, me)) return;
+    this.stats.totalMs = this.stats.totalMs * 0.9 + (performance.now() - t0) * 0.1;
+    this.stats.gpuMs = this.gpu?.gpuMs ?? 0;
   }
 
-  /** GPU pipeline frame (docs/GPU-RENDER.md). Returns false when WebGL2 is unavailable, so the CPU path draws instead. */
+  /** The frame on the graphics card (docs/GPU-RENDER.md). Returns false when WebGL2 is unavailable. */
   private renderGpu(f: FrameInput, p: Projection, cam: Camera, env: Env, cx: number, cy: number, cz: number, me: Entity | undefined): boolean {
     const { state, tiles } = f;
+    if (this.gpuFailed) return false;
     try {
-      this.gpu ??= new GpuRenderer(this.viewport.canvas, this.terrain.lod, this.sampler, tiles);
+      this.gpu ??= new GpuRenderer(this.viewport.canvas, this.lod, this.sampler, tiles);
     } catch (e) {
-      console.warn('GPU renderer unavailable, using the classic one', e);
-      this.options.gpu = false;
+      console.error('This game needs WebGL2 (a graphics card and browser that support it).', e);
+      this.gpuFailed = true;
       return false;
     }
-    this.terrain.lod.beginFrame(7);
+    this.lod.beginFrame(7);
     this.lightmap.build(state, tiles, cx, cy, this.time, f.alpha);
     const billboards = this.sprites.collect(p, state, tiles, f.localId, f.alpha, this.time, this.hitFlash);
     const wl = tiles.waterLevel(cx, cy);
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
-    this.terrain.shadow.update(state.weather, cx, cy);
+    this.shadow.update(state.weather, cx, cy);
     this.particles.emit(state, tiles, cx, cy, f.dt, env);
     this.particles.update(f.dt);
     const wind = state.weather.wind;
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.terrain.shadow, shadowOn: this.terrain.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;

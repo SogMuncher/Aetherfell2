@@ -24,7 +24,7 @@ try {
   const p = await b.newPage({ viewport: { width: 800, height: 450 } });
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
-  await p.addInitScript(() => localStorage.setItem('aetherfell2.settings', JSON.stringify({ renderer: 'gpu', renderDistance: 3 })));
+  await p.addInitScript(() => localStorage.setItem('aetherfell2.settings', JSON.stringify({})));
   await p.goto(`http://localhost:${PORT}/`);
   await p.waitForSelector('[data-a=solo]', { timeout: 15000 }).catch(() => fail('menu did not appear', b));
   await p.click('[data-a=solo]');

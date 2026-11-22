@@ -1,4 +1,4 @@
-/** One shared texture atlas of every tile code's floor and wall surface (and the surfaces matter states cover things with), painted from material data (the same procedural textures Classic uses). */
+/** One shared texture atlas of every tile code's floor and wall surface (and the surfaces matter states cover things with), painted from material data (procedural textures from render/materials). */
 import type { TileInfo } from '../../types';
 import { TILES } from '../../content/tiles';
 import { surfaceTexture, TEX } from '../materials';
