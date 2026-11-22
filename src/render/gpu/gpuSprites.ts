@@ -8,7 +8,7 @@ import type { Billboard } from '../entities/spriteRenderer';
 import type { Sprite } from '../entities/sprites';
 import type { Env } from '../lighting';
 import { compile, loc, makeTexture } from './glUtil';
-import { GpuLight, LIGHT_SHADER } from './gpuLight';
+import { SURFACE_OUT } from './gpuSurfaces';
 import type { CamBasis } from './glUtil';
 
 /** All numbers live here. */
@@ -28,8 +28,8 @@ void main(){
 const FS = `#version 300 es
 precision highp float;
 uniform sampler2D uAtlas; uniform vec3 uEye, uFog, uSun, uAmb; uniform float uFogDist, uSunK;
-${LIGHT_SHADER}
-in vec2 vUv; flat in vec4 fRect; flat in vec4 fTint; flat in vec4 fFx; flat in vec3 fBase; in vec3 vWorld; out vec4 o;
+${SURFACE_OUT}
+in vec2 vUv; flat in vec4 fRect; flat in vec4 fTint; flat in vec4 fFx; flat in vec3 fBase; in vec3 vWorld; layout(location = 0) out vec4 o;
 const float BAYER[16] = float[16](0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.);
 void main(){
   ivec2 px = ivec2(gl_FragCoord.xy);
@@ -37,7 +37,8 @@ void main(){
   ivec2 t = ivec2(fRect.xy) + clamp(ivec2(vUv * fRect.zw), ivec2(0), ivec2(fRect.zw) - 1);
   vec4 c = texelFetch(uAtlas, t, 0);
   if (c.a < 0.5) discard;
-  vec3 L = uAmb + uSun * uSunK + lightAt(fBase.xy) + vec3(fFx.x, fFx.x * 0.45, fFx.x * 0.1) + vec3(fFx.y * 2.0, fFx.y * 0.4, fFx.y * 0.4);
+  vec3 L = uAmb + uSun * uSunK + vec3(fFx.x, fFx.x * 0.45, fFx.x * 0.1) + vec3(fFx.y * 2.0, fFx.y * 0.4, fFx.y * 0.4);
+  surfaceOut(c.rgb * fTint.rgb, vec3(0.0, 0.0, 1.0), sunShare(uSun * uSunK, L), 0.5);
   float f = min(0.97, 1.0 - exp(-length(vWorld - uEye) / uFogDist));
   o = vec4(c.rgb * L * fTint.rgb * (1.0 - f) + uFog * f, 1.0);
 }`;
@@ -62,7 +63,7 @@ export class GpuSprites {
   /** Billboards drawn in the last frame. */
   drawn = 0;
 
-  constructor(private readonly gl: WebGL2RenderingContext, private readonly light: GpuLight) {
+  constructor(private readonly gl: WebGL2RenderingContext) {
     this.prog = compile(gl, VS, FS);
     this.vao = gl.createVertexArray() as WebGLVertexArrayObject;
     gl.bindVertexArray(this.vao);
@@ -146,7 +147,6 @@ export class GpuSprites {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlas);
     gl.uniform1i(loc(gl, p, 'uAtlas'), 0);
-    this.light.bind(p, 1);
     gl.uniformMatrix4fv(loc(gl, p, 'uVP'), false, vp);
     gl.uniform3f(loc(gl, p, 'uRight'), cam.right[0], cam.right[1], 0);
     gl.uniform3f(loc(gl, p, 'uEye'), eye.x, eye.y, eye.z);

@@ -18,6 +18,7 @@ import { GpuClouds } from './gpuClouds';
 import { GpuOverlay } from './gpuOverlay';
 import { GpuParticles } from './gpuParticles';
 import { GpuLight } from './gpuLight';
+import { GpuSolid } from './gpuSolid';
 import { GpuSprites } from './gpuSprites';
 import { GpuPost } from './gpuPost';
 import type { PostParams } from './gpuPost';
@@ -40,6 +41,8 @@ export interface GpuFrame {
   weather: WeatherState;
   volume: ReadonlyVolume;
   lightmap: LightMap;
+  /** Lights each pixel takes (setting). */
+  lightsPerPixel: number;
   tiles: ReadonlyTiles;
   billboards: readonly Billboard[];
   motes: readonly Particle[];
@@ -66,6 +69,7 @@ export class GpuRenderer {
   private readonly structures: GpuStructures;
   private readonly blocks: GpuTileBlocks;
   private readonly light: GpuLight;
+  private readonly solid: GpuSolid;
   private readonly sprites: GpuSprites;
   private readonly fx: GpuParticles;
   private readonly overlay: GpuOverlay;
@@ -87,10 +91,11 @@ export class GpuRenderer {
     this.gl = gl;
     const surf = makeSurfaceAtlas(gl);
     this.light = new GpuLight(gl);
-    this.terrain = new GpuTerrain(gl, lod, tiles, surf, this.light);
-    this.structures = new GpuStructures(gl, surf, this.light);
-    this.blocks = new GpuTileBlocks(gl, surf, this.light);
-    this.sprites = new GpuSprites(gl, this.light);
+    this.solid = new GpuSolid(gl);
+    this.terrain = new GpuTerrain(gl, lod, tiles, surf);
+    this.structures = new GpuStructures(gl, surf);
+    this.blocks = new GpuTileBlocks(gl, surf);
+    this.sprites = new GpuSprites(gl);
     this.fx = new GpuParticles(gl);
     this.overlay = new GpuOverlay(gl);
     this.sky = new GpuSky(gl);
@@ -140,14 +145,22 @@ export class GpuRenderer {
     const cam = camBasis(f.yaw, f.pitch, f.fovDegrees, w / h);
     const vp = viewProj(f.eye, cam, NEAR, FAR);
     this.terrain.update(f.eye.x, f.eye.y);
-    this.light.upload(f.lightmap);
+    this.light.upload(f.lightmap.lights, f.eye.x, f.eye.y);
+    this.solid.update(f.eye, f.tiles, f.volume);
     this.post.begin(w, h);
     this.sky.draw(cam, f.eye, f.env, f.time);
     if (this.frames % 4 === 0) this.terrain.setShadow(f.shadow, f.shadowOn);
+    this.post.surfaces(true);
     this.terrain.draw(vp, f.eye, f.env, f.time);
     this.blocks.draw(vp, f.eye, f.env, f.tiles, f.time);
     this.structures.draw(vp, cam, w, h, f.time, f.eye, f.env, f.volume);
     this.sprites.draw(vp, cam, f.eye, f.env, f.billboards);
+    this.post.surfaces(false);
+    // Every pixel's surface is known now: light it from the nearest lights, with a shadow ray to each.
+    const s = this.post.surfaceTextures;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.litTarget);
+    this.light.draw(cam, f.eye, f.env, f.lightsPerPixel, s.alb, s.nrm, this.post.depthTexture, this.solid, w, h, NEAR, FAR);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.sceneTarget);
     this.clouds.draw(cam, f.eye, f.env, f.weather, f.time, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR);
     gl.viewport(0, 0, w, h);
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;

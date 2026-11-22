@@ -1,11 +1,13 @@
-import type { Entity, ReadonlyTiles, SimState } from '../types';
+import type { ReadonlyTiles, SimState } from '../types';
 import { unpackKey, unpackSpot } from '../types';
+import type { LightDef } from '../types';
 import { CONTENT, heldLight, thingDef, spellFor } from '../content';
 
 export { computeEnv } from './env';
 export type { Env } from './env';
 
-interface PointLight {
+/** One light in the world this frame (a torch, a flame, a spell, a lamp): the one list every renderer lights from. */
+export interface PointLight {
   x: number;
   y: number;
   z: number;
@@ -19,8 +21,9 @@ interface PointLight {
 export const LM_SIZE = 96;
 
 /**
- * A small light grid (1 m cells) centred on the camera. Torches, flames and spells add warm light
- * with smooth falloff; torches also cast shadows by checking line of sight through walls.
+ * Gathers every light near the camera from shared data: a thing's `light`, a bolt's spell light, what an actor holds,
+ * the realm's carried lamp, and anything burning (the `fire` matter state's `light`, on ground, cells and bodies).
+ * `lights` is that list (the GPU lights each pixel from it). Classic also splats it into a 1 m grid (`grid`).
  */
 export class LightMap {
   readonly r = new Float32Array(LM_SIZE * LM_SIZE);
@@ -28,60 +31,62 @@ export class LightMap {
   readonly b = new Float32Array(LM_SIZE * LM_SIZE);
   ox = 0;
   oy = 0;
-  private lights: PointLight[] = [];
+  readonly lights: PointLight[] = [];
 
-  build(state: SimState, tiles: ReadonlyTiles, camX: number, camY: number, time: number, alpha: number): void {
+  build(state: SimState, tiles: ReadonlyTiles, camX: number, camY: number, time: number, alpha: number, grid = true): void {
     this.ox = Math.floor(camX) - LM_SIZE / 2;
     this.oy = Math.floor(camY) - LM_SIZE / 2;
-    this.r.fill(0);
-    this.g.fill(0);
-    this.b.fill(0);
     const lights = this.lights;
     lights.length = 0;
+    const fire = CONTENT.matterStates.fire.light;
+    const near = (x: number, y: number, pad: number): boolean => Math.abs(x - camX) <= LM_SIZE / 2 + pad && Math.abs(y - camY) <= LM_SIZE / 2 + pad;
+    const add = (L: LightDef, k: number, x: number, y: number, z: number, seed: number, shadow: boolean): void => {
+      const fl = k * (1 - L.flicker * 0.5 + Math.sin(time * 17 + seed * 3.1) * L.flicker * 0.25 + Math.sin(time * 29 + seed) * L.flicker * 0.25);
+      lights.push({ x, y, z, r: L.r * fl, g: L.g * fl, b: L.b * fl, radius: L.radius, shadow });
+    };
     for (const e of state.entities.values()) {
       const d = thingDef(CONTENT, e.def);
       // A thing's own light, a bolt's, or the light of what an actor holds in its hand.
       const held = e.projectile || d.light ? undefined : heldLight(CONTENT, e);
       const L = e.projectile ? spellFor(CONTENT, e.projectile.spell)?.light : d.light ?? held;
       const burning = (e.status.burning ?? 0) > 0;
-      if (!L && !burning) continue;
+      if (!L && !(burning && fire)) continue;
       const x = lerp(e.prev.x, e.pos.x, alpha);
       const y = lerp(e.prev.y, e.pos.y, alpha);
-      if (Math.abs(x - camX) > LM_SIZE / 2 + 10 || Math.abs(y - camY) > LM_SIZE / 2 + 10) continue;
-      const fl = L ? 1 - L.flicker * 0.5 + Math.sin(time * 17 + e.id * 3.1) * L.flicker * 0.25 + Math.sin(time * 29 + e.id) * L.flicker * 0.25 : 1;
-      if (L) lights.push({ x, y, z: e.z + 1, r: L.r * fl, g: L.g * fl, b: L.b * fl, radius: L.radius, shadow: !!d.body.anchored || !!held });
-      else if (burning) lights.push(burnLight(e, x, y, time));
+      if (!near(x, y, 10)) continue;
+      if (L) add(L, 1, x, y, e.z + 1, e.id, !!d.body.anchored || !!held);
+      else if (fire) add(fire, 1, x, y, e.z + 1, e.id, false);
     }
     // Where the sky is rock, every traveller carries a lamp.
     const glow = CONTENT.realms[state.realm]?.glow;
     if (glow) {
       for (const pid of Object.values(state.players)) {
         const e = state.entities.get(pid);
-        if (!e) continue;
-        const fl = 1 - glow.flicker * 0.5 + Math.sin(time * 15 + e.id * 2.3) * glow.flicker * 0.3 + Math.sin(time * 27 + e.id) * glow.flicker * 0.2;
-        lights.push({ x: lerp(e.prev.x, e.pos.x, alpha), y: lerp(e.prev.y, e.pos.y, alpha), z: e.z + 1.4, r: glow.r * fl, g: glow.g * fl, b: glow.b * fl, radius: glow.radius, shadow: true });
+        if (e) add(glow, 1, lerp(e.prev.x, e.pos.x, alpha), lerp(e.prev.y, e.pos.y, alpha), e.z + 1.4, e.id, true);
       }
     }
     let n = 0;
-    for (const key of state.burning) {
-      if (n > 400) break;
-      const { x, y } = unpackKey(key);
-      if (Math.abs(x - camX) > LM_SIZE / 2 + 6 || Math.abs(y - camY) > LM_SIZE / 2 + 6) continue;
-      const f = tiles.fire(x, y) / 255;
-      const fl = 0.8 + Math.sin(time * 13 + x * 1.7 + y * 2.3) * 0.2;
-      lights.push({ x: x + 0.5, y: y + 0.5, z: 1, r: 1.1 * f * fl, g: 0.55 * f * fl, b: 0.18 * f * fl, radius: 4.5, shadow: false });
-      n++;
+    if (fire) {
+      for (const key of state.burning) {
+        if (n > 400) break;
+        const { x, y } = unpackKey(key);
+        if (!near(x, y, 6)) continue;
+        add(fire, tiles.fire(x, y) / 255, x + 0.5, y + 0.5, tiles.ground(x + 0.5, y + 0.5) + 1, x * 1.7 + y * 2.3, false);
+        n++;
+      }
+      // Fire in the walls, floors and roofs of the 3D layer lights the room like any other fire.
+      for (const key of state.volume.burningCells) {
+        if (n > 400) break;
+        const { x, y, z } = unpackSpot(key);
+        if (!near(x, y, 6)) continue;
+        add(fire, state.volume.cellGet('fire', x, y, z) / 255, x + 0.5, y + 0.5, z + 1, x * 1.7 + y * 2.3 + z, false);
+        n++;
+      }
     }
-    // Fire in the walls, floors and roofs of the 3D layer lights the room like any other fire.
-    for (const key of state.volume.burningCells) {
-      if (n > 400) break;
-      const { x, y, z } = unpackSpot(key);
-      if (Math.abs(x - camX) > LM_SIZE / 2 + 6 || Math.abs(y - camY) > LM_SIZE / 2 + 6) continue;
-      const f = state.volume.cellGet('fire', x, y, z) / 255;
-      const fl = 0.8 + Math.sin(time * 13 + x * 1.7 + y * 2.3 + z) * 0.2;
-      lights.push({ x: x + 0.5, y: y + 0.5, z: z + 1, r: 1.1 * f * fl, g: 0.55 * f * fl, b: 0.18 * f * fl, radius: 4.5, shadow: false });
-      n++;
-    }
+    if (!grid) return;
+    this.r.fill(0);
+    this.g.fill(0);
+    this.b.fill(0);
     for (const l of lights) this.splat(l, tiles);
   }
 
@@ -151,11 +156,6 @@ export class LightMap {
     out[1] = (G[i] ?? 0) * w00 + (G[i + 1] ?? 0) * w10 + (G[i + LM_SIZE] ?? 0) * w01 + (G[i + LM_SIZE + 1] ?? 0) * w11;
     out[2] = (B[i] ?? 0) * w00 + (B[i + 1] ?? 0) * w10 + (B[i + LM_SIZE] ?? 0) * w01 + (B[i + LM_SIZE + 1] ?? 0) * w11;
   }
-}
-
-function burnLight(e: Entity, x: number, y: number, time: number): PointLight {
-  const fl = 0.85 + Math.sin(time * 15 + e.id) * 0.15;
-  return { x, y, z: e.z + 1, r: 1.1 * fl, g: 0.5 * fl, b: 0.15 * fl, radius: 5, shadow: false };
 }
 
 export function lerp(a: number, b: number, t: number): number {

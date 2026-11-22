@@ -52,7 +52,7 @@ export class Renderer {
   lastEnv: Env | null = null;
   stats = { gpuMs: 0, terrainMs: 0, spritesMs: 0, totalMs: 0, lightMs: 0, skyMs: 0, volumeMs: 0, vfxMs: 0, postMs: 0 };
   /** Look options from the settings menu (main.ts keeps these up to date). */
-  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24, gpu: false };
+  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24, gpu: false, lights: 4 };
 
   constructor(canvas: HTMLCanvasElement, sampler: WorldSampler, tiles: ReadonlyTiles) {
     this.viewport = new Viewport(canvas, 200);
@@ -201,7 +201,7 @@ export class Renderer {
     const wind = state.weather.wind;
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, lightmap: this.lightmap, tiles, billboards, motes: this.particles.motes, shadow: this.terrain.shadow, shadowOn: this.terrain.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, billboards, motes: this.particles.motes, shadow: this.terrain.shadow, shadowOn: this.terrain.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;

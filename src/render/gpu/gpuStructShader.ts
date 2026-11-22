@@ -1,5 +1,4 @@
-import { LIGHT_SHADER } from './gpuLight';
-import { SURFACE_SHADER } from './gpuSurfaces';
+import { SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
 import { STATE_SHADER } from './gpuStates';
 
 /** Shader text for GPU structures (docs/GPU-RENDER.md stage 2): each brick's box is rasterised, the pixel walks the cells inside it. */
@@ -22,10 +21,10 @@ export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 uniform mat4 uVP; uniform vec3 uEye, uFog, uSun, uAmb, uSunDir; uniform float uFogDist;
 uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform float uTime; uniform float uRainWet; uniform vec2 uFade; uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
-in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; out vec4 o;
+in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; layout(location = 0) out vec4 o;
 ${SURFACE_SHADER}
 ${STATE_SHADER}
-${LIGHT_SHADER}
+${SURFACE_OUT}
 float P(int pc, int k){ return texelFetch(uPieces, ivec2(k, pc), 0).r; }
 float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
 vec4 rayShape(int byte, vec3 o, vec3 d){
@@ -118,7 +117,9 @@ void main(){
   // What has happened to this cell (the same matter states the sim's rules use), blended over its own surface.
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2((slot % 32) * 64 + (cell.z - origin.z & 3) * 16 + (cell.x - origin.x), (slot / 32) * 64 + ((cell.z - origin.z) >> 2) * 16 + (cell.y - origin.y)), suv, open ? uRainWet : 0.0, 0.75 + 0.25 * sin(uTime * 40.0 + float(cell.x) * 1.7 + float(cell.y) * 2.3 + float(cell.z)), glow);
-  vec3 c = col * tint * (uAmb * (open ? 1.0 : 0.9) + (open ? 0.0 : 0.09) + uSun * lit + lightAt((w + n * 0.6).xy)) + glow;
+  vec3 lv = uAmb * (open ? 1.0 : 0.9) + (open ? 0.0 : 0.09) + uSun * lit;
+  vec3 c = col * tint * lv + glow;
+  surfaceOut(col * tint, n, sunShare(uSun * lit, lv), 1.0);
   float f = 1.0 - exp(-length(w - uEye) / uFogDist);
   o = vec4(mix(c, uFog, f), 1.0);
   vec4 cp = uVP * vec4(w, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;
