@@ -1,6 +1,7 @@
 import { AREA_H, AREA_W, DROP_BELOW, type Drag, ICON, type Icon, PICK_PAD, STORE, type Spot, type WorldDrag, clamp01, describe, esc, iconUrl, leatherUrl, readStore } from './bagParts';
 import { CONTENT, itemDef, stackWeight, thingDef, weaponStats, wornWeight } from '../../content';
 import type { Entity, ItemId, ItemStack, SimState, ThrowAim } from '../../types';
+import { HAND_SLOT } from '../../types';
 import { type Projection, toScreen } from '../raycaster/camera';
 import { itemWorldSize } from '../entities/itemArt';
 import { rhash } from '../color';
@@ -13,8 +14,8 @@ export interface BagCallbacks {
   throwItem(aim: ThrowAim): void;
   /** A loose item (entity id) in the view was dragged into the bag. */
   pickUp(entity: number): void;
-  /** A piece of armour was dragged from the bag onto the paperdoll. */
-  wear(id: ItemId): void;
+  /** An item was dragged from the bag onto the paperdoll: armour onto the body, anything onto the hands. */
+  wear(id: ItemId, slot?: string): void;
   /** A piece of armour lying in the view was dragged onto the paperdoll. */
   wearFrom(entity: number): void;
 }
@@ -51,6 +52,8 @@ export class BagWindow {
   /** Set by the interface: is this screen point over the paperdoll window, and is it open (it also lets things be dragged out of the world). */
   dollAt: (x: number, y: number) => boolean = () => false;
   dollOpen: () => boolean = () => false;
+  /** Set by the interface: the paperdoll slot (body part or hands) under this screen point. */
+  dollSlotAt: (x: number, y: number) => string | null = () => null;
 
   constructor(
     private readonly host: HTMLElement,
@@ -112,11 +115,12 @@ export class BagWindow {
     const a = e.actor;
     const wpn = a ? weaponStats(CONTENT, thingDef(CONTENT, e.def), a.weapon) : null;
     const load = stackWeight(p.inventory) + wornWeight(CONTENT, e.worn);
-    const key = `${load.toFixed(1)}|${p.stats.might}|${a?.weapon ?? ''}:${a?.wear ?? 0}|${Object.values(p.skills).map((s) => s.level).join(',')}`;
+    const key = `${load.toFixed(1)}|${p.stats.might}|${a?.weapon ?? ''}|${Object.values(p.skills).map((s) => s.level).join(',')}`;
     if (key === this.footKey) return;
     this.footKey = key;
     const limit = 30 + p.stats.might * 4;
-    const edge = a?.weapon && wpn ? `, edge ${a.wear}/${wpn.durability}` : '';
+    const held = a?.weapon ? itemDef(CONTENT, a.weapon) : undefined;
+    const edge = held ? `, ${held.wear}/${held.durability} blows left` : '';
     const skills = Object.entries(p.skills).map(([k, v]) => `${k} ${v.level}`).join(' · ');
     this.foot.innerHTML = `<div${load > limit ? ' class="heavy"' : ''}>Load ${load.toFixed(1)} / ${limit} kg${load > limit ? ' — too heavy, you are slowed' : ''}</div>
       ${wpn ? `<div>In hand: ${esc(wpn.name)} (${wpn.kind}${edge})</div>` : ''}
@@ -214,8 +218,8 @@ export class BagWindow {
     // Tell the player what letting go here will do.
     const where = this.targetAt(ev.clientX, ev.clientY);
     const aim = where === 'view' ? this.aimAt(d.id, ev.clientX, ev.clientY) : null;
-    const wearable = !!itemDef(CONTENT, d.id)?.armour;
-    const tag = where === 'view' && aim ? (aim.power < DROP_BELOW ? 'set down' : aim.power > 0.7 ? 'hurl' : 'throw') : where === 'bag' ? '' : where === 'doll' ? (wearable ? 'wear' : '✕') : '✕';
+    const toHand = this.toHand(d.id, ev.clientX, ev.clientY);
+    const tag = where === 'view' && aim ? (aim.power < DROP_BELOW ? 'set down' : aim.power > 0.7 ? 'hurl' : 'throw') : where === 'bag' ? '' : where === 'doll' ? (toHand ? 'hold' : 'wear') : '✕';
     const t = d.ghost.querySelector<HTMLElement>('.tag');
     if (t && t.textContent !== tag) t.textContent = tag;
   }
@@ -238,7 +242,8 @@ export class BagWindow {
       this.area.appendChild(d.el);
       this.save();
     } else if (where === 'doll') {
-      if (itemDef(CONTENT, d.id)?.armour) this.cb.wear(d.id);
+      if (this.toHand(d.id, ev.clientX, ev.clientY)) this.cb.wear(d.id, HAND_SLOT);
+      else this.cb.wear(d.id);
     } else if (where === 'view') {
       const aim = this.aimAt(d.id, ev.clientX, ev.clientY);
       const icon = this.icons.get(d.id);
@@ -289,6 +294,11 @@ export class BagWindow {
   }
 
   /** Is this screen point inside the bag, over the open world, or over some other window? */
+  /** Dropped on the paperdoll here, does it go into the hands? (Anything not armour does, and anything dropped on the hands.) */
+  private toHand(id: ItemId, x: number, y: number): boolean {
+    return !itemDef(CONTENT, id)?.armour || this.dollSlotAt(x, y) === HAND_SLOT;
+  }
+
   private targetAt(x: number, y: number): 'bag' | 'doll' | 'view' | 'none' {
     const r = this.area.getBoundingClientRect();
     if (this.open && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return 'bag';

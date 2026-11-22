@@ -1,6 +1,6 @@
 import type { DialogueOption, DialogueView, Entity, Location, Quest, RoleDef, SimContext, SimSystem } from '../../types';
 import { addItem, countItem, removeItem } from '../../types';
-import { dayPart, fillText, pluralName, rainAt, siteBaseName, weaponStats, thingDef } from '../../content';
+import { dayPart, fillText, itemDef, mended, pluralName, rainAt, siteBaseName, thingDef } from '../../content';
 
 const COMPASS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
 
@@ -96,7 +96,7 @@ function questGoal(ctx: SimContext, q: Quest): { goal: string; plural: string } 
     return { goal: `Kill ${q.needed} ${plural}`, plural };
   }
   if (q.kind === 'fetch') {
-    const name = (ctx.content.items[q.targetKind]?.name ?? q.targetKind).toLowerCase();
+    const name = (itemDef(ctx.content, q.targetKind)?.name ?? q.targetKind).toLowerCase();
     const plural = q.needed > 1 && !name.endsWith('s') ? `${name}s` : name;
     return { goal: `Bring ${q.needed} ${plural}`, plural };
   }
@@ -182,10 +182,10 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
       const trade = roleOf(ctx, npc)?.trade;
       if (!trade || !npc.npc) break;
       const a = pl.actor;
-      const w = a ? weaponStats(ctx.content, thingDef(ctx.content, pl.def), a.weapon) : null;
-      if (trade.mend && a?.weapon && w && a.wear < w.durability) {
+      const held = a?.weapon ? itemDef(ctx.content, a.weapon) : undefined;
+      if (trade.mend && a?.weapon && held && (held.wear ?? 0) < (held.durability ?? 0)) {
         if (removeItem(p.inventory, coin, trade.mend.price)) {
-          a.wear = w.durability;
+          a.weapon = mended(a.weapon);
           text = trade.mend.done;
         } else text = trade.mend.broke;
         break;
@@ -194,9 +194,9 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
         // Sell the first thing on the rack you can afford.
         const coins = countItem(p.inventory, coin);
         const stock = npc.npc.stock;
-        const offer = stock.find((st) => (ctx.content.items[st.id]?.value ?? 999) <= coins);
+        const offer = stock.find((st) => (itemDef(ctx.content, st.id)?.value ?? 999) <= coins);
         if (offer) {
-          const it = ctx.content.items[offer.id];
+          const it = itemDef(ctx.content, offer.id);
           removeItem(p.inventory, coin, it?.value ?? 0);
           removeItem(stock, offer.id, 1);
           addItem(p.inventory, offer.id, 1);
@@ -210,12 +210,12 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
       for (const id of bt.buys) {
         const s = p.inventory.find((x) => x.id === id);
         if (!s) continue;
-        const value = (ctx.content.items[id]?.value ?? 1) * s.count;
+        const value = (itemDef(ctx.content, id)?.value ?? 1) * s.count;
         sold += value;
         removeItem(p.inventory, id, s.count);
       }
       if (sold > 0) addItem(p.inventory, coin, sold);
-      const bought = removeItem(p.inventory, coin, ctx.content.items[bt.sells]?.value ?? 0);
+      const bought = removeItem(p.inventory, coin, itemDef(ctx.content, bt.sells)?.value ?? 0);
       if (bought) addItem(p.inventory, bt.sells, 1);
       text = `${sold > 0 ? fillText(bt.sold, { silver: sold }) : ''}${bought ? bt.bought : bt.broke}`;
       p.skills.speech.xp += 2;

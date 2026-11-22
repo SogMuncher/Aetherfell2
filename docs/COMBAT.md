@@ -11,7 +11,12 @@
   status rules (cancels/blocks) -> death (`onDestroy`, loot, credit).
 - Melee (`sim/melee`): swings, charge, hitstop, knockback, all numbers in `content/rules.ts` `combat`. Ground tiles and
   3D cells are hit by the same `strikeSpot`. Wear lives in `SimState.tileWear`.
-- Armour: `Entity.worn` (part -> item id); `pickRegion` chooses the part hit; pieces wear and break. Data: `content/gear.ts`.
+- Gear (`content/gear.ts`, made by `gearItems.ts`): weapons and armour are one table of forms x materials x qualities x
+  enchantments (`gear:<form>:<material>:<quality>[:<enchant>]`). Armour: `Entity.worn` (part -> id), `pickRegion` picks the
+  part hit. Hands: `actor.weapon` holds ANY item (paperdoll hand slot); `itemWeapon` swings it (its own weapon, else
+  `rules.items.improvised`). Every item has durability (`rules.items.durability` by category); wear rides in the id
+  (`id@wear`, `content/itemDefs.ts`). At 0 it breaks via `ctx.breakItem` (`sim/breakage.ts`): its `onBreak` burst + `into`.
+  Thrown items take a blow when they strike (`physics/impacts.ts`). G (`throwHeld`) throws the held item or drops it when looking down.
 - Magic (`sim/magic`, `content/spellcraft.ts`, `runes.ts`): up to 3 runes (>=1 essence, <=1 shape) compose a spell;
   casters in creatures use a brain `cast` behaviour and the same code as the player.
 - Fire (`interactionSystem`, numbers in `rules.fire`): spread chance/beat, fuel-left damping, max fires, `sleep` (fires far from players burn out but

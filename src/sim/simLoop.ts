@@ -1,4 +1,5 @@
 import { CONTENT, itemDef, rollOutfit, setAirMoisture } from '../content';
+import { breakItem } from './breakage';
 import { type Command, type Entity, type InputSnapshot, type ItemStack, type SimContext, type SimEvent, type SimState, type SimSystem, type SpawnInit, TICK_DT, type ThingId, type WorldSampler, emptyInput, emptyQueues, unpackKey } from '../types';
 import { LatticeSampler, generateLatticeChunk } from './world/underworld';
 import { MAX_QUEUED_INPUTS, MAX_WAITING_INPUTS, canFold, foldInputs, hasPress, holdInput } from './inputQueue';
@@ -128,6 +129,7 @@ export class Simulation {
           spawn('looseItem', x, y, { z, prevZ: z, vz: rng.range(2.5, 4.5), vel: { x: Math.cos(a) * v, y: Math.sin(a) * v }, item: { id: s.id, count: s.count } });
         }
       },
+      breakItem: (item, x, y, z, by) => breakItem(this.ctx, item, x, y, z, by),
     };
   }
 
@@ -297,10 +299,7 @@ export class Simulation {
           const z = this.tiles.ground(spawn.x, spawn.y);
           const e = this.ctx.spawn('player', spawn.x, spawn.y, { z, prevZ: z, player: newPlayer(c.playerId, c.name, spawn) });
           const wield = CONTENT.rules.start.wield;
-          if (e.actor && wield) {
-            e.actor.weapon = wield;
-            e.actor.wear = CONTENT.items[wield]?.weapon?.durability ?? 100;
-          }
+          if (e.actor && wield) e.actor.weapon = wield;
           for (const id of CONTENT.rules.start.worn) {
             const region = itemDef(CONTENT, id)?.armour?.region;
             if (region) (e.worn ??= {})[region] = id;
@@ -442,6 +441,7 @@ export class Simulation {
       emit: () => {},
       spawn: (thing, x, y, init) => makeEntity(CONTENT, -1, thing, x, y, init),
       dropItems: () => {},
+      breakItem: () => {},
     };
     for (const o of own.values()) {
       o.prev.x = o.pos.x;

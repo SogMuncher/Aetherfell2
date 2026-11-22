@@ -10,8 +10,8 @@ export const LOOT: Record<LootId, LootDef> = {
   raider: {
     entries: [
       { item: 'coin', min: 3, max: 12, chance: 0.9 },
-      { item: 'rustyBlade', min: 1, max: 1, chance: 0.3 },
-      { item: 'ironSword', min: 1, max: 1, chance: 0.08 },
+      { item: '', gear: { region: 'hand', qualities: ['crude'] }, min: 1, max: 1, chance: 0.3 },
+      { item: '', gear: { region: 'hand', qualities: ['common', 'fine'] }, min: 1, max: 1, chance: 0.08 },
       { item: 'healingDraught', min: 1, max: 1, chance: 0.2 },
       // What they wear drops with them (gear rules); this is a spare piece they carried.
       { item: '', gear: { qualities: ['crude', 'common'] }, min: 1, max: 1, chance: 0.12 },
@@ -44,7 +44,7 @@ export const LOOT: Record<LootId, LootDef> = {
       { item: 'bread', min: 2, max: 2, chance: 0.3 },
       { item: 'antidote', min: 1, max: 1, chance: 0.2 },
       { item: 'frostFlask', min: 1, max: 1, chance: 0.2 },
-      { item: 'woodAxe', min: 1, max: 1, chance: 0.15 },
+      { item: '', gear: { form: 'axe', materials: ['bronze', 'iron'] }, min: 1, max: 1, chance: 0.15 },
       { item: '', gear: { materials: ['linen', 'wool', 'leather'] }, min: 1, max: 1, chance: 0.25 },
     ],
   },
@@ -54,9 +54,8 @@ export const LOOT: Record<LootId, LootDef> = {
       { item: 'healingDraught', min: 1, max: 3, chance: 0.8 },
       { item: 'manaTonic', min: 1, max: 2, chance: 0.6 },
       { item: 'runeShard', min: 1, max: 1, chance: 0.7 },
-      { item: 'warHammer', min: 1, max: 1, chance: 0.35 },
-      { item: 'spear', min: 1, max: 1, chance: 0.35 },
-      { item: 'ironSword', min: 1, max: 1, chance: 0.3 },
+      { item: '', gear: { region: 'hand', qualities: ['common', 'fine', 'masterwork'], enchant: 0.35 }, min: 1, max: 1, chance: 0.7 },
+      { item: '', gear: { region: 'hand' }, min: 1, max: 1, chance: 0.3 },
       { item: '', gear: { materials: ['leather', 'bronze', 'iron', 'steel'], qualities: ['common', 'fine', 'masterwork'] }, min: 1, max: 1, chance: 0.5 },
       { item: '', gear: { materials: ['bronze', 'iron', 'steel'] }, min: 1, max: 1, chance: 0.3 },
       { item: 'frostFlask', min: 1, max: 2, chance: 0.4 },

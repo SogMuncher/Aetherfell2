@@ -1,5 +1,5 @@
 import type { Entity, HandPose, SimEvent, SimState, SwingDir } from '../../types';
-import { CONTENT, heldLight } from '../../content';
+import { CONTENT, heldLight, itemDef } from '../../content';
 import type { Env, LightMap } from '../lighting';
 import { addPixel, blendPixel, glowDisc, glowLine, glowTriangle } from '../vfx/glow';
 import type { Surface } from '../vfx/glow';
@@ -105,7 +105,7 @@ export class ViewModel {
     const W = vp.width;
     const H = vp.height;
     const dt = Math.max(0.0005, Math.min(0.1, f.dt));
-    const item = a.weapon === null ? null : CONTENT.items[a.weapon] ?? null;
+    const item = a.weapon === null ? null : itemDef(CONTENT, a.weapon) ?? null;
     if (a.weapon !== this.lastWeapon) {
       this.lastWeapon = a.weapon;
       this.trail.length = 0;
@@ -191,8 +191,7 @@ export class ViewModel {
     const light = new Float32Array(3);
     lm.sample(e.pos.x, e.pos.y, light);
     const flick = held ? 1 - held.flicker * 0.5 + Math.sin(f.time * 17) * held.flicker * 0.25 + Math.sin(f.time * 29) * held.flicker * 0.25 : 1;
-    const dim = item && a.wear <= 0 ? 0.65 : 1;
-    const lit = (amb: number, sun: number, l: number, own: number): number => Math.min(1.5, (Math.max(0.22, amb * 0.8 + l * 0.55) + sun * 0.3 + own * flick * 0.35) * dim);
+    const lit = (amb: number, sun: number, l: number, own: number): number => Math.min(1.5, (Math.max(0.22, amb * 0.8 + l * 0.55) + sun * 0.3 + own * flick * 0.35));
     const warp: Warp = {
       x: gx,
       y: gy,

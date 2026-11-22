@@ -5,7 +5,7 @@ const HUMANOID: BodyRegionId[] = ['head', 'torso', 'arms', 'legs'];
 
 /** A creature's own weapon (fangs, fists, a staff). Unless told otherwise it only lunges (thrusts). */
 export function natural(name: string, damage: number, kind: WeaponStats['kind'], reach: number, more: Partial<WeaponStats> = {}): WeaponStats {
-  return { name, damage, kind, reach, speed: 1, push: 1, durability: 9999, tint: { r: 200, g: 190, b: 170 }, swings: ['thrust'], ...more };
+  return { name, damage, kind, reach, speed: 1, push: 1, tint: { r: 200, g: 190, b: 170 }, swings: ['thrust'], ...more };
 }
 
 /**

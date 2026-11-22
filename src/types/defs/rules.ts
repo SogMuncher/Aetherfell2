@@ -1,8 +1,9 @@
 import type { DamageKind } from '../effects';
-import type { FactionId, ItemId, RuneId, StatusId, ThingId } from './ids';
+import type { FactionId, ItemId, MaterialId, RuneId, StatusId, ThingId } from './ids';
 import type { ItemStack } from '../items';
 import type { SkillId } from '../entities';
 import type { SwingDir } from '../input';
+import type { ItemCategory } from './items';
 
 
 /** How a body reacts to heat, water and cold: which status it gets and for how long. */
@@ -144,6 +145,8 @@ export interface RulesDef {
   skills: Record<SkillId, { maxHp?: number; maxMana?: number; maxStamina?: number }>;
   /** How far away (metres) you can reach a loose item to pull it into your open bag with the mouse. */
   pickReach: number;
+  /** Rules every item follows, whatever it is. */
+  items: ItemRules;
   /**
    * Places and the party. A place is filled with its people and creatures when someone comes within
    * `fill` metres. What lives there belongs to the place and stays until everyone is `keep` metres
@@ -183,4 +186,18 @@ export interface DayRules {
   /** After night comes morning until morningUntil, then afternoon until afternoonUntil, then evening. */
   morningUntil: number;
   afternoonUntil: number;
+}
+
+/** Rules every item follows (content/rules.ts `items`). */
+export interface ItemRules {
+  /** Blows an item takes before it breaks, by category, when its definition gives none. */
+  durability: Record<ItemCategory, number>;
+  /** What an item is made of, by category, when its definition does not say. */
+  material: Record<ItemCategory, MaterialId>;
+  /** How anything without fighting numbers is swung: harm grows with weight, heavy things are slow. */
+  improvised: { damage: number; perKg: number; kind: DamageKind; reach: number; speed: number; slowPerKg: number; push: number; pushPerKg: number };
+  /** G: looking further down than this pitch (-1..1) sets the held item at your feet; otherwise it is thrown. */
+  dropPitch: number;
+  /** A thrown item flying into something at least this fast (m/s) takes a blow. */
+  impactSpeed: number;
 }

@@ -1,7 +1,7 @@
 import type { ArmourStats } from '../gear';
-import type { Burst, HeldLightDef, WeaponStats } from './things';
+import type { HeldLightDef, WeaponStats } from './things';
 import type { Effect } from '../effects';
-import type { RuneId } from './ids';
+import type { ItemId, MaterialId, RuneId } from './ids';
 
 
 export type ItemCategory = 'currency' | 'potion' | 'throwable' | 'food' | 'weapon' | 'armour' | 'material' | 'key' | 'tool' | 'rune';
@@ -40,6 +40,20 @@ export interface ItemLook {
   size?: number;
   /** For armour: 0 (cloth) .. 1 (plates). */
   plate?: number;
+  /**
+   * Picture pieces painted in order, later over earlier (render/entities/itemParts.ts): gear puts
+   * itself together this way ('haft', 'axeBit'…). Left out, the item is the one piece `form`.
+   */
+  parts?: readonly string[];
+}
+
+/** What happens where an item breaks (a flask shatters and splashes, a torch scatters fire). */
+export interface BreakDef {
+  /** A burst of effects around the spot (missing = nothing happens there). */
+  radius?: number;
+  effects?: Effect[];
+  /** What is left lying there (missing = nothing). */
+  into?: ItemId;
 }
 
 export interface ItemDef {
@@ -53,9 +67,20 @@ export interface ItemDef {
   look?: ItemLook;
   /** Drinking or eating it applies these to you. */
   use?: Effect[];
-  /** Using it throws it (shatters on impact with these effects). */
-  thrown?: Burst & { speed: number };
-  /** Wielding it replaces your natural weapon. */
+  /** Made to be thrown: using it throws it at this speed (it still has to break to burst). */
+  thrown?: { speed: number };
+  /**
+   * Blows (or hard landings) it takes before it breaks. Every item has some: left out, the
+   * category's number in `rules.items.durability` is used. A resolved item always has it.
+   */
+  durability?: number;
+  /** Blows left, for one worn item (set when an id carries `@wear`, see content/itemDefs.ts). */
+  wear?: number;
+  /** What it is made of: how it sounds when struck or broken (missing: `rules.items.material` by category). */
+  material?: MaterialId;
+  /** What it does when it breaks (in the hands, or flying into something). */
+  onBreak?: BreakDef;
+  /** How it fights when swung. Left out, any item is swung as it is (`rules.items.improvised`). */
   weapon?: WeaponStats;
   /** Lights the way while it is wielded (a torch): the same light as anything else that glows, carried with you. */
   light?: HeldLightDef;

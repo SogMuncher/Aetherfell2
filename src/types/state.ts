@@ -1,6 +1,6 @@
 import type { Chunk, TileAccess } from './tiles';
 import type { Entity } from './entities';
-import type { Content, FactionId, RealmId, ThingId } from './defs';
+import type { Content, FactionId, ItemId, RealmId, ThingId } from './defs';
 import type { EffectRequest } from './effects';
 import type { SimEvent } from './events';
 import type { JournalEntry, Location, Quest, WeatherState } from './world';
@@ -117,6 +117,8 @@ export interface SimContext {
   spawn(thing: ThingId, x: number, y: number, init?: SpawnInit): Entity;
   /** Tumbles items out into the world as loose objects. */
   dropItems(x: number, y: number, z: number, items: readonly ItemStack[]): void;
+  /** Breaks an item here: its `onBreak` burst lands on the spot and what it breaks into tumbles out (`by` caused it). */
+  breakItem(item: ItemId, x: number, y: number, z: number, by: number | null): void;
   /** Raises a building from a recipe into the 3D layer. */
   build(def: StructureDef, site: StructureSite, seed?: number): StructureReport;
   /** Every definition registry. */

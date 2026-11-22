@@ -4,7 +4,7 @@ const STORE = 'aetherfell2.quick';
 export const QUICK_SLOTS = 4;
 
 /**
- * The quick-use keys 1..4 (H and G still work as keys 1 and 2). Each holds an item id, or
+ * The quick-use keys 1..4 (H still works as key 1; G throws what is in your hands). Each holds an item id, or
  * '@throwable' for whatever flask you carry, or '' for nothing. Kept per computer.
  */
 export class QuickSlots {

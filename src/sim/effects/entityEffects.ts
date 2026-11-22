@@ -1,6 +1,6 @@
-import { type ArmourStats, type Effect, type EffectRequest, type Entity, GROUND_Z, type MaterialDef, type ReactionDef, type SimContext } from '../../types';
+import { type ArmourStats, type Effect, type ItemDef, type EffectRequest, type Entity, GROUND_Z, type MaterialDef, type ReactionDef, type SimContext } from '../../types';
 import { applyToSpot } from './spotEffects';
-import { gearEffect, itemDef, pickRegion, rollLoot, thingDef, withWear } from '../../content';
+import { gearEffect, itemDef, pickRegion, rollLoot, takeBlows, thingDef } from '../../content';
 
 
 export const DOWNED_TICKS = 20 * 30;
@@ -54,8 +54,8 @@ export function applyToEntity(ctx: SimContext, e: Entity, r: EffectRequest): voi
     if (!e.worn || !regions || Object.keys(e.worn).length === 0) return null;
     const region = pickRegion(content.gear, regions, r.swing ?? null, ctx.rng);
     const id = region ? e.worn[region] : undefined;
-    const armour = id ? itemDef(content, id)?.armour : undefined;
-    if (region && id && armour) guard = { region, id, armour };
+    const item = id ? itemDef(content, id) : undefined;
+    if (region && id && item?.armour) guard = { region, id, armour: item.armour, def: item };
     return guard;
   };
 
@@ -72,7 +72,7 @@ export function applyToEntity(ctx: SimContext, e: Entity, r: EffectRequest): voi
         const g = piece();
         const raw = eff.amount * scale * mult * (mat?.resist[eff.kind] ?? 1) * (g?.armour.resist[eff.kind] ?? 1);
         let d = raw;
-        if (PHYSICAL.has(eff.kind)) d -= (def.health.armor + (g ? g.armour.armor * gearEffect(content.gear, g.armour) : 0)) * (1 - (eff.pierce ?? 0));
+        if (PHYSICAL.has(eff.kind)) d -= (def.health.armor + (g ? g.armour.armor * gearEffect(content.gear, g.def) : 0)) * (1 - (eff.pierce ?? 0));
         if (raw > 0) {
           dmg += Math.max(1, Math.round(d));
           if (g) guard = wearDown(ctx, e, g, raw);
@@ -207,23 +207,23 @@ export interface Guard {
   region: string;
   id: string;
   armour: ArmourStats;
+  def: ItemDef;
 }
 
 /** A piece that turned a blow wears: heavy blows wear it more; at nothing left it breaks. Returns the piece as it is now (null if gone). */
 export function wearDown(ctx: SimContext, e: Entity, g: Guard, harm: number): Guard | null {
   const { content } = ctx;
-  const left = g.armour.wear - (1 + Math.floor(harm / content.gear.rules.heavyBlow));
   if (!e.worn) return null;
-  if (left <= 0) {
+  const id = takeBlows(content, g.id, 1 + Math.floor(harm / content.gear.rules.heavyBlow));
+  if (!id) {
     delete e.worn[g.region];
     ctx.emit({ type: 'armour', entity: e.id, region: g.region, item: null, broke: true });
-    if (e.player) ctx.emit({ type: 'notice', player: e.id, text: `Your ${(itemDef(content, g.id)?.name ?? 'armour').toLowerCase()} gives way and falls apart!` });
+    ctx.breakItem(g.id, e.pos.x, e.pos.y, e.z + 1, e.id);
     return null;
   }
-  const id = withWear(content.gear, g.id, left);
   e.worn[g.region] = id;
-  const armour = itemDef(content, id)?.armour;
-  return armour ? { region: g.region, id, armour } : null;
+  const item = itemDef(content, id);
+  return item?.armour ? { region: g.region, id, armour: item.armour, def: item } : null;
 }
 
 export function destroy(ctx: SimContext, e: Entity, src: Entity | null): void {

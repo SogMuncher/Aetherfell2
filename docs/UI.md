@@ -5,7 +5,7 @@
 
 - `ui/ui.ts` `GameUI`: HUD, dialogue, journal, map, runebook. Callbacks go out through `UiCallbacks` to `main.ts`.
 - `ui/bag.ts` (+ `bagParts.ts`): draggable bag window; layout saved per screen in localStorage, never in the sim.
-- `ui/paperdoll.ts`: C key, armour slots, stats, skills, statuses. `ui/settingsMenu.ts`: Esc/O, builds itself from
+- `ui/paperdoll.ts`: C key, armour slots + a hand slot (drop anything on it to hold it); side panel in `paperdollStats.ts`. G throws the held item (look down: drop). `ui/settingsMenu.ts`: Esc/O, builds itself from
   `settings/settings.ts` data (add a setting = one entry there + where it is used) and the debug cheat tab.
 - `ui/style.ts`: HUD colours as CSS variables from `content/hud.ts`.
 - `input/`: keyboard, pointer-lock mouse look, quick-use slots -> one `InputSnapshot` per tick; edge presses are latched.

@@ -2,10 +2,10 @@ import type { ItemDef, ItemId, ItemStack, RuneId, WeaponStats } from '../types';
 import { RUNES } from './runes';
 
 function weapon(name: string, p: Partial<WeaponStats> & Pick<WeaponStats, 'damage' | 'kind' | 'reach'>): WeaponStats {
-  return { name, speed: 1, push: 1, durability: 9999, tint: { r: 180, g: 186, b: 196 }, ...p };
+  return { name, speed: 1, push: 1, tint: { r: 180, g: 186, b: 196 }, ...p };
 }
 
-/** Inventory goods. A new potion, food, throwable or weapon is just a new entry here. */
+/** Inventory goods. A new potion, food, throwable or tool is just a new entry here; weapons and armour are gear (content/gear.ts). */
 export const ITEMS: Record<ItemId, ItemDef> = {
   coin: { name: 'Silver coin', category: 'currency', weight: 0.01, value: 1, tint: 0xd8d8e8 },
   healingDraught: { name: 'Healing draught', category: 'potion', weight: 0.3, value: 12, tint: 0xd04040, use: [{ type: 'heal', amount: 45 }] },
@@ -21,7 +21,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     value: 5,
     tint: 0x806020,
     look: { level: 0.55 },
-    thrown: { speed: 13, radius: 1.6, effects: [{ type: 'coat', liquid: 'oil', amount: 4 }] },
+    thrown: { speed: 13 },
+    onBreak: { radius: 1.6, effects: [{ type: 'coat', liquid: 'oil', amount: 4 }] },
   },
   frostFlask: {
     name: 'Rimewater flask',
@@ -30,7 +31,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     value: 18,
     tint: 0xa0e0ff,
     look: { body: 'round', sparkle: true },
-    thrown: { speed: 13, radius: 2.4, effects: [{ type: 'chill', amount: 1 }, { type: 'damage', amount: 4, kind: 'cold' }] },
+    thrown: { speed: 13 },
+    onBreak: { radius: 2.4, effects: [{ type: 'chill', amount: 1 }, { type: 'damage', amount: 4, kind: 'cold' }] },
   },
   nightshade: {
     name: 'Nightshade vial',
@@ -38,7 +40,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     weight: 0.3,
     value: 15,
     tint: 0x704090,
-    thrown: { speed: 14, radius: 2.2, effects: [{ type: 'status', id: 'poisoned', ticks: 200 }] },
+    thrown: { speed: 14 },
+    onBreak: { radius: 2.2, effects: [{ type: 'status', id: 'poisoned', ticks: 200 }] },
   },
   firePot: {
     name: 'Fire pot',
@@ -46,49 +49,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     weight: 0.9,
     value: 16,
     tint: 0xe06020,
-    thrown: { speed: 12, radius: 1.8, effects: [{ type: 'coat', liquid: 'oil', amount: 2 }, { type: 'heat', amount: 1 }, { type: 'damage', amount: 8, kind: 'fire' }] },
-  },
-  travellerSword: {
-    name: 'Traveller’s sword',
-    category: 'weapon',
-    weight: 2.5,
-    value: 20,
-    tint: 0xb8c0c8,
-    weapon: weapon('Traveller’s sword', { damage: 14, kind: 'cut', reach: 2.1, durability: 120 }),
-  },
-  ironSword: { name: 'Iron sword', category: 'weapon', weight: 3, value: 40, tint: 0xb0b8c0, weapon: weapon('Iron sword', { damage: 18, kind: 'cut', reach: 2.2, durability: 200 }) },
-  rustyBlade: {
-    name: 'Rusty blade',
-    category: 'weapon',
-    weight: 2.5,
-    value: 8,
-    tint: 0x8a5a3a,
-    weapon: weapon('Rusty blade', { damage: 10, kind: 'cut', reach: 2, durability: 50, tint: { r: 150, g: 100, b: 70 } }),
-  },
-  woodAxe: {
-    name: 'Woodsman’s axe',
-    category: 'weapon',
-    weight: 3.5,
-    value: 25,
-    tint: 0x8a6a4a,
-    weapon: weapon('Woodsman’s axe', { damage: 21, kind: 'cut', reach: 1.9, speed: 1.3, push: 1.2, durability: 150, tint: { r: 160, g: 150, b: 140 }, swings: ['left', 'right', 'overhead'], charge: 0.5 }),
-  },
-  warHammer: {
-    name: 'War hammer',
-    category: 'weapon',
-    weight: 6,
-    value: 55,
-    tint: 0x707880,
-    weapon: weapon('War hammer', { damage: 25, kind: 'blunt', reach: 2, speed: 1.5, push: 2.4, durability: 220, tint: { r: 120, g: 124, b: 132 }, swings: ['left', 'right', 'overhead'], charge: 0.7 }),
-  },
-  spear: {
-    name: 'Ash spear',
-    category: 'weapon',
-    weight: 2.5,
-    value: 30,
-    tint: 0xa08060,
-    look: { shell: 0xc4cad4 },
-    weapon: weapon('Ash spear', { damage: 15, kind: 'pierce', reach: 2.9, speed: 0.9, push: 0.8, durability: 140, tint: { r: 170, g: 140, b: 100 }, swings: ['thrust', 'overhead'], charge: 0.3 }),
+    thrown: { speed: 12 },
+    onBreak: { radius: 1.8, effects: [{ type: 'coat', liquid: 'oil', amount: 2 }, { type: 'heat', amount: 1 }, { type: 'damage', amount: 8, kind: 'fire' }] },
   },
   // A burning brand: lights the way while it is in your hand, hits for little but sets what it touches alight.
   torch: {
@@ -99,13 +61,16 @@ export const ITEMS: Record<ItemId, ItemDef> = {
     tint: 0xe8a040,
     look: { form: 'torch', glow: 0xffb050 },
     light: { r: 1, g: 0.62, b: 0.28, radius: 9, flicker: 0.25, flame: true },
+    durability: 90,
+    material: 'wood',
+    // A broken brand scatters its fire.
+    onBreak: { radius: 1.2, effects: [{ type: 'heat', amount: 2 }, { type: 'damage', amount: 3, kind: 'fire' }] },
     weapon: weapon('Torch', {
       damage: 6,
       kind: 'blunt',
       reach: 1.8,
       speed: 0.95,
       push: 0.8,
-      durability: 90,
       tint: { r: 232, g: 160, b: 64 },
       effects: [{ type: 'heat', amount: 1 }, { type: 'damage', amount: 2, kind: 'fire' }],
     }),

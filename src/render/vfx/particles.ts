@@ -1,5 +1,5 @@
 import { type BurstDef, GROUND_Z, type MoteLook, type ParticleKind, type ReadonlyTiles, type SimEvent, type SimState, type SpellLook } from '../../types';
-import { CONTENT, heldLight, spellFor, thingDef } from '../../content';
+import { CONTENT, heldLight, itemDef, spellFor, thingDef } from '../../content';
 import type { Env } from '../lighting';
 import { emitFire, type FireSink } from './fireEmitter';
 import { KINDS, type KindMote, MAX, type Particle, TAU, fx } from './particleKinds';
@@ -331,8 +331,13 @@ export class Particles implements FireSink {
         break;
       case 'shatter': {
         const it = state.entities.get(e.entity);
-        const tint = it?.item ? (CONTENT.items[it.item.id]?.tint ?? 0xa0a0a0) : 0xa06040;
+        const tint = it?.item ? (itemDef(CONTENT, it.item.id)?.tint ?? 0xa0a0a0) : 0xa06040;
         this.burst('dust', e.x, e.y, (it?.z ?? 0) + 0.2, 16, 3.5, (tint >> 16) & 255, (tint >> 8) & 255, tint & 255, false, 0.6, 0.06);
+        break;
+      }
+      case 'itemBroke': {
+        const tint = itemDef(CONTENT, e.item)?.tint ?? 0xa0a0a0;
+        this.burst('dust', e.x, e.y, e.z + 0.2, 16, 3.5, (tint >> 16) & 255, (tint >> 8) & 255, tint & 255, false, 0.6, 0.06);
         break;
       }
       case 'splash':

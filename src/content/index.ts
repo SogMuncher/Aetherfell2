@@ -27,7 +27,7 @@ import { VIEWMODEL } from './viewmodel';
 import { WORLD } from './world';
 import { validateContent } from './validate';
 
-export { fillText, pluralName, siteBaseName, thingDef, weaponStats, heldLight, isCreature, looksDangerous, moveFactor, isDisabled, isPanicking, rollLoot, skillXp, stackWeight } from './helpers';
+export { fillText, pluralName, siteBaseName, thingDef, isCreature, looksDangerous, moveFactor, isDisabled, isPanicking, rollLoot, skillXp, stackWeight } from './helpers';
 export { validateContent } from './validate';
 
 export { cloudDensity3, cloudPattern, layerCover, layerDensity, airColumn, airAt, rainAt, airMoisture, setAirMoisture, moistCell, MOIST_CELL, sunThrough } from './skyField';
@@ -36,7 +36,10 @@ export type { DayPart } from './day';
 
 export { MAX_SPELL_RUNES, composeSpell, describeSpell, effectWords, spellFor, spellKey } from './spellcraft';
 export type { Composed } from './spellcraft';
-export { GEAR, gearCondition, gearEffect, gearId, gearItem, gearProblems, itemDef, parseGear, pickRegion, rollGear, rollOutfit, withWear, wornWeight } from './gear';
+export { GEAR } from './gear';
+export { gearEffect, gearId, gearItem, parseGear, pickRegion, rollGear, rollOutfit } from './gearItems';
+export { breakOf, gearCondition, heldLight, itemDef, itemWeapon, mended, takeBlows, weaponStats, withWear, wornWeight } from './itemDefs';
+export { gearProblems } from './gearCheck';
 
 /** Every definition in the game, in one object. */
 export const CONTENT: Content = {

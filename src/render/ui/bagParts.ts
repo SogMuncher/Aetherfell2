@@ -106,16 +106,17 @@ export function describe(def: ItemDef): string[] {
     const a = def.armour;
     const reg = CONTENT.gear.regions[a.region]?.name.toLowerCase() ?? a.region;
     out.push(`Armour for the ${reg}: turns ${a.armor} off each blow. Double-click to wear.`);
-    out.push(`Condition: ${gearCondition(a)} (${a.wear}/${a.durability} blows left).`);
     const res = Object.entries(a.resist).filter(([, v]) => v !== undefined && Math.abs(v - 1) > 0.01).map(([k, v]) => `${k} ${(v ?? 1) < 1 ? '−' : '+'}${Math.round(Math.abs(1 - (v ?? 1)) * 100)}%`);
     if (res.length) out.push(`Harm taken: ${res.join(', ')}.`);
   }
   if (def.weapon) out.push(`Weapon: ${def.weapon.damage} ${def.weapon.kind}, reach ${def.weapon.reach.toFixed(1)} m. Double-click to wield.`);
+  if (def.weapon?.effects?.length) out.push(`Each blow also: ${effectWords(CONTENT, def.weapon.effects, 1)}.`);
+  out.push(`Condition: ${gearCondition(def)} (${def.wear}/${def.durability} blows left).`);
   if (def.use?.length) {
     const verb = def.category === 'potion' ? 'Drink' : def.category === 'food' ? 'Eat' : 'Use';
     out.push(`${verb} (double-click): ${effectWords(CONTENT, def.use, 1)}.`);
   }
-  if (def.thrown) out.push(`Bursts where it lands: ${effectWords(CONTENT, def.thrown.effects, 1)}.`);
+  if (def.onBreak?.effects?.length) out.push(`When it breaks: ${effectWords(CONTENT, def.onBreak.effects, 1)}.`);
   if (def.glide) out.push('Jump, then hold Space in the air to glide.');
   if (def.teaches) out.push(`Carved with the ${CONTENT.runes[def.teaches]?.name ?? def.teaches} rune.`);
   if (def.category === 'key') out.push('Opens the lock it fits.');

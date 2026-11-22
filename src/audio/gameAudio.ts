@@ -1,7 +1,7 @@
 import type { DamageKind, Entity, ReadonlyTiles, SimEvent, SimState, WeaponStats } from '../types';
 import { unpackKey, unpackSpot } from '../types';
 import { TILES } from '../content/tiles';
-import { CONTENT, isNight, itemDef, rainAt, thingDef, spellFor } from '../content';
+import { CONTENT, isNight, itemDef, rainAt, thingDef, spellFor, weaponStats } from '../content';
 import { AudioEngine } from './engine';
 import { MusicEngine, STYLE_IDS } from './music';
 import type { MusicStatus, StyleId } from './music';
@@ -201,8 +201,7 @@ export class GameAudio {
   /** The weapon an entity strikes with: what it wields, or its natural one. */
   private weaponOf(ent: Entity | undefined): WeaponStats | null {
     if (!ent) return null;
-    const held = ent.actor?.weapon ? CONTENT.items[ent.actor.weapon]?.weapon : undefined;
-    return held ?? thingDef(CONTENT, ent.def).actor?.weapon ?? null;
+    return weaponStats(CONTENT, thingDef(CONTENT, ent.def), ent.actor?.weapon ?? null);
   }
 
   private soundOf(ent: Entity | undefined): string {
@@ -354,6 +353,12 @@ export class GameAudio {
         strike(e, out, t, ent ? this.soundOf(ent) : 'glass', { strength: 1, mass: ent ? thingDef(CONTENT, ent.def).body.mass : 10, breaks: true });
         break;
       }
+      case 'itemBroke': {
+        const out = this.at(ev.x, ev.y);
+        const it = itemDef(CONTENT, ev.item);
+        if (out) strike(e, out, t, CONTENT.materials[it?.material ?? '']?.sound ?? 'glass', { strength: 1, mass: (it?.weight ?? 1) * 10, breaks: true });
+        break;
+      }
       case 'glide':
         if (ev.entity === localId && ev.open) {
           e.burst(e.sfx, t, jit(0.25, 0.15), 0.12, 'bandpass', jit(700, 0.12), { q: 1.5, to: jit(300, 0.15) });
@@ -481,7 +486,7 @@ export class GameAudio {
       }
       case 'pickup':
         if (ev.player === localId) {
-          const item = CONTENT.items[ev.item];
+          const item = itemDef(CONTENT, ev.item);
           if (item?.category === 'currency') {
             // Coins: a little clink per coin, up to a handful.
             for (let i = Math.min(6, Math.max(2, ev.count)); i > 0; i--) strike(e, e.sfx, t + rnd(0, 0.12), 'metal', { strength: rnd(0.15, 0.3), mass: 0.3 });

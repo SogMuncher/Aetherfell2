@@ -1,6 +1,7 @@
-import type { Burst, Entity, ReadonlyTiles, ReadonlyVolume, SimContext, SimSystem, ThingDef, TileInfo } from '../../types';
+import type { Entity, ReadonlyTiles, ReadonlyVolume, SimContext, SimSystem, ThingDef, TileInfo } from '../../types';
 import { GROUND_Z, SHOWN_STATES } from '../../types';
 import { thingDef } from '../../content';
+import { impacts } from './impacts';
 
 const GRAVITY = 22;
 const MAX_STEP = 0.55;
@@ -80,16 +81,6 @@ function floorUnder(tiles: ReadonlyTiles, vol: ReadonlyVolume, e: Entity, d: Thi
   return up > ground ? up : ground;
 }
 
-/** What happens when this flies into something: its own onImpact, or a thrown item's burst. */
-function impactOf(ctx: SimContext, e: Entity, d: ThingDef): (Burst & { minSpeed: number; shatter: boolean }) | null {
-  if (d.onImpact) return d.onImpact;
-  if (e.item && e.thrownBy !== null) {
-    const t = ctx.content.items[e.item.id]?.thrown;
-    if (t) return { radius: t.radius, effects: t.effects, minSpeed: 3, shatter: true };
-  }
-  return null;
-}
-
 /**
  * Moves everything: gravity, ground, ice and water, tile collisions with sliding, steep-slope
  * blocking, pushing solid bodies apart, carried objects, and thrown things that hurt what they hit
@@ -139,7 +130,8 @@ export const physicsSystem: SimSystem = (ctx: SimContext) => {
     if ((e.freeze ?? 0) > 0) continue;
     if (d.body.anchored && e.vel.x === 0 && e.vel.y === 0 && e.vz === 0) continue;
 
-    const impact = impactOf(ctx, e, d);
+    // Who threw it, as it was before this tick (landing can end the throw).
+    const thrower = e.thrownBy;
     const speed0 = Math.hypot(e.vel.x, e.vel.y, e.vz);
     let struck = false;
 
@@ -218,50 +210,7 @@ export const physicsSystem: SimSystem = (ctx: SimContext) => {
       state.queues.effects.push({ target: { kind: 'entity', id: e.id }, effects: [{ type: 'soak', amount: 1 }], source: null, from: null });
     }
 
-    // Fast-moving loose objects hurt what they hit.
-    if (!e.actor && d.body.mass >= 0.4) {
-      const speed = Math.hypot(e.vel.x, e.vel.y);
-      if (speed > 5) {
-        for (const o of ctx.query.near(e.pos.x, e.pos.y, r + 0.6)) {
-          if (o === e || !o.actor || o.id === e.heldBy || o.id === e.thrownBy) continue;
-          const od = thingDef(content, o.def);
-          if (Math.abs(o.z + od.body.height * 0.5 - e.z) > od.body.height) continue;
-          const dmg = Math.min(40, Math.round(d.body.mass * speed * 0.06));
-          const by = e.thrownBy ?? e.id;
-          if (dmg > 0) {
-            state.queues.effects.push({
-              target: { kind: 'entity', id: o.id },
-              effects: [{ type: 'damage', amount: dmg, kind: 'blunt' }, { type: 'push', force: speed * 0.3 }],
-              source: by,
-              from: { x: e.pos.x - e.vel.x, y: e.pos.y - e.vel.y },
-            });
-          }
-          ctx.emit({ type: 'impact', entity: e.id, x: e.pos.x, y: e.pos.y, strength: Math.min(1, dmg / 30 + 0.2) });
-          if (d.health) hurt(ctx, e.id, o.id, Math.round(dmg * 0.6), 'blunt');
-          e.vel.x *= -0.2;
-          e.vel.y *= -0.2;
-          struck = true;
-          break;
-        }
-      }
-    }
-
-    if (struck && impact && speed0 >= impact.minSpeed) {
-      if (impact.effects.length) {
-        state.queues.effects.push({
-          target: { kind: 'area', x: e.pos.x, y: e.pos.y, z: e.z, radius: impact.radius },
-          effects: impact.effects,
-          source: e.thrownBy ?? e.id,
-          from: { x: e.pos.x, y: e.pos.y },
-          exclude: e.id,
-        });
-      }
-      if (impact.shatter) {
-        ctx.emit({ type: 'shatter', entity: e.id, x: e.pos.x, y: e.pos.y });
-        if (d.health) hurt(ctx, e.id, e.thrownBy ?? e.id, 9999, 'blunt');
-        else e.dead = true;
-      }
-    }
+    struck = impacts(ctx, e, d, struck, speed0, thrower);
   }
 
   separateBodies(ctx);
