@@ -31,7 +31,7 @@ export { fillText, pluralName, siteBaseName, thingDef, isCreature, looksDangerou
 export { validateContent } from './validate';
 
 export { cloudDensity3, cloudPattern, layerCover, layerDensity, airColumn, airAt, rainAt, airMoisture, setAirMoisture, moistCell, MOIST_CELL, sunThrough } from './skyField';
-export { dayPart, isNight, nightFalls, sunAngle, sunHeight } from './day';
+export { dayPart, isDark, isNight, nightFalls, sunAngle, sunHeight } from './day';
 export type { DayPart } from './day';
 
 export { MAX_SPELL_RUNES, composeSpell, describeSpell, effectWords, spellFor, spellKey } from './spellcraft';

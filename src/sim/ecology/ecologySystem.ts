@@ -1,6 +1,6 @@
 import type { Entity, SimContext, SimSystem } from '../../types';
 import { CHUNK_SIZE, TICK_RATE, unpackKey } from '../../types';
-import { isNight, thingDef } from '../../content';
+import { isDark, thingDef } from '../../content';
 
 
 /**
@@ -10,8 +10,8 @@ import { isNight, thingDef } from '../../content';
 export const ecologySystem: SimSystem = (ctx: SimContext) => {
   const { state, rng, tiles } = ctx;
   const t = state.weather.time;
-  // Under rock it is always "night": no sun to keep the dangerous things away.
-  const night = ctx.content.realms[state.realm]?.sky === false || isNight(ctx.content.rules.day, t);
+  // Under rock it is always dark: no sun to keep the dangerous things away.
+  const night = isDark(ctx.content, state.realm, t);
   if (state.tick % 20 === 0) changeOverTime(ctx);
 
   // Faction memory: a faction resents whoever kills its own, and warms to whoever kills its enemies.

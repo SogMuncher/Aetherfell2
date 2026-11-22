@@ -1,6 +1,6 @@
 import type { Creature, SimContext, SimSystem, Vec2 } from '../../types';
 import { SWING_DIRS } from '../../types';
-import { isCreature, isDisabled, isNight, isPanicking, moveFactor, thingDef, weaponStats } from '../../content';
+import { isCreature, isDark, isDisabled, isPanicking, moveFactor, thingDef, weaponStats } from '../../content';
 import { decide, sense } from './behaviours';
 
 /**
@@ -11,7 +11,7 @@ import { decide, sense } from './behaviours';
  */
 export const aiSystem: SimSystem = (ctx: SimContext) => {
   const { state, rng } = ctx;
-  const night = isNight(ctx.content.rules.day, state.weather.time);
+  const night = isDark(ctx.content, state.realm, state.weather.time);
   for (const e of state.entities.values()) {
     if (!isCreature(e) || e.dead || e.heldBy !== null) continue;
     const ai = e.ai;

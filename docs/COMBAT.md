@@ -27,6 +27,9 @@
   `chill` takes them; heat first lifts cold back to 0, melts frost, dries damp, then warms. At `burns` fuel ignites; at
   `freezes` water becomes ice (`freezesInto`) and wet (>= `rules.frost.wetNeeded`) becomes a `frost` overlay; spots relax back
   and from `thaws` frost fades into wet and ice melts. No source is special-cased: a torch, bolt or spreading fire is just heat.
+- Standing in stuff (`sim/effects/touch.ts`, rows in `rules.touch`): each body reads the 3D cell under its feet, or the
+  ground tile when on the ground, the same way (fire, wet, wading depth incl. liquid cells, rain under open sky) and gets
+  the row's effects. New "standing in" rule = a data row, never a check in another system.
 - Factions decide who may hurt whom (`friendlyFire`).
 
 ## Add / change
@@ -36,4 +39,4 @@
 - The first-person weapon picture is render-side (see RENDER.md); combat never reads it.
 
 ## Checks
-`scripts/mechanicsSmoke.ts`, `runebookSmoke.ts`, `fireSmoke.ts`, `gearSmoke.ts`, `torchSmoke.ts`.
+`scripts/mechanicsSmoke.ts`, `runebookSmoke.ts`, `fireSmoke.ts`, `gearSmoke.ts`, `torchSmoke.ts`, `senseSmoke.ts`.

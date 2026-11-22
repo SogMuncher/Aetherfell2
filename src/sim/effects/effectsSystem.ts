@@ -2,6 +2,7 @@ import { type EffectRequest, GROUND_Z, type SimContext, type SimSystem } from '.
 import { applyToEntity } from './entityEffects';
 import { applyToSpot, mendWear, touchesMatter } from './spotEffects';
 import { settleTemperatures } from './temperature';
+import { touchBodies } from './touch';
 import { thingDef } from '../../content';
 
 
@@ -11,11 +12,13 @@ import { thingDef } from '../../content';
  *   2. material reaction (resistances, catching fire, soaking, chilling, freezing water)
  *   3. status rules (cancels / blocked by)
  *   4. death or destruction (onDestroy effects, loot, credit)
+ * First, what bodies stand in or on (fire, deep water, rain, a soaked floor) turns into effects (touch.ts).
  * Also lets warm and cold spots settle back (sim/effects/temperature.ts). Which status heat, water and cold give a body comes from
  * content.rules.reactions; which tile freezes or melts into which comes from the tile definitions.
  */
 export const effectsSystem: SimSystem = (ctx: SimContext) => {
   const { state } = ctx;
+  touchBodies(ctx);
   // Applying effects can cause more (a barrel bursts into oil, a dying torch drops its flame).
   // Run a few rounds so chains land this tick; anything left over waits for the next one.
   for (let round = 0; round < 4 && state.queues.effects.length > 0; round++) {
