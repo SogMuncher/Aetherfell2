@@ -26,7 +26,6 @@ ${SURFACE_SHADER}
 ${STATE_SHADER}
 ${SURFACE_OUT}
 float P(int pc, int k){ return texelFetch(uPieces, ivec2(k, pc), 0).r; }
-float h3(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
 vec4 rayShape(int byte, vec3 o, vec3 d){
   int n = int(texelFetch(uShapeIdx, ivec2(byte, 1), 0).r); int s = int(texelFetch(uShapeIdx, ivec2(byte, 0), 0).r);
   float best = 1e9; vec3 bn = vec3(0.0);
@@ -69,12 +68,11 @@ bool covered(ivec3 c){
   for (int k = 0; k <= 24; k++) if (cellWorld(c + ivec3(0, 0, k)).r != 0u) return true;
   return false;
 }
-/** The surface of the cell one step e along a face (one further along the face's own slope if that is empty), times that cell's tint; this cell's if both are empty. */
-vec3 nextFace(ivec3 c, ivec3 e, vec3 n, ivec3 dom, int own, vec3 t, float tint, bool wall, vec2 uv){
+/** The surface of the cell one step e along a face (one further along the face's own slope if that is empty), drifted for that cell; this cell's own (t) if both are empty. */
+vec3 nextFace(ivec3 c, ivec3 e, vec3 n, ivec3 dom, vec3 t, bool wall, vec2 uv){
   float k = dot(n, vec3(e)); ivec3 q = c + e; uvec2 sm = cellWorld(q);
   if (sm.x == 0u && abs(k) > 0.05){ q -= int(sign(k)) * dom; sm = cellWorld(q); }
-  if (sm.x == 0u) return t * tint;
-  return (int(sm.y) == own ? t : surf(int(sm.y), wall, uv)) * (0.93 + 0.14 * h3(vec3(q)));
+  return sm.x == 0u ? t : surf(int(sm.y), wall, uv, vec3(q));
 }
 void main(){
   vec2 nd = gl_FragCoord.xy / uRes.xy * 2.0 - 1.0;
@@ -121,16 +119,15 @@ void main(){
   if (!wall) { suv = w.xy * 16.0; fc = fract((floor(suv) + 0.5) / 16.0); tx = vec2(16.0); ea = ivec3(1, 0, 0); eb = ivec3(0, 1, 0); dom = ivec3(0, 0, n.z < 0.0 ? -1 : 1); }
   else {
     bool xFace = abs(n.x) > abs(n.y); float across = xFace ? w.y : w.x; float nh = abs(n.z) > 0.05 ? max(0.35, sqrt(1.0 - n.z * n.z)) : 1.0;
-    suv = vec2(across * 16.0, -w.z * 10.0 / nh); fc = vec2(fract((floor(suv.x) + 0.5) / 16.0), fract(-(floor(suv.y) + 0.5) * nh / 10.0)); tx = vec2(16.0, 10.0 / nh);
+    suv = vec2(across * 16.0, -w.z * 16.0 / nh); fc = vec2(fract((floor(suv.x) + 0.5) / 16.0), fract(-(floor(suv.y) + 0.5) * nh / 16.0)); tx = vec2(16.0, 16.0 / nh);
     ea = xFace ? ivec3(0, 1, 0) : ivec3(1, 0, 0); eb = ivec3(0, 0, 1); dom = xFace ? ivec3(n.x < 0.0 ? -1 : 1, 0, 0) : ivec3(0, n.y < 0.0 ? -1 : 1, 0);
   }
   bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // from the middle of the cell, not the exact pixel, so a wall face is lit evenly
-  float tint = 0.93 + 0.14 * h3(vec3(cell));
-  // Neighbour cells meet by the ground's one edge rule (edgeLean), same material too, so each cell's tint fades into the next.
-  vec3 t0 = surf(mat, wall, suv), col = t0 * tint; vec2 lean = edgeLean(fc, tx);
+  // Neighbour cells meet by the ground's one edge rule (edgeLean), same material too, so each cell's colour drift fades into the next.
+  vec3 col = surf(mat, wall, suv, vec3(cell)), t0 = col; vec2 lean = edgeLean(fc, tx);
   if (lean.x + lean.y > 0.0) {
     ivec3 sa = ea * (fc.x < 0.5 ? -1 : 1), sb = eb * (fc.y < 0.5 ? -1 : 1);
-    col = mix(mix(col, nextFace(cell, sa, n, dom, mat, t0, tint, wall, suv), lean.x), mix(nextFace(cell, sb, n, dom, mat, t0, tint, wall, suv), nextFace(cell, sa + sb, n, dom, mat, t0, tint, wall, suv), lean.x), lean.y);
+    col = mix(mix(col, nextFace(cell, sa, n, dom, t0, wall, suv), lean.x), mix(nextFace(cell, sb, n, dom, t0, wall, suv), nextFace(cell, sa + sb, n, dom, t0, wall, suv), lean.x), lean.y);
   }
   col = surfPatches(col, w.xy + w.z * vec2(1.7, -1.3), length(w - uEye));
   // What has happened to this cell (the same matter states the sim's rules use), blended over its own surface.
