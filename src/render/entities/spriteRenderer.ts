@@ -6,6 +6,10 @@ import { TileBillboards } from '../raycaster/tileBillboards';
 import { itemSprite, missingSprite } from './sprites';
 import type { Sprite } from './sprites';
 import { ArtSprites } from './artSprites';
+import { artPaintBudget } from './assembler';
+
+/** Time each frame may spend painting pictures it has not drawn before (creatures first, then trees). */
+const PAINT_BUDGET_MS = 4;
 
 export interface Billboard {
   x: number;
@@ -67,6 +71,9 @@ export class SpriteRenderer {
   collect(p: Projection, state: SimState, tiles: ReadonlyTiles, localId: number | null, alpha: number, time: number, hitFlash: Map<number, number>): readonly Billboard[] {
     for (const b of this.list) this.pool.push(b);
     this.list.length = 0;
+    // One painting budget for the whole frame, opened before anything picks a picture: opened later,
+    // creatures always found it spent and kept one picture per side (no walking, no swings).
+    artPaintBudget(PAINT_BUDGET_MS);
     for (const e of state.entities.values()) {
       if (e.id === localId) continue;
       const x = lerp(e.prev.x, e.pos.x, alpha);
