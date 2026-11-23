@@ -7,7 +7,7 @@ import type { ItemId, MaterialId, RuneId } from './ids';
 export type ItemCategory = 'currency' | 'potion' | 'throwable' | 'food' | 'weapon' | 'armour' | 'material' | 'key' | 'tool' | 'rune';
 
 /**
- * Which shared base shape an item picture is built from (render/entities/itemArt.ts paints them):
+ * Which shared base shape an item picture is built from (art pieces 'item.<form>', content/itemGoodsArt.ts):
  * 'vessel' (bottles, vials, jugs, pots: see ItemLook.body), 'blade', 'axe', 'hammer', 'club',
  * 'spear', 'coin', 'key', 'loaf', 'haunch', 'pelt', 'shard', 'stone', 'bundle', 'lump'.
  * A plain string like SpriteId: an unknown form is painted as a lump.
@@ -41,7 +41,7 @@ export interface ItemLook {
   /** For armour: 0 (cloth) .. 1 (plates). */
   plate?: number;
   /**
-   * Picture pieces painted in order, later over earlier (render/entities/itemParts.ts): gear puts
+   * Picture pieces put together (art pieces 'item.<name>', content/itemGearArt.ts): gear puts
    * itself together this way ('haft', 'axeBit'…). Left out, the item is the one piece `form`.
    */
   parts?: readonly string[];

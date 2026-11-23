@@ -9,7 +9,7 @@ import type { GearTables } from '../types';
  * other item. content/gearItems.ts turns the id back into a full definition.
  *
  * Adding a metal, a garment, a weapon, a grade of work, an enchantment or a body part is a new
- * entry below and nothing else. A form's picture is its list of `parts` (render/entities/itemParts.ts).
+ * entry below and nothing else. A form's picture is its list of `parts` (art pieces 'item.<name>', content/itemGearArt.ts).
  */
 export const GEAR: GearTables = {
   regions: {

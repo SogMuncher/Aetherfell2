@@ -74,7 +74,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemDefs.ts` (107) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (97) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
-- `index.ts` (81) collects every table into CONTENT, re-exports helpers, runs validation
+- `index.ts` (83) collects every table into CONTENT, re-exports helpers, runs validation
 - `items.ts` (103) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
 - `living.ts` (126) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (284) creature looks as solid parts (D)
@@ -103,6 +103,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
 - `artCheck.ts` (38) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
 - `smallForms.ts` (253) Bushes, rocks, plants and small heaps (haystacks, woodpiles, wells, rubble) grown from parts, like trees (form
+- `itemGearArt.ts` (117) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
+- `itemGoodsArt.ts` (125) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
 
 ## src/input/
 - `input.ts` (177) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -133,18 +135,15 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/render/entities/
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
 - `bodyPaint.ts` (324) ray-intersect solids into colour-region pixels
-- `itemArt.ts` (192) paints an item: its parts in order (one picture per item), other base forms, world size
-- `itemPaint.ts` (218) item painting tools (Pix, axis, palette materials) and the resolved look
-- `itemParts.ts` (182) weapon parts (grip, guard, blade, pommel, haft, axe bit, heads) + ITEM_PARTS table
-- `itemPlates.ts` (131) armour parts: headgear, torsowear, armwear, legwear
-- `itemVessel.ts` (157) flasks, bottles, vials, jugs, pots
+- `itemArt.ts` (140) paints an item: its parts in order (one picture per item), other base forms, world size
 - `spriteRenderer.ts` (128) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (341) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
-- `artGrow.ts` (242) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
+- `artGrow.ts` (252) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
 - `artSprites.ts` (101) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
-- `assembler.ts` (202) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
+- `assembler.ts` (217) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
+- `itemLook.ts` (93) What an item looks like, worked out from its definition: base shape, colours, size, gear parts (no item ids)
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (200) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
@@ -314,7 +313,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `volume.ts` (135) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (202) surface, biome, water and world-generation defs
-- `art.ts` (150) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
+- `art.ts` (157) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
 
 ## src/types/defs/
 - `brains.ts` (103) BehaviourDef, BrainDef, loot, habitats, population
