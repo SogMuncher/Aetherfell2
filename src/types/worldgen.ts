@@ -28,7 +28,8 @@ export type SurfaceLayerKind =
   | { kind: 'boards'; dir: 'vertical' | 'horizontal'; size: number; seam: RGB; joint?: { every: number; stagger: number } }
   /** Wood grain rings running along vertical boards of width `board`. */
   | { kind: 'rings'; board: number; salt: number; freq: number; warp: { salt: number; cells: number; amount: number }; amount: number | RGB }
-  /** Patches where noise is above `above` get another colour (moss, pools); `keep` carries over that much of the shading so far. */
+  /** Patches where noise is above `above` get another colour (moss, pools); `keep` carries over that much of the shading so far.
+   *  `cells` (here and in noise) is 4, 8 or 16 per tile: bigger blobs repeat every tile and read as stripes. */
   | { kind: 'patches'; salt: number; cells: number; above: number; colour: RGB; keep?: number | RGB };
 
 /**

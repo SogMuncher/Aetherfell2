@@ -28,7 +28,9 @@ function driftTexel(id: string): number[] {
 }
 
 export function makeSurfaceAtlas(gl: WebGL2RenderingContext): WebGLTexture {
-  const atlas = makeTexture(gl, gl.RGBA8, DRIFT_W, SLOT_ROWS + Math.ceil(SLOTS / DRIFT_W), gl.RGBA, gl.UNSIGNED_BYTE);
+  // Height padded to whole slots: an odd height makes some GPUs (Windows) resample each halving, so slots bleed into the
+  // rows above and below them at a distance and the ground shows a line along every tile edge.
+  const atlas = makeTexture(gl, gl.RGBA8, DRIFT_W, SLOT_ROWS + Math.ceil(SLOTS / DRIFT_W / TEX) * TEX, gl.RGBA, gl.UNSIGNED_BYTE);
   const drift = new Uint8Array(Math.ceil(SLOTS / DRIFT_W) * DRIFT_W * 4);
   const fallback = surfaceTexture('grass');
   for (let code = 0; code < 256; code++) {
