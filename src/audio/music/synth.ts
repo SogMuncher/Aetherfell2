@@ -124,4 +124,13 @@ export class Synth {
 
 export type Patch = (s: Synth, out: AudioNode, n: Note) => void;
 
+/** A loop of white noise for breath, hiss and drums (outside the sim, so Math.random is fine). */
+export function noiseBuffer(ctx: BaseAudioContext, seconds: number): AudioBuffer {
+  const n = Math.floor(ctx.sampleRate * seconds);
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
 export const nyq = (s: Synth): number => s.ctx.sampleRate * 0.45;

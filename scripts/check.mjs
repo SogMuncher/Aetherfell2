@@ -16,7 +16,7 @@ const AREAS = {
   render: ['artSmoke', 'skySmoke'],
   rpg: ['mechanicsSmoke', 'simSmoke', 'cheatsSmoke', 'dataSmoke', 'gearSmoke', 'outfitSmoke', 'senseSmoke', 'handsSmoke'],
   content: ['dataSmoke', 'mechanicsSmoke'],
-  audio: ['mechanicsSmoke'],
+  audio: ['mechanicsSmoke', 'musicSmoke'],
   multiplayer: ['coopSmoke'],
   ui: [],
 };

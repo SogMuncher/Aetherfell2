@@ -7,7 +7,7 @@ export const STYLES_PLACES = {
   village: {
     name: 'Village life',
     tempo: [96, 116],
-    meters: ['sixEight', 'sixEight', 'four', 'three'],
+    meters: ['sixEight', 'sixEight', 'nine', 'four', 'two', 'three'],
     modes: ['mixolydian', 'ionian', 'dorian'],
     roots: [50, 55, 52, 48],
     progressions: [[0, 3, 4, 0], [0, 6, 3, 0], [0, 4, 0, 4], [0, 3, 0, 4], [5, 4, 0, 0], [0, 6, 0, 4]],
@@ -18,6 +18,9 @@ export const STYLES_PLACES = {
     sectionBars: [8, 16],
     melody: { cells: DANCE_CELLS, leap: 3, space: 0.15, theme: false },
     layers: [
+      { role: 'perc', instrument: 'tambourine', lo: 0, hi: 0, level: 0.4, enter: 0.35, hits: 5, on: 'euclid', pan: 0.3 },
+      { role: 'arp', instrument: 'dulcimer', lo: 60, hi: 79, level: 0.4, enter: 0.5, rate: 2, shape: 'updown', pan: -0.3 },
+      { role: 'perc', instrument: 'clap', lo: 0, hi: 0, level: 0.3, enter: 0.75, on: 'offbeats', chance: 0.5 },
       { role: 'arp', instrument: 'lute', lo: 55, hi: 76, level: 0.8, enter: 0, rate: 2, shape: 'updown', pan: -0.3 },
       { role: 'bass', instrument: 'pluckBass', lo: 38, hi: 52, level: 0.7, enter: 0.1 },
       { role: 'melody', instrument: 'fiddle', lo: 64, hi: 86, level: 0.8, enter: 0.25, pan: 0.2 },
@@ -36,7 +39,7 @@ export const STYLES_PLACES = {
   snow: {
     name: 'Snowfields',
     tempo: [62, 76],
-    meters: ['four', 'three'],
+    meters: ['four', 'three', 'nine'],
     modes: ['aeolian', 'lydian', 'dorian'],
     roots: [52, 50, 47, 45],
     progressions: [[0, 5, 2, 6], [0, 3, 5, 4], [0, 6, 5, 6], [0, 2, 3, 2]],
@@ -47,6 +50,7 @@ export const STYLES_PLACES = {
     sectionBars: [8, 16],
     melody: { cells: SLOW_CELLS, leap: 4, space: 0.35, theme: false },
     layers: [
+      { role: 'texture', instrument: 'bowl', lo: 60, hi: 76, level: 0.35, enter: 0, chance: 0.02, echo: 0.5 },
       { role: 'pad', instrument: 'glass', lo: 60, hi: 81, level: 0.7, enter: 0, voices: 3 },
       { role: 'arp', instrument: 'celesta', lo: 72, hi: 96, level: 0.55, enter: 0.1, rate: 2, shape: 'random', echo: 0.8, pan: 0.35 },
       { role: 'texture', instrument: 'bell', lo: 76, hi: 91, level: 0.35, enter: 0.1, chance: 0.05, echo: 0.6, pan: -0.4 },
@@ -64,7 +68,7 @@ export const STYLES_PLACES = {
   coast: {
     name: 'Shoreline',
     tempo: [68, 80],
-    meters: ['sixEight', 'three'],
+    meters: ['sixEight', 'three', 'twelve'],
     modes: ['mixolydian', 'ionian', 'dorian'],
     roots: [48, 50, 45, 52],
     progressions: [[0, 6, 3, 0], [0, 4, 3, 0], [0, 3, 6, 3], [0, 5, 3, 4]],
@@ -75,6 +79,7 @@ export const STYLES_PLACES = {
     sectionBars: [8, 16],
     melody: { cells: CALM_CELLS, leap: 3, space: 0.35, theme: false },
     layers: [
+      { role: 'arp', instrument: 'marimba', lo: 60, hi: 77, level: 0.35, enter: 0.55, rate: 2, shape: 'up', pan: 0.25 },
       { role: 'pad', instrument: 'warmPad', lo: 52, hi: 74, level: 0.75, enter: 0, voices: 3, bright: 0.45 },
       { role: 'arp', instrument: 'harp', lo: 55, hi: 86, level: 0.85, enter: 0.1, rate: 2, shape: 'updown', echo: 0.6, pan: 0.3 },
       { role: 'bass', instrument: 'pluckBass', lo: 36, hi: 50, level: 0.55, enter: 0.3 },
@@ -91,7 +96,7 @@ export const STYLES_PLACES = {
   hearth: {
     name: 'Fireside',
     tempo: [70, 84],
-    meters: ['three', 'sixEight', 'four'],
+    meters: ['three', 'sixEight', 'four', 'twelve'],
     modes: ['dorian', 'mixolydian', 'aeolian'],
     roots: [50, 45, 48],
     progressions: [[0, 3, 0, 4], [0, 6, 3, 4], [0, 5, 3, 6], [0, 3, 6, 0]],
@@ -102,6 +107,7 @@ export const STYLES_PLACES = {
     sectionBars: [8, 16],
     melody: { cells: CALM_CELLS, leap: 3, space: 0.3, theme: true },
     layers: [
+      { role: 'counter', instrument: 'reed', lo: 62, hi: 79, level: 0.3, enter: 0.6, pan: 0.3 },
       { role: 'arp', instrument: 'lute', lo: 52, hi: 72, level: 0.85, enter: 0, rate: 2, shape: 'up', pan: -0.2 },
       { role: 'bass', instrument: 'pluckBass', lo: 36, hi: 50, level: 0.55, enter: 0.2 },
       { role: 'melody', instrument: 'fiddle', lo: 62, hi: 81, level: 0.6, enter: 0.3, pan: 0.2 },

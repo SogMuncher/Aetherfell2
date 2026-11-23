@@ -7,7 +7,7 @@ export const STYLES_DAY = {
   wander: {
     name: 'Wandering',
     tempo: [76, 92],
-    meters: ['four', 'four', 'three'],
+    meters: ['four', 'four', 'three', 'twelve'],
     modes: ['ionian', 'mixolydian', 'dorian', 'lydian'],
     roots: [50, 48, 45, 43, 52],
     progressions: [[0, 4, 5, 3], [0, 3, 0, 4], [5, 3, 0, 4], [0, 5, 3, 4], [0, 1, 3, 0], [3, 0, 4, 5], [0, 6, 3, 0]],
@@ -18,6 +18,7 @@ export const STYLES_DAY = {
     sectionBars: [8, 8, 16],
     melody: { cells: CALM_CELLS, leap: 3, space: 0.3, theme: true },
     layers: [
+      { role: 'arp', instrument: 'pizzicato', lo: 55, hi: 74, level: 0.3, enter: 0.6, rate: 2, shape: 'updown', pan: 0.3 },
       { role: 'pad', instrument: 'warmPad', lo: 55, hi: 74, level: 0.8, enter: 0, voices: 3, bright: 0.4 },
       { role: 'arp', instrument: 'harp', lo: 57, hi: 86, level: 0.85, enter: 0.15, rate: 2, shape: 'updown', echo: 0.45, pan: -0.25 },
       { role: 'bass', instrument: 'pluckBass', lo: 36, hi: 50, level: 0.7, enter: 0.25 },
@@ -37,7 +38,7 @@ export const STYLES_DAY = {
   grandeur: {
     name: 'Grand adventure',
     tempo: [84, 100],
-    meters: ['four', 'four', 'three'],
+    meters: ['four', 'four', 'three', 'twelve'],
     modes: ['lydian', 'ionian', 'mixolydian', 'aeolian'],
     roots: [43, 45, 48, 50, 41],
     progressions: [[0, 4, 5, 3], [5, 3, 0, 4], [0, 1, 3, 0], [0, 3, 5, 4], [0, 6, 5, 6], [3, 4, 0, 0], [5, 6, 0, 0]],
@@ -48,6 +49,7 @@ export const STYLES_DAY = {
     sectionBars: [8, 16],
     melody: { cells: FLOW_CELLS, leap: 4, space: 0.12, theme: true },
     layers: [
+      { role: 'perc', instrument: 'gong', lo: 0, hi: 0, level: 0.3, enter: 0.7, on: 'down', chance: 0.25 },
       { role: 'pad', instrument: 'strings', lo: 50, hi: 76, level: 0.9, enter: 0, voices: 4, bright: 0.6 },
       { role: 'bass', instrument: 'cello', lo: 33, hi: 50, level: 0.75, enter: 0.1 },
       { role: 'arp', instrument: 'harp', lo: 55, hi: 88, level: 0.75, enter: 0.2, rate: 1, shape: 'up', echo: 0.4, pan: -0.3 },
@@ -58,6 +60,7 @@ export const STYLES_DAY = {
       { role: 'perc', instrument: 'frameDrum', lo: 0, hi: 0, level: 0.4, enter: 0.65, hits: 5, on: 'euclid', bright: 0.7, pan: 0.3 },
     ],
     mix: { level: 1, hall: 0.8, cave: 0, echo: 0.5, tone: 11000 },
+    enter: 'sweep',
     minBars: 8,
     affinity: (s) => s.vista * 0.75 + s.soaring * 0.5 + s.wonder * 0.85 + s.altitude * 0.15,
     energy: (s) => c(0.35 + s.wonder * 0.4 + s.soaring * 0.3 + s.vista * 0.2 + s.company * 0.15),
@@ -67,7 +70,7 @@ export const STYLES_DAY = {
   forest: {
     name: 'Deep woods',
     tempo: [66, 82],
-    meters: ['four', 'sixEight', 'three'],
+    meters: ['four', 'sixEight', 'three', 'nine'],
     modes: ['dorian', 'aeolian', 'mixolydian'],
     roots: [50, 52, 45, 47],
     progressions: [[0, 6, 3, 0], [0, 3, 6, 0], [0, 5, 6, 0], [0, 2, 3, 4], [0, 6, 5, 6], [0, 3, 0, 6]],
@@ -78,6 +81,7 @@ export const STYLES_DAY = {
     sectionBars: [8, 16],
     melody: { cells: CALM_CELLS, leap: 2, space: 0.35, theme: false },
     layers: [
+      { role: 'texture', instrument: 'panpipe', lo: 67, hi: 84, level: 0.35, enter: 0.2, chance: 0.03, echo: 0.6 },
       { role: 'pad', instrument: 'warmPad', lo: 50, hi: 72, level: 0.75, enter: 0, voices: 3, bright: 0.3 },
       { role: 'arp', instrument: 'kalimba', lo: 62, hi: 84, level: 0.8, enter: 0.1, rate: 2, shape: 'random', echo: 0.55, pan: 0.3 },
       { role: 'texture', instrument: 'celesta', lo: 79, hi: 96, level: 0.45, enter: 0.1, chance: 0.08, echo: 0.7, pan: -0.4 },
@@ -96,7 +100,7 @@ export const STYLES_DAY = {
   fen: {
     name: 'The fen',
     tempo: [56, 70],
-    meters: ['sixEight', 'five'],
+    meters: ['sixEight', 'five', 'nine'],
     modes: ['dorian', 'phrygian', 'aeolian'],
     roots: [43, 45, 40],
     progressions: [[0, 1, 0, 6], [0, 6, 0, 1], [0, 3, 1, 0], [0, 0, 6, 0]],
@@ -107,6 +111,7 @@ export const STYLES_DAY = {
     sectionBars: [8, 16],
     melody: { cells: SLOW_CELLS, leap: 1, space: 0.55, theme: false },
     layers: [
+      { role: 'perc', instrument: 'woodblock', lo: 0, hi: 0, level: 0.3, enter: 0.3, hits: 3, on: 'euclid', pitch: 330, chance: 0.6 },
       { role: 'drone', instrument: 'drone', lo: 31, hi: 43, level: 0.6, enter: 0, bright: 0.2 },
       { role: 'texture', instrument: 'drip', lo: 72, hi: 90, level: 0.5, enter: 0, chance: 0.09, echo: 0.4, pan: 0.3 },
       { role: 'pad', instrument: 'warmPad', lo: 45, hi: 64, level: 0.5, enter: 0.1, voices: 3, bright: 0.15 },
