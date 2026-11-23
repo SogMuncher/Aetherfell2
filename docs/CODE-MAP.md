@@ -98,7 +98,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `things.ts` (332) entity archetypes by trait (D)
 - `tileCodes.ts` (17) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (201) all tile kinds + code assignment from the ledger
-- `validate.ts` (266) validateContent: every reference must point at something that exists
+- `validate.ts` (270) validateContent: every reference must point at something that exists
 - `viewmodel.ts` (33) held-item hand poses (viewmodel thread)
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
 
@@ -158,7 +158,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuCasters.ts` (125) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
 - `gpuFarShade.ts` (86) cloud shade + sun rays over terrain height levels far from the eye
 - `gpuSolid.ts` (218) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
-- `gpuSurfaces.ts` (111) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
+- `gpuSurfaces.ts` (113) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
 - `gpuParticles.ts` (155) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (61) held item buffer composited on top
 - `gpuSky.ts` (82) full-screen sky: gradient, sun, moon, stars, aurora
@@ -314,7 +314,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `vfx.ts` (62) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
 - `volume.ts` (135) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
-- `worldgen.ts` (201) surface, biome, water and world-generation defs
+- `worldgen.ts` (202) surface, biome, water and world-generation defs
 
 ## src/types/defs/
 - `brains.ts` (103) BehaviourDef, BrainDef, loot, habitats, population

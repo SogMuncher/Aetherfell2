@@ -36,7 +36,7 @@ export const SURFACES: Record<string, SurfaceDef> = {
       { kind: 'grain', salt: 26, amount: [22, 30, 16] },
       { kind: 'lines', axis: 'x', period: 4, add: [-8, -6, -4] },
       { kind: 'speckle', salt: 27, chance: 0.1, add: [30, 28, 6] },
-      { kind: 'patches', salt: 28, cells: 2, above: 0.74, colour: [52, 70, 64], keep: 0.5 },
+      { kind: 'patches', salt: 28, cells: 4, above: 0.74, colour: [52, 70, 64], keep: 0.5 },
     ],
   },
   sand: {
@@ -80,7 +80,7 @@ export const SURFACES: Record<string, SurfaceDef> = {
     layers: [
       { kind: 'bricks', w: 16, h: 8, mortar: [52, 58, 52], salt: 10, vary: 26 },
       { kind: 'grain', salt: 11, amount: 22 },
-      { kind: 'patches', salt: 12, cells: 2, above: 0.62, colour: [70, 96, 58], keep: [0.5, 0.6, 0] },
+      { kind: 'patches', salt: 12, cells: 4, above: 0.62, colour: [70, 96, 58], keep: [0.5, 0.6, 0] },
     ],
   },
   wood: {
@@ -109,10 +109,10 @@ export const SURFACES: Record<string, SurfaceDef> = {
     base: [58, 52, 58],
     spin: true,
     layers: [
-      { kind: 'noise', salt: 61, cells: 3, amount: [26, 22, 26] },
+      { kind: 'noise', salt: 61, cells: 4, amount: [26, 22, 26] },
       { kind: 'grain', salt: 62, amount: 16 },
       { kind: 'speckle', salt: 63, chance: 0.07, add: [22, 22, 26] },
-      { kind: 'patches', salt: 64, cells: 2, above: 0.7, colour: [44, 50, 44], keep: 0.6 },
+      { kind: 'patches', salt: 64, cells: 4, above: 0.7, colour: [44, 50, 44], keep: 0.6 },
     ],
   },
   flagstone: {
@@ -199,8 +199,8 @@ export const SURFACES: Record<string, SurfaceDef> = {
     base: [200, 190, 162],
     spin: true,
     layers: [
-      { kind: 'noise', salt: 42, cells: 3, amount: [16, 14, 12] },
-      { kind: 'patches', salt: 43, cells: 2, above: 0.7, colour: [150, 136, 110], keep: 0.55 },
+      { kind: 'noise', salt: 42, cells: 4, amount: [16, 14, 12] },
+      { kind: 'patches', salt: 43, cells: 4, above: 0.7, colour: [150, 136, 110], keep: 0.55 },
       { kind: 'speckle', salt: 44, chance: 0.05, add: [-40, -38, -34] },
     ],
   },
@@ -217,7 +217,7 @@ export const SURFACES: Record<string, SurfaceDef> = {
     spin: true,
     layers: [
       { kind: 'grain', salt: 13, amount: [26, 20, 14] },
-      { kind: 'patches', salt: 14, cells: 3, above: 0.7, colour: [40, 48, 40], keep: [0.46, 0.7, 0.71] },
+      { kind: 'patches', salt: 14, cells: 4, above: 0.7, colour: [40, 48, 40], keep: [0.46, 0.7, 0.71] },
     ],
   },
 };
