@@ -169,8 +169,8 @@ export class GpuLight {
     });
     solid.bind(p, texs.length);
     const fl = Math.hypot(cam.fwd[0], cam.fwd[1]) || 1;
-    casters.bind(p, texs.length + 2, [cam.fwd[0] / fl || 1, cam.fwd[1] / fl]);
-    farShade.bind(p, texs.length + 5);
+    casters.bind(p, texs.length + 4, [cam.fwd[0] / fl || 1, cam.fwd[1] / fl]);
+    farShade.bind(p, texs.length + 7);
     const v3 = (n: string, v: readonly number[]): void => gl.uniform3f(loc(gl, p, n), v[0] ?? 0, v[1] ?? 0, v[2] ?? 0);
     v3('uFwd', cam.fwd);
     v3('uRight', cam.right);

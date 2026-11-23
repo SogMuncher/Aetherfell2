@@ -150,15 +150,15 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuTerrain.ts` (274) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (63) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
-- `gpuStructures.ts` (220) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
-- `gpuStructShader.ts` (142) shader text for structures: shapes, DDA, surface textures, sun/cover light
+- `gpuStructures.ts` (211) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
+- `gpuStructShader.ts` (126) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (159) tile walls/doors/windows as boxes from tile data, with their matter states
 - `gpuSprites.ts` (254) billboards: sprite atlas + instanced quads
 - `gpuLight.ts` (194) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
-- `gpuCasters.ts` (124) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
+- `gpuCasters.ts` (125) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
 - `gpuFarShade.ts` (86) cloud shade + sun rays over terrain height levels far from the eye
-- `gpuSolid.ts` (151) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
-- `gpuSurfaces.ts` (105) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
+- `gpuSolid.ts` (218) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
+- `gpuSurfaces.ts` (111) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
 - `gpuParticles.ts` (155) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (61) held item buffer composited on top
 - `gpuSky.ts` (82) full-screen sky: gradient, sun, moon, stars, aurora
@@ -168,7 +168,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `glUtil.ts` (84) shader/texture helpers, camera basis and view-projection
 
 ## src/render/materials/
-- `textures.ts` (196) tileable procedural textures from surface layers
+- `textures.ts` (197) tileable procedural textures from surface layers
 
 ## src/render/raycaster/
 - `camera.ts` (58) per-frame projection values

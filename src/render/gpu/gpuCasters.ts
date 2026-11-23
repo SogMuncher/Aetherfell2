@@ -12,7 +12,7 @@ const S = GPU_SOLID.size;
 const ROW = 64;
 
 /**
- * GLSL (needs `uSolid0` from SOLID_UNIFORMS): `castersAt(column, from, dir, length, end, self)` is true when a sprite
+ * GLSL (needs `uSolid0` from SOLID_UNIFORMS and the eye `uEye`): `castersAt(column, from, dir, length, end, self)` is true when a sprite
  * blocks the ray. `self` is the sprite the ray starts on (-1 for none), which never shades itself; a caster holding the
  * ray's end (a torch in its hand) is skipped too. A column first rejects by the height band of its casters.
  */
@@ -28,7 +28,8 @@ bool castBlocks(int k, vec3 o, vec3 d, float len, vec3 e){
   vec3 q = o + d * t;
   float u = dot(q.xy - a.xy, vec2(-dh.y, dh.x)) / (2.0 * a.w) + 0.5; float v = (q.z - a.z) / c.x;
   if (u < 0.0 || u > 1.0 || v < 0.0 || v > 1.0) return false;
-  if (c.y > 0.5) u = 1.0 - u;
+  // The drawn picture faces the eye, the card faces the ray: seen from the light's side they look opposite ways, so mirror it back.
+  if ((c.y > 0.5) != (dot(a.xy - uEye.xy, dh) < 0.0)) u = 1.0 - u;
   vec4 b = castT(k, 1);
   ivec2 tx = ivec2(b.xy) + clamp(ivec2(vec2(u, 1.0 - v) * b.zw), ivec2(0), ivec2(b.zw) - 1);
   return texelFetch(uAtlas, tx, 0).a > 0.5;

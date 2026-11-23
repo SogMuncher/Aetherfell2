@@ -1,8 +1,8 @@
 import { SURFACE_MIX, SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
 import { STATE_SHADER } from './gpuStates';
+import { SHAPE_SHADER } from './gpuSolid';
 
 /** Shader text for GPU structures (docs/GPU-RENDER.md stage 2): each brick's box is rasterised, the pixel walks the cells inside it. */
-export const PIECE_FLOATS = 23;
 export const GRID = { win: 11, zLow: 2, zCount: 14 } as const;
 const GW = GRID.win * 2 + 1;
 
@@ -20,34 +20,18 @@ void main(){
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 uniform mat4 uVP; uniform vec3 uEye, uFog; uniform float uFogDist;
-uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform float uTime; uniform float uRainWet; uniform vec2 uFade; uniform usampler2D uAtlas, uPage; uniform sampler2D uPieces, uShapeIdx; uniform ivec2 uGrid0;
+uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform float uTime; uniform float uRainWet; uniform vec2 uFade; uniform usampler2D uAtlas, uPage; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; layout(location = 0) out vec4 o;
 ${SURFACE_SHADER}
 ${STATE_SHADER}
 ${SURFACE_OUT}
-float P(int pc, int k){ return texelFetch(uPieces, ivec2(k, pc), 0).r; }
+${SHAPE_SHADER}
 vec4 rayShape(int byte, vec3 o, vec3 d){
-  int n = int(texelFetch(uShapeIdx, ivec2(byte, 1), 0).r); int s = int(texelFetch(uShapeIdx, ivec2(byte, 0), 0).r);
+  int n = shapeCount(byte), s = shapeStart(byte);
   float best = 1e9; vec3 bn = vec3(0.0);
-  for (int k = 0; k < 4; k++){ if (k >= n) break; int pc = s + k;
-    float t0 = 0.0, t1 = 1e9; vec3 nn = vec3(0.0); bool miss = false;
-    for (int a = 0; a < 3; a++){
-      float oo = o[a], dd = d[a], lo = P(pc, a), hi = P(pc, 3 + a);
-      if (abs(dd) < 1e-9){ if (oo < lo || oo > hi) miss = true; continue; }
-      float ta = (lo - oo) / dd, tb = (hi - oo) / dd; if (ta > tb){ float x = ta; ta = tb; tb = x; }
-      if (ta > t0){ t0 = ta; nn = vec3(0.0); nn[a] = dd > 0.0 ? -1.0 : 1.0; }
-      if (tb < t1) t1 = tb;
-    }
-    if (miss) continue;
-    int cuts = int(P(pc, 6));
-    for (int c = 0; c < 4; c++){ if (c >= cuts) break; int b = 7 + c * 4;
-      vec3 cn = vec3(P(pc, b), P(pc, b + 1), P(pc, b + 2)); float cd = P(pc, b + 3);
-      float den = dot(cn, d), num = cd - dot(cn, o);
-      if (abs(den) < 1e-9){ if (num < 0.0) miss = true; continue; }
-      float t = num / den;
-      if (den < 0.0){ if (t > t0){ t0 = t; nn = normalize(cn); } } else if (t < t1) t1 = t;
-    }
-    if (miss || t0 > t1 || t1 <= 0.0) continue;
+  for (int k = 0; k < 4; k++){ if (k >= n) break; float t0, t1; vec3 nn;
+    if (!pieceSpan(s + k, o, d, t0, t1, nn) || t1 <= 0.0) continue;
+    if (t0 <= 0.0){ t0 = 0.0; nn = vec3(0.0); }
     if (t0 < best){ best = t0; bn = nn; }
   }
   return best >= 1e8 ? vec4(-1.0) : vec4(best, bn);

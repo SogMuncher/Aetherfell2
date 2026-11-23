@@ -52,8 +52,9 @@ function tn(x: number, y: number, f: number, s: number): number {
   return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
 }
 
+// Finest octave 4 texels: a coarser one (one blob per tile) repeats every tile and reads as a grid across the ground.
 function grain(x: number, y: number, s: number): number {
-  return tn(x, y, TEX / 8, s) * 0.5 + tn(x, y, TEX / 4, s + 1) * 0.3 + tn(x, y, TEX / 2, s + 2) * 0.2;
+  return tn(x, y, TEX / 4, s) * 0.5 + tn(x, y, TEX / 2, s + 1) * 0.3 + tn(x, y, TEX, s + 2) * 0.2;
 }
 
 function bricks(x: number, y: number, bw: number, bh: number): { mortar: boolean; id: number } {
