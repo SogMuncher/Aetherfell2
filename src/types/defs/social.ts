@@ -1,4 +1,4 @@
-import type { DressDef } from '../looks';
+import type { DressDef } from '../art';
 import type { FactionId, ItemId, SiteId, ThingId } from './ids';
 import type { ItemStack } from '../items';
 

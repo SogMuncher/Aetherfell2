@@ -2,8 +2,8 @@
 // regions survive painting, and each individual wears its own colours over a shared shape.
 // Prints PASS/FAIL per check.
 import { CONTENT, validateContent } from '../src/content';
-import { FormBank, formColours } from '../src/render/entities/formArt';
-import { BodyBank, individual } from '../src/render/entities/bodyArt';
+import { ArtBank, assemble } from '../src/render/entities/assembler';
+import { artColours } from '../src/render/entities/artGrow';
 import { swatch } from '../src/render/palette';
 
 let failed = 0;
@@ -17,40 +17,42 @@ check('content (palettes, prop forms, dress colours) validates', validateContent
 // 1. Every thing with a picture is a look, a form or a loose item: nothing falls back to hand-drawn art.
 {
   const missing = Object.entries(CONTENT.things)
-    .filter(([, t]) => t.sprite !== null && t.sprite !== 'item' && !(t.sprite in CONTENT.looks) && !(t.sprite in CONTENT.forms))
+    .filter(([, t]) => t.sprite !== null && t.sprite !== 'item' && !(t.sprite in CONTENT.art))
     .map(([k]) => k);
   check('every prop and creature is built from parts', missing.length === 0, missing.join(', '));
   const empty: string[] = [];
   for (const [id, t] of Object.entries(CONTENT.things)) {
-    const f = t.sprite ? CONTENT.forms[t.sprite] : undefined;
-    if (!f) continue;
-    const s = new FormBank(f, 3, 1).sprite(0);
+    const f = t.sprite ? CONTENT.art[t.sprite] : undefined;
+    if (!f || !t.sprite) continue;
+    const s = new ArtBank(assemble(t.sprite, f, 0), 1).sprite('idle', 0, 0);
     const filled = s.px.reduce((n, c) => n + (c !== 0 ? 1 : 0), 0);
     if (filled < 20) empty.push(`${id} (${filled} px)`);
   }
-  check('every prop paints a picture', empty.length === 0, empty.join(', '));
+  check('every prop and creature paints a picture', empty.length === 0, empty.join(', '));
 }
 
 // 2. Colour regions: one painted shape, many colourings.
 {
-  const oak = CONTENT.forms.oak;
+  const oak = CONTENT.art.oak;
   if (oak) {
-    const s = new FormBank(oak, 11, 1).sprite(0);
+    const s = new ArtBank(assemble('oak', oak, 1), 1).sprite('idle', 0, 0);
     const regions = s.regions ? s.regions.reduce((n, r) => n + (r ? 1 : 0), 0) : 0;
     check('grown pictures keep their colour regions', regions > 50 && !!s.shade, `${regions} region pixels`);
     const seen = new Set<string>();
-    for (let i = 0; i < 12; i++) seen.add(Array.from(formColours(oak, i * 101 + 5)).join(','));
+    for (let i = 0; i < 12; i++) seen.add(Array.from(artColours(oak, i * 101 + 5)).join(','));
     check('placed copies of one shape wear different colours', seen.size >= 10, `${seen.size} of 12 distinct`);
   } else check('oak form exists', false);
-  const wolf = CONTENT.looks.wolf;
+  const wolf = CONTENT.art.wolf;
   if (wolf) {
-    const a = individual('wolf', wolf, 1);
-    const b = individual('wolf', wolf, 2);
-    const shared = a.key === b.key;
-    const differ = Array.from(a.colours).join(',') !== Array.from(b.colours).join(',');
-    const s = new BodyBank(a, 1).sprite('walk', 2, 3);
-    check('wolves share a picture but not their colours', shared && differ && !!s.regions, `same picture ${shared}, own colours ${differ}`);
-  } else check('wolf look exists', false);
+    const a = assemble('wolf', wolf, 2);
+    const shared = a.key === assemble('wolf', wolf, 2).key;
+    const differ = Array.from(artColours(wolf, 1)).join(',') !== Array.from(artColours(wolf, 2)).join(',');
+    const bank = new ArtBank(a, 1);
+    const walk = bank.sprite('walk', 2, 3);
+    const moves = Array.from(walk.px).join(',') !== Array.from(bank.sprite('walk', 6, 3).px).join(',');
+    check('wolves share a picture but not their colours', shared && differ && !!walk.regions, `same picture ${shared}, own colours ${differ}`);
+    check('things with a gait animate their joints', moves);
+  } else check('wolf art exists', false);
 }
 
 // 3. Palettes drift a little, never wildly, and stay stable per seed.

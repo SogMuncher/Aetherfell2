@@ -1,11 +1,12 @@
-import type { Chunk, FormDef, ReadonlyTiles } from '../../types';
+import type { ArtDef, Chunk, ReadonlyTiles } from '../../types';
 import { CHUNK_SIZE, packKey } from '../../types';
 import { CONTENT } from '../../content';
 import { TILES } from '../../content/tiles';
 import { rhash } from '../color';
 import { missingSprite } from '../entities/sprites';
 import type { Sprite } from '../entities/sprites';
-import { FormBank, formColours, formPaintBudget, formVariants } from '../entities/formArt';
+import { ArtBank, artPaintBudget, artVariants, assemble } from '../entities/assembler';
+import { artColours } from '../entities/artGrow';
 
 /** Trees and rocks are drawn as pictures out to this distance (m)... */
 export const FLORA_RANGE = 90;
@@ -26,7 +27,7 @@ export interface TileBillboard {
   chunk: Chunk;
   idx: number;
   /** Its grown individual (null only for a tile whose form is missing). */
-  bank: FormBank | null;
+  bank: ArtBank | null;
   /** Which way it was set down (radians). */
   yaw: number;
   /** Its own colours for the picture's colour regions (null for a picture without regions). */
@@ -58,16 +59,16 @@ function rangeFor(height: number): number {
 export class TileBillboards {
   private cache = new Map<number, ChunkFlora>();
   /** Grown individuals by form, variant and screen handedness. */
-  private banks = new Map<string, FormBank>();
+  private banks = new Map<string, ArtBank>();
   /** Draw range per form (from the height of its first individual). */
   private ranges = new Map<string, number>();
   private hand = 1;
 
-  private bank(formId: string, form: FormDef, variant: number): FormBank {
+  private bank(formId: string, form: ArtDef, variant: number): ArtBank {
     const key = `${formId}|${variant}|${this.hand}`;
     let b = this.banks.get(key);
     if (!b) {
-      b = new FormBank(form, variant * 7919 + formId.length * 131 + formId.charCodeAt(0), this.hand);
+      b = new ArtBank(assemble(formId, form, variant), this.hand);
       this.banks.set(key, b);
       if (!this.ranges.has(formId)) this.ranges.set(formId, rangeFor(b.top));
     }
@@ -89,15 +90,15 @@ export class TileBillboards {
         const y = cy * CHUNK_SIZE + j;
         const jx = (rhash(x, y, 1) - 0.5) * 0.4;
         const jy = (rhash(x, y, 2) - 0.5) * 0.4;
-        const form = CONTENT.forms[info.sprite];
-        let bank: FormBank | null = null;
+        const form = CONTENT.art[info.sprite];
+        let bank: ArtBank | null = null;
         let sprite: Sprite | undefined;
         let scale = 1;
         let range = FLORA_RANGE;
         let colours: Uint32Array | null = null;
         if (form) {
-          colours = formColours(form, Math.floor(rhash(x, y, 9) * 0x7fffffff));
-          bank = this.bank(info.sprite, form, Math.floor(rhash(x, y, 3) * formVariants(form)));
+          colours = artColours(form, Math.floor(rhash(x, y, 9) * 0x7fffffff));
+          bank = this.bank(info.sprite, form, Math.floor(rhash(x, y, 3) * artVariants(form)));
           scale = 1 + (rhash(x, y, 4) - 0.5) * 2 * (form.vary ?? 0.12);
           range = this.ranges.get(info.sprite) ?? FLORA_RANGE;
         } else sprite = missingSprite();
@@ -125,7 +126,7 @@ export class TileBillboards {
       this.cache.clear();
     }
     if (this.banks.size > 1500) this.banks.clear();
-    formPaintBudget(PAINT_BUDGET_MS);
+    artPaintBudget(PAINT_BUDGET_MS);
     // Which way the right vector turns from forward: the same turn gives each object's own "right".
     const turn = fx * ry - fy * rx > 0 ? 1 : -1;
     const camCx = Math.floor(camX / CHUNK_SIZE);
@@ -149,7 +150,7 @@ export class TileBillboards {
           const fadeFrom = t.range >= FLORA_RANGE ? FLORA_FADE : t.range * 0.7;
           const fade = d2 <= fadeFrom * fadeFrom ? 1 : 1 - (Math.sqrt(d2) - fadeFrom) / (t.range >= FLORA_RANGE ? span : t.range - fadeFrom);
           if (t.bank) {
-            if (t.bank.nviews === 1) t.sprite = t.bank.sprite(0);
+            if (t.bank.nviews === 1) t.sprite = t.bank.sprite('idle', 0, 0);
             else {
               // The side seen: the object's facing measured against the line from the camera to it.
               const d = Math.sqrt(d2) || 1;
@@ -160,7 +161,7 @@ export class TileBillboards {
               const ca = Math.cos(t.yaw);
               const sa = Math.sin(t.yaw);
               const psi = Math.atan2(-ox * sa + oy * ca, ox * ca + oy * sa);
-              t.sprite = t.bank.sprite(Math.round((psi / (Math.PI * 2)) * t.bank.nviews));
+              t.sprite = t.bank.sprite('idle', 0, Math.round((psi / (Math.PI * 2)) * t.bank.nviews));
             }
           }
           fn(t, fade, (t.chunk.fire[t.idx] ?? 0) > 0);

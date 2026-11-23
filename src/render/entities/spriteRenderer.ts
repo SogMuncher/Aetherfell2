@@ -5,8 +5,7 @@ import { sideFrom, type Projection } from '../raycaster/camera';
 import { TileBillboards } from '../raycaster/tileBillboards';
 import { itemSprite, missingSprite } from './sprites';
 import type { Sprite } from './sprites';
-import { CreatureSprites } from './creatures';
-import { PropSprites } from './props';
+import { ArtSprites } from './artSprites';
 
 export interface Billboard {
   x: number;
@@ -37,8 +36,7 @@ export class SpriteRenderer {
   private flora = new TileBillboards();
   private list: Billboard[] = [];
   private pool: Billboard[] = [];
-  private creatures = new CreatureSprites();
-  private props = new PropSprites();
+  private art = new ArtSprites();
 
   private add(x: number, y: number, z: number, sprite: Sprite, p: Projection, flip = false, heat = 0, flash = 0, scale = 1, tint: { r: number; g: number; b: number } | null = null, fade = 1, colours: Uint32Array | null = null): void {
     const dx = x - p.cam.x;
@@ -77,25 +75,19 @@ export class SpriteRenderer {
       const dx = x - p.cam.x;
       const dy = y - p.cam.y;
       if (dx * dx + dy * dy > 160 * 160) continue;
-      // Creatures with a look are built from their parts and drawn from the side the camera sees.
+      // Creatures, people and props are built from their art recipe: an opened container shows its `…Open` recipe if it has one.
       const def = thingDef(CONTENT, e.def);
-      const look = def.sprite !== null ? CONTENT.looks[def.sprite] : undefined;
       let s: Sprite | null;
       let facing = false;
       let scale = 1;
       let sink = 0;
       let colours: Uint32Array | null = null;
-      // Props grow from forms (content/props.ts): an opened container shows its `…Open` form if it has one.
-      const formId = def.sprite === null ? undefined : e.container?.opened && CONTENT.forms[`${def.sprite}Open`] ? `${def.sprite}Open` : def.sprite;
-      const form = formId !== undefined ? CONTENT.forms[formId] : undefined;
-      if (look && def.sprite !== null) {
-        const c = this.creatures.pick(e, def.sprite, look, p, time);
+      const artId = def.sprite === null ? undefined : e.container?.opened && CONTENT.art[`${def.sprite}Open`] ? `${def.sprite}Open` : def.sprite;
+      const art = artId !== undefined ? CONTENT.art[artId] : undefined;
+      if (art && artId !== undefined) {
+        const c = this.art.pick(e, artId, art, p, time);
         s = c.sprite;
         scale = c.scale;
-        colours = c.colours;
-      } else if (form && formId !== undefined) {
-        const c = this.props.pick(e, formId, form, p, time);
-        s = c.sprite;
         colours = c.colours;
       } else {
         s = this.spriteFor(e);

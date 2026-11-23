@@ -1,6 +1,6 @@
 import type { PartShape, Surface } from '../../types';
 import { SHADE_ONE } from '../palette';
-import type { Solid } from './bodyArt';
+import type { Solid } from './artGrow';
 import type { Sprite } from './sprites';
 import { apply } from './bodyMath';
 import { pack, rhash } from '../color';

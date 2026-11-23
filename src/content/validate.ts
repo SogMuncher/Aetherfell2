@@ -1,10 +1,9 @@
 import { type Content, type Effect, PARTICLE_KINDS, Tile } from '../types';
 import { SWING_DIRS } from '../types/input';
 import { colourProblem, paletteProblems } from './palettes';
-import { formProblems } from './forms';
+import { artProblems } from './artCheck';
 import { gearProblems } from './gearCheck';
 import { itemDef } from './itemDefs';
-import { lookProblems } from './looks';
 import { spellFor, spellKey } from './spellcraft';
 import { tileTableProblems } from './tiles';
 import { validateShapes } from './shapes';
@@ -249,11 +248,9 @@ export function validateContent(c: Content): string[] {
     if (t.freezesInto !== undefined) tile(t.freezesInto, `tile ${k} (${t.name}) freezesInto`);
     if (t.meltsInto !== undefined) tile(t.meltsInto, `tile ${k} (${t.name}) meltsInto`);
   }
-  // World objects: every billboard tile grows from a form.
-  out.push(...formProblems(c.forms, c.palettes));
-  for (const [k, t] of Object.entries(c.tiles)) if (t.shape === 'billboard') need(t.sprite !== null && t.sprite in c.forms, `tile ${k} (${t.name})`, `form '${t.sprite ?? ''}'`);
-  // Every thing with a picture is a creature look, a form (prop), or a loose item.
-  for (const [k, t] of Object.entries(c.things)) if (t.sprite !== null && t.sprite !== 'item') need(t.sprite in c.looks || t.sprite in c.forms, `thing '${k}'`, `look or form '${t.sprite}'`);
+  // Every billboard tile and every thing with a picture is built from parts (or is a loose item).
+  for (const [k, t] of Object.entries(c.tiles)) if (t.shape === 'billboard') need(t.sprite !== null && t.sprite in c.art, `tile ${k} (${t.name})`, `art '${t.sprite ?? ''}'`);
+  for (const [k, t] of Object.entries(c.things)) if (t.sprite !== null && t.sprite !== 'item') need(t.sprite in c.art, `thing '${k}'`, `art '${t.sprite}'`);
   // Colours: palettes are sound, and jobs dress people only in colours that exist.
   out.push(...paletteProblems(c.palettes));
   for (const [k, r] of Object.entries(c.roles)) for (const [slot, list] of Object.entries(r.dress?.colors ?? {})) for (const col of list) {
@@ -261,6 +258,6 @@ export function validateContent(c: Content): string[] {
     if (why) out.push(`role '${k}' dress '${slot}': ${why}`);
   }
   const dressed = Object.values(c.roles).flatMap((r) => [...(r.dress?.features ?? []), ...(r.dress?.without ?? [])]);
-  out.push(...lookProblems(c.looks, dressed, c.palettes));
+  out.push(...artProblems(c.art, dressed, c.palettes));
   return out;
 }

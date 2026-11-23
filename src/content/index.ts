@@ -3,6 +3,7 @@ import { BRAINS, FACTIONS, HABITATS } from './living';
 import type { Content } from '../types';
 import { EFFECTS } from './effects';
 import { FORMS } from './forms';
+import { SMALL_FORMS } from './smallForms';
 import { GEAR } from './gear';
 import { HUD } from './hud';
 import { ITEMS } from './items';
@@ -66,9 +67,8 @@ export const CONTENT: Content = {
   villagerNames: VILLAGER_NAMES,
   rules: RULES,
   gear: GEAR,
-  looks: LOOKS,
-  // Trees, rocks and plants (forms.ts) and made things like barrels and chests (props.ts) grow the same way.
-  forms: { ...FORMS, ...PROPS },
+  // One table of pictures built from parts: creatures (looks.ts), trees, rocks and plants (forms.ts, smallForms.ts), props (props.ts).
+  art: { ...LOOKS, ...FORMS, ...SMALL_FORMS, ...PROPS },
   palettes: PALETTES,
   realms: REALMS,
   sky: SKY,
