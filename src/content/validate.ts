@@ -223,6 +223,10 @@ export function validateContent(c: Content): string[] {
   for (const [k, s] of Object.entries(c.matterStates)) {
     if (s.cover && 'surface' in s.cover) need(s.cover.surface in c.surfaces, `matter state ${k}`, `surface '${s.cover.surface}'`);
   }
+  // A noise blob wider than 4 texels repeats once per tile, and the repeats line up into stripes across the ground.
+  for (const [k, s] of Object.entries(c.surfaces)) for (const l of s.layers) {
+    if ((l.kind === 'noise' || l.kind === 'patches') && (l.cells < 4 || 16 % l.cells !== 0)) out.push(`surface ${k}: ${l.kind} cells must be 4, 8 or 16, not ${l.cells}`);
+  }
   let fallback = false;
   for (const [id, b] of Object.entries(c.biomes)) {
     const w = `biome '${id}'`;
