@@ -30,6 +30,8 @@ export interface Beat {
   bar: number;
   step: number;
   channel(i: number, l: LayerDef): Channel;
+  /** True while a reaction is playing this role's part (the band leaves it the space). */
+  quiet?(role: LayerDef['role'], t: number): boolean;
 }
 
 /** MIDI note of a scale degree, placed inside a register. */
@@ -52,7 +54,8 @@ export class Band {
   ) {}
 
   play(inst: InstrumentId, ch: Channel, t: number, midi: number, dur: number, vel: number, priority: number, bright?: number): void {
-    if (!this.synth.allow(priority)) return;
+    // Nothing in the music sounds for sure (theory's chance is capped), so any note may go missing.
+    if (!this.synth.allow(priority) || !this.rng.chance(1)) return;
     const freq = mtof(midi);
     if (!(freq > 15) || freq > this.synth.ctx.sampleRate * 0.4) return;
     try {
@@ -109,7 +112,7 @@ export class Band {
     const lift = 0.75 + energy * 0.35;
 
     def.layers.forEach((l, i) => {
-      if (!plan.active[i]) return;
+      if (!plan.active[i] || b.quiet?.(l.role, t) === true) return;
       const ch = b.channel(i, l);
       const pri = PRIORITY[l.role];
       const inst = INSTRUMENTS[l.instrument];
@@ -186,6 +189,17 @@ export class Band {
           break;
       }
     });
+  }
+
+  /** A stray instrument breaks in for a few chord tones somewhere in this bar. */
+  rogue(b: Beat, inst: InstrumentId, ch: Channel, t: number, stepDur: number): void {
+    const tones = this.chordNotes(b.sec, b.plan.chord, 64, 81);
+    const count = 1 + this.rng.int(3);
+    let s = this.rng.int(b.sec.meter.steps - 2);
+    for (let k = 0; k < count && tones.length > 0; k++) {
+      this.play(inst, ch, t + s * stepDur, this.rng.pick(tones), stepDur * this.rng.pick([1, 2, 3]), 0.4 + this.rng.next() * 0.2, 0.5);
+      s += this.rng.pick([1, 2, 3]);
+    }
   }
 
   private ostinatoNotes(sec: Section, chord: Chord, l: LayerDef): number[] {

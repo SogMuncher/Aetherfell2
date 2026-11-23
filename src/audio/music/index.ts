@@ -1,5 +1,5 @@
 export { MusicEngine } from './conductor';
-export type { MusicStatus } from './conductor';
+export type { MusicStatus } from './styles';
 export { MoodTracker, EVENT_IMPULSES, SIGNAL_NAMES } from './signals';
 export { PROBES } from './signalProbes';
 export type { MoodSignals, SignalName, SignalProbe, GameView } from './signals';

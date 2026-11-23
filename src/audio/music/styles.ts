@@ -1,6 +1,6 @@
 /** Musical styles: types and helpers in styleTypes.ts, the entries in stylesDay/Places/Danger.ts.
  * Adding a mood = adding one entry to one of those tables. The conductor blends by itself. */
-import type { StyleDef } from './styleTypes';
+import type { MeterId, StyleDef } from './styleTypes';
 import type { MoodSignals } from './signals';
 import { STYLES_DANGER } from './stylesDanger';
 import { STYLES_DAY } from './stylesDay';
@@ -39,4 +39,18 @@ export function bestStyle(s: MoodSignals, extra: ReadonlyMap<string, number>, cu
     }
   }
   return best;
+}
+
+/** What the conductor is doing right now (console status). */
+export interface MusicStatus {
+  style: StyleId;
+  styleName: string;
+  section: string;
+  key: string;
+  mode: string;
+  tempo: number;
+  meter: MeterId;
+  energy: number;
+  voices: number;
+  lastCue: string;
 }

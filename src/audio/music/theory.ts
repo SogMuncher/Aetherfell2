@@ -2,6 +2,7 @@
  * Music theory helpers: scales and modes, chords stacked inside a mode, voice leading, Euclidean
  * rhythms and a small seeded random source. Pure functions, no WebAudio.
  */
+import { CHAOS } from './chaos';
 
 export type ModeId =
   | 'ionian'
@@ -160,7 +161,7 @@ export class MusicRng {
     return Math.floor(this.next() * n);
   }
   chance(p: number): boolean {
-    return this.next() < p;
+    return this.next() < Math.min(p, CHAOS.maxChance);
   }
   pick<T>(arr: readonly T[]): T {
     const v = arr[Math.floor(this.next() * arr.length)];
