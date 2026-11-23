@@ -24,6 +24,10 @@ export const METERS = {
   sixEight: { steps: 12, beats: [0, 6], accents: [0, 6] },
   five: { steps: 20, beats: [0, 4, 8, 12, 16], accents: [0, 12] },
   seven: { steps: 14, beats: [0, 4, 8, 11], accents: [0, 8] },
+  two: { steps: 8, beats: [0, 4], accents: [0] },
+  nine: { steps: 18, beats: [0, 6, 12], accents: [0] },
+  eleven: { steps: 22, beats: [0, 4, 8, 14, 18], accents: [0, 8] },
+  twelve: { steps: 24, beats: [0, 6, 12, 18], accents: [0, 12] },
 } satisfies Record<string, Meter>;
 
 export type MeterId = keyof typeof METERS;
@@ -122,6 +126,10 @@ export interface StyleDef {
     /** Lowpass on the whole style in Hz (dark styles are muffled). */
     tone: number;
   };
+  /** Cue played when the music changes into this style (cues.ts); wins over the old style's `leave`. */
+  enter?: string;
+  /** Cue played when the music leaves this style for one without an `enter` cue. */
+  leave?: string;
   /** Can cut in on the next beat instead of waiting for a phrase to end. */
   urgent?: boolean;
   /** Minimum bars before the conductor may leave this style. */

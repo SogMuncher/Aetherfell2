@@ -126,7 +126,7 @@ export class GameAudio {
     e.amb.gain.setTargetAtTime(0.9 * this.mix.ambience, t, 0.05);
   }
 
-  /** Console helpers: `aetherfellMusic.status()`, `.play('battle')`, `.follow()`, `.feed('depth', 1, 30)`, `.volume(0.5)`. */
+  /** Console helpers: `aetherfellMusic.status()`, `.play('battle')`, `.follow()`, `.feed('depth', 1, 30)`, `.cue('parry')`, `.volume(0.5)`. */
   private exposeConsole(): void {
     const m = this.music;
     if (!m || typeof window === 'undefined') return;
@@ -143,6 +143,7 @@ export class GameAudio {
         return 'following the game';
       },
       feed: (name: string, value: number, seconds = 10): void => m.mood.feed(name, value, seconds),
+      cue: (id: string): boolean => m.cue(id),
       mood: (): Record<string, number> => ({ ...m.mood.current }),
       volume: (v: number): void => {
         this.musicVolume = v;
