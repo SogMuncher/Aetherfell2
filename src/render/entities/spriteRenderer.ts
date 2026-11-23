@@ -69,9 +69,6 @@ export class SpriteRenderer {
   collect(p: Projection, state: SimState, tiles: ReadonlyTiles, localId: number | null, alpha: number, time: number, hitFlash: Map<number, number>): readonly Billboard[] {
     for (const b of this.list) this.pool.push(b);
     this.list.length = 0;
-    this.flora.each(tiles, p.cam.x, p.cam.y, p.FX, p.FY, p.RX, p.RY, (t, fade, burning) => {
-      this.add(t.x, t.y, t.z, t.sprite, p, false, burning ? 0.3 : 0, 0, t.scale, t.tint, fade, t.colours);
-    });
     for (const e of state.entities.values()) {
       if (e.id === localId) continue;
       const x = lerp(e.prev.x, e.pos.x, alpha);
@@ -122,6 +119,10 @@ export class SpriteRenderer {
       }
       this.add(x, y, z - sink, s, p, facing, glow, flash, scale, tint, 1, colours);
     }
+    // Flora last: when a dense forest passes the GPU's billboard cap, trees drop out, never creatures or items.
+    this.flora.each(tiles, p.cam.x, p.cam.y, p.FX, p.FY, p.RX, p.RY, (t, fade, burning) => {
+      this.add(t.x, t.y, t.z, t.sprite, p, false, burning ? 0.3 : 0, 0, t.scale, t.tint, fade, t.colours);
+    });
     return this.list;
   }
 

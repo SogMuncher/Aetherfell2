@@ -35,3 +35,4 @@ A new `Renderer` is made on every world swap (join, load): always `dispose()` th
 `scripts/artSmoke.ts`, `skySmoke.ts`; `npx tsc --noEmit`.
 
 Sprite views (8-way creatures, props) and left/right facing are picked from where the camera STANDS relative to the thing (`sideFrom` in raycaster/camera.ts), never from where it is turned. Each billboard quad also turns to face the camera's position (gpuSprites VS), so turning or tilting the view never swings it round.
+Each sprite picture sits in the GPU atlas ONCE, its colour-region pixels stored as (region, shade) codes; each individual's colours are a row in a palette texture (`GPU_SPRITES`). The atlas and palette only start over between frames, never while a frame's billboards are queued (that once made dense forests shuffle pictures). Flora is collected last, so the billboard cap drops trees before creatures.

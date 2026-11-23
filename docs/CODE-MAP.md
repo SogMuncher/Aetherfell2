@@ -140,7 +140,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemPlates.ts` (131) armour parts: headgear, torsowear, armwear, legwear
 - `itemVessel.ts` (157) flasks, bottles, vials, jugs, pots
 - `props.ts` (56) props grown from forms
-- `spriteRenderer.ts` (135) gathers billboards (trees, creatures, props, items) for the GPU
+- `spriteRenderer.ts` (136) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (341) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
@@ -153,9 +153,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuStructures.ts` (220) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
 - `gpuStructShader.ts` (140) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (158) tile walls/doors/windows as boxes from tile data, with their matter states
-- `gpuSprites.ts` (166) billboards: sprite atlas + instanced quads
+- `gpuSprites.ts` (254) billboards: sprite atlas + instanced quads
 - `gpuLight.ts` (194) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
-- `gpuCasters.ts` (114) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
+- `gpuCasters.ts` (124) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
 - `gpuFarShade.ts` (86) cloud shade + sun rays over terrain height levels far from the eye
 - `gpuSolid.ts` (151) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
 - `gpuSurfaces.ts` (89) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
