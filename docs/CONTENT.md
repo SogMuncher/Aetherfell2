@@ -16,7 +16,7 @@
 | `items`, `gear`, `loot` | goods; weapons + armour (`gear:<form>:<material>:<quality>[:<enchant>]`, worn ids end `@wear`); drops |
 | `runes`, `spellcraft`, `statuses`, `effects` | spell syllables, ongoing conditions, mote bursts |
 | `sites`, `roles`, `structures`, `shapes` | places, villager jobs, building recipes, 3D shapes (append-only ledger) |
-| `looks`, `forms`, `props` | creature parts, trees/rocks/plants, made objects, drawn from pieces + colour regions |
+| `art` (from `looks`, `forms`, `smallForms`, `props`) | every picture built from parts (`ArtDef`, types/art.ts): creatures, trees/rocks/plants, made objects; one assembler draws all |
 | `realms`, `sky`, `day` | spaces; cloud layers; the day clock |
 | `rules`, `hud`, `cheats`, `viewmodel` | world-wide numbers/choices; screen colours; debug entries; held-item poses |
 
@@ -31,7 +31,7 @@ Thing traits (systems act on these): `body` `health` `material` `actor` `brain` 
   `gear.enchants` entry (`hit` effects, `resist`, multipliers). Resolve with `itemDef()`, never `items[id]`.
 - Rune: `runes` entry (+ stone item `rune:<id>`, loot). Condition: `statuses`. Material behaviour: `materials`.
 - Tile/building material: `tiles` entry (+ `surfaces`); code uses `tileCode('id')`. Landscape: `biomes` (order matters).
-- Tree/rock/plant: `forms` + a `tiles` entry whose sprite names it. Prop: `props` form named by the thing's `sprite`.
+- Tree/rock/plant: an `art` entry (`forms`/`smallForms`) + a `tiles` entry whose sprite names it. Prop or creature: an `art` entry (`props`/`looks`) named by the thing's `sprite`; give it a `gait` if it walks.
 - Place: `sites` entry (a new layout *shape* needs code, see WORLD.md). Building: `structures` recipe in a site's list.
 - Look of a state on stuff (soot, wet, oil, frost, fire): `matterStates.ts` row. A brand-new state also needs its name in
   `SHOWN_STATES` (types/matter.ts) and storage in the chunk and brick (code).

@@ -9,7 +9,7 @@ import { BLOCK, TerrainLod } from '../src/render/raycaster/terrainLod';
 import type { LodBlock } from '../src/render/raycaster/terrainLod';
 import { FLORA_FADE, FLORA_RANGE, TileBillboards } from '../src/render/raycaster/tileBillboards';
 import { TILES } from '../src/content/tiles';
-import { FormBank, formVariants, growForm } from '../src/render/entities/formArt';
+import { ArtBank, artVariants, assemble } from '../src/render/entities/assembler';
 import { REGION_SIZE, siteInRegion } from '../src/sim/world/sites';
 import type { SiteLayout } from '../src/sim/world/sites';
 
@@ -172,23 +172,23 @@ else {
   const off: string[] = [];
   for (const t of Object.values(TILES)) {
     if (t.shape !== 'billboard' || !t.solid || !t.sprite) continue;
-    const f = CONTENT.forms[t.sprite];
+    const f = CONTENT.art[t.sprite];
     if (!f) continue;
     let sum = 0;
-    const n = formVariants(f);
-    for (let v = 0; v < n; v++) sum += growForm(f, v * 7919 + 3).top;
+    const n = artVariants(f);
+    for (let v = 0; v < n; v++) sum += new ArtBank(assemble(t.sprite, f, v), 1).top;
     const avg = sum / n;
     if (Math.abs(avg - t.height) > t.height * 0.35) off.push(`${t.id} looks ${avg.toFixed(1)} m, blocks ${t.height} m`);
   }
   check('grown objects stand about as tall as their collision height', off.length === 0, off.join('; ') || 'all within 35%');
-  const oak = CONTENT.forms.oak;
+  const oak = CONTENT.art.oak;
   if (oak) {
-    const a = new FormBank(oak, 11, 1).sprite(0);
-    const b = new FormBank(oak, 11, 1).sprite(0);
-    const c = new FormBank(oak, 12, 1).sprite(0);
+    const a = new ArtBank(assemble('oak', oak, 1), 1).sprite('idle', 0, 0);
+    const b = new ArtBank(assemble('oak', oak, 1), 1).sprite('idle', 0, 0);
+    const c = new ArtBank(assemble('oak', oak, 2), 1).sprite('idle', 0, 0);
     const same = a.px.length === b.px.length && a.px.every((p, i) => p === b.px[i]);
     const differs = a.px.length !== c.px.length || a.px.some((p, i) => p !== c.px[i]);
-    const side = new FormBank(oak, 11, 1).sprite(2);
+    const side = new ArtBank(assemble('oak', oak, 1), 1).sprite('idle', 0, 2);
     const turns = side.px.length !== a.px.length || side.px.some((p, i) => p !== a.px[i]);
     check('the same seed grows the same oak; another seed grows another; its sides differ', same && differs && turns);
   }

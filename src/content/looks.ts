@@ -1,5 +1,5 @@
-import { colourProblem } from './palettes';
-import type { LookDef, LookId, PaletteDef, PaletteId, PartDef, Vec3 } from '../types';
+// Creatures and people as art data: fixed parts on joints that swing, plus body-plan helpers (four legs, two legs, hopper)
+import type { ArtDef, ArtId, ArtPart, Vec3 } from '../types';
 
 /**
  * How creatures look. Each look is a handful of solid parts placed in metres ([forward, up, side]
@@ -42,7 +42,7 @@ export interface FourLegs {
 }
 
 /** A four-legged animal: body, chest, four legs that trot, neck, head, muzzle, ears, eyes, tail. */
-export function fourLegs(p: FourLegs): PartDef[] {
+export function fourLegs(p: FourLegs): ArtPart[] {
   const top = p.back;
   const cy = top - p.body[1];
   const legLen = cy;
@@ -51,7 +51,7 @@ export function fourLegs(p: FourLegs): PartDef[] {
   const nt = (p.neckTilt * Math.PI) / 180;
   const neckMid = v(neckBase[0] + Math.sin(nt) * p.neck * 0.5, neckBase[1] + Math.cos(nt) * p.neck * 0.5, 0);
   const headAt = v(neckBase[0] + Math.sin(nt) * p.neck + p.head[0] * 0.4, neckBase[1] + Math.cos(nt) * p.neck, 0);
-  const parts: PartDef[] = [
+  const parts: ArtPart[] = [
     { id: 'body', shape: 'ball', at: v(0, cy, 0), size: p.body, color: 'coat', surface: 'fur', idle: 1.5 },
     { parent: 'body', shape: 'ball', at: v(0, cy - p.body[1] * 0.35, 0), size: v(p.body[0] * 0.8, p.body[1] * 0.7, p.body[2] * 0.85), color: 'belly', surface: 'fur' },
     { parent: 'body', shape: 'ball', at: v(p.body[0] * 0.6, cy + p.body[1] * 0.05, 0), size: v(p.body[0] * 0.45, p.body[1] * 1.08, p.body[2] * 1.05), color: 'coat', surface: 'fur' },
@@ -77,7 +77,7 @@ export function fourLegs(p: FourLegs): PartDef[] {
  * A person: legs, boots, belted tunic, arms (the right one swings the weapon), hands, head, hair,
  * face, and optional robe, apron, beard, hat and cape.
  */
-export function twoLegs(height = 1.75): PartDef[] {
+export function twoLegs(height = 1.75): ArtPart[] {
   const k = height / 1.75;
   const p = (f: number, u: number, s: number): Vec3 => [f * k, u * k, s * k];
   return [
@@ -106,7 +106,7 @@ export function twoLegs(height = 1.75): PartDef[] {
 }
 
 /** A squat hopper: round body, wide head, bulging eyes, big folded hind legs, small forelegs. */
-export function hopper(size: number): PartDef[] {
+export function hopper(size: number): ArtPart[] {
   const p = (f: number, u: number, s: number): Vec3 => [f * size, u * size, s * size];
   return [
     { id: 'body', shape: 'ball', at: p(-0.04, 0.2, 0), size: p(0.25, 0.16, 0.22), color: 'coat', surface: 'scales', idle: 2 },
@@ -122,8 +122,8 @@ export function hopper(size: number): PartDef[] {
 }
 
 /** Antlers: two forked beams of cones, for a head at `at`. */
-function antlers(at: Vec3, reach: number): PartDef[] {
-  const beam = (side: number): PartDef[] => [
+function antlers(at: Vec3, reach: number): ArtPart[] {
+  const beam = (side: number): ArtPart[] => [
     { parent: 'head', shape: 'cone', at: v(at[0], at[1], side * 0.05), size: v(0.018, reach, 0.018), tilt: -25, roll: side * 30, color: 'antler', surface: 'shell', feature: 'antlers' },
     { parent: 'head', shape: 'cone', at: v(at[0] - 0.04, at[1] + reach * 0.45, side * (0.05 + reach * 0.22)), size: v(0.012, reach * 0.5, 0.012), tilt: 20, roll: side * 10, color: 'antler', surface: 'shell', feature: 'antlers' },
     { parent: 'head', shape: 'cone', at: v(at[0] - 0.09, at[1] + reach * 0.7, side * (0.05 + reach * 0.35)), size: v(0.011, reach * 0.4, 0.011), tilt: -10, roll: side * 35, color: 'antler', surface: 'shell', feature: 'antlers' },
@@ -136,8 +136,9 @@ function antlers(at: Vec3, reach: number): PartDef[] {
 const SKIN = ['@skin'];
 const HAIR = ['@hair'];
 
-export const LOOKS: Record<LookId, LookDef> = {
+export const LOOKS: Record<ArtId, ArtDef> = {
   wolf: {
+    ppm: 18,
     parts: fourLegs({
       back: 0.74, body: v(0.42, 0.2, 0.16), leg: 0.06, legAt: 0.27, legApart: 0.09, swing: 30,
       neck: 0.2, neckTilt: 60, neckThick: 0.13, head: v(0.13, 0.11, 0.1), muzzle: 0.16, muzzleThick: 0.055,
@@ -157,6 +158,7 @@ export const LOOKS: Record<LookId, LookDef> = {
     vary: 0.1,
   },
   deer: {
+    ppm: 18,
     parts: [
       ...fourLegs({
         back: 1.0, body: v(0.42, 0.17, 0.15), leg: 0.035, legAt: 0.28, legApart: 0.08, swing: 26,
@@ -181,6 +183,7 @@ export const LOOKS: Record<LookId, LookDef> = {
     vary: 0.08,
   },
   villager: {
+    ppm: 18,
     parts: twoLegs(1.72),
     colors: {
       skin: SKIN,
@@ -195,13 +198,14 @@ export const LOOKS: Record<LookId, LookDef> = {
       hat: ['#c8a85a', '#6a5038'],
       cape: ['#6a3030'],
     },
-    features: { beard: 0.3, hat: 0.2, robe: 0.1 },
+    features: { beard: 0.3, hat: 0.2, robe: 0.1, cape: 0 },
     gait: { stride: 1.3, bounce: 0.025 },
     attack: { lean: 10, lunge: 0.1 },
     vary: 0.07,
   },
   /** A hedge-mage: robed, usually hooded and dark. */
   hexer: {
+    ppm: 18,
     parts: twoLegs(1.74),
     colors: {
       skin: SKIN,
@@ -223,6 +227,7 @@ export const LOOKS: Record<LookId, LookDef> = {
   },
   /** A cutthroat: patched leathers, a rag cape, rough hair. */
   raider: {
+    ppm: 18,
     parts: twoLegs(1.78),
     colors: {
       skin: SKIN,
@@ -243,6 +248,7 @@ export const LOOKS: Record<LookId, LookDef> = {
     vary: 0.08,
   },
   player: {
+    ppm: 18,
     parts: twoLegs(1.75),
     colors: {
       skin: SKIN,
@@ -263,6 +269,7 @@ export const LOOKS: Record<LookId, LookDef> = {
     attack: { lean: 10, lunge: 0.12 },
   },
   toad: {
+    ppm: 18,
     parts: hopper(1.15),
     colors: {
       coat: ['@hide.toad'],
@@ -275,30 +282,3 @@ export const LOOKS: Record<LookId, LookDef> = {
     vary: 0.2,
   },
 };
-
-/** Problems in the looks (unknown colour slots, parents or features), for validateContent(). */
-export function lookProblems(looks: Readonly<Record<LookId, LookDef>>, extraFeatures: readonly string[], palettes?: Readonly<Record<PaletteId, PaletteDef>>): string[] {
-  const out: string[] = [];
-  const hex = /^#[0-9a-fA-F]{6}$/;
-  // A feature named anywhere (a look's chances or a role's dress) may be used by any look's parts.
-  const features = new Set([...extraFeatures, ...Object.values(looks).flatMap((l) => Object.keys(l.features ?? {}))]);
-  for (const [id, l] of Object.entries(looks)) {
-    const w = `look '${id}'`;
-    const ids = new Set(l.parts.map((p) => p.id).filter((x): x is string => !!x));
-    for (const [slot, list] of Object.entries(l.colors)) {
-      if (!list.length) out.push(`${w}: colour slot '${slot}' has no choices`);
-      for (const c of list) {
-        const why = colourProblem(c, palettes);
-        if (why) out.push(`${w}: in '${slot}', ${why}`);
-      }
-    }
-    for (const p of l.parts) {
-      if (p.parent && !ids.has(p.parent)) out.push(`${w}: unknown parent part '${p.parent}'`);
-      if (!hex.test(p.color) && !(p.color in l.colors)) out.push(`${w}: unknown colour slot '${p.color}'`);
-      const f = p.feature?.replace(/^!/, '');
-      if (f && !features.has(f)) out.push(`${w}: unknown feature '${f}'`);
-    }
-    if (!(l.gait.stride > 0)) out.push(`${w}: gait stride must be above 0`);
-  }
-  return out;
-}

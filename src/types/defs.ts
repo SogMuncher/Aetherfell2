@@ -3,11 +3,10 @@ import type { BrainDef, HabitatDef, LootDef } from './defs/brains';
 import type { BrainId, FactionId, ItemId, LootId, MaterialId, RealmId, RoleId, RuneId, SiteId, StatusId, ThingId } from './defs/ids';
 import type { BurstDef, ViewmodelDef } from './vfx';
 import type { FactionDef, RoleDef } from './defs/social';
-import type { FormDef, FormId } from './forms';
 import type { GearTables } from './gear';
 import type { HudTheme, RulesDef } from './defs/rules';
 import type { ItemDef } from './defs/items';
-import type { LookDef, LookId } from './looks';
+import type { ArtDef, ArtId } from './art';
 import type { MaterialDef, RealmDef, ThingDef } from './defs/things';
 import type { PaletteDef, PaletteId } from './palettes';
 import type { ShownState, StateLookDef } from './matter';
@@ -57,10 +56,8 @@ export interface Content {
   /** Recipes for buildings in the 3D layer, by id (content/structures.ts). */
   structures: Readonly<Record<string, StructureDef>>;
   roles: Readonly<Record<RoleId, RoleDef>>;
-  /** How creatures look, by sprite id (content/looks.ts). Sprite ids not found here are props. */
-  looks: Readonly<Record<LookId, LookDef>>;
-  /** How world objects (trees, rocks, haystacks…) grow from pieces, by form id (content/forms.ts). */
-  forms: Readonly<Record<FormId, FormDef>>;
+  /** Every picture built from parts (creatures, trees, rocks, props), by the sprite id a thing or tile names (types/art.ts). */
+  art: Readonly<Record<ArtId, ArtDef>>;
   /** Colour palettes that colour regions are filled from ('@bark', '@fur.grey'), content/palettes.ts. */
   palettes: Readonly<Record<PaletteId, PaletteDef>>;
   /** Kinds of building that village-shaped sites put together (content/buildings.ts). */
