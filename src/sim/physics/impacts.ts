@@ -1,5 +1,5 @@
 import type { Entity, SimContext, ThingDef } from '../../types';
-import { takeBlows, thingDef } from '../../content';
+import { itemDef, takeBlows, thingDef, thrownDamage } from '../../content';
 
 /**
  * Things that fly into something: fast loose objects hurt whoever they hit, a thing with its own
@@ -18,12 +18,14 @@ export function impacts(ctx: SimContext, e: Entity, d: ThingDef, hit: boolean, s
           if (o === e || !o.actor || o.id === e.heldBy || o.id === e.thrownBy) continue;
           const od = thingDef(content, o.def);
           if (Math.abs(o.z + od.body.height * 0.5 - e.z) > od.body.height) continue;
-          const dmg = Math.min(40, Math.round(d.body.mass * speed * 0.06));
+          // A thrown item hits as its handling says (a spear point-first, a pot barely) and with its own kind of damage.
+          const it = e.item ? itemDef(content, e.item.id) : undefined;
+          const dmg = Math.min(40, Math.round(d.body.mass * speed * 0.06 * (e.item ? thrownDamage(content, e.item.id) : 1)));
           const by = e.thrownBy ?? e.id;
           if (dmg > 0) {
             state.queues.effects.push({
               target: { kind: 'entity', id: o.id },
-              effects: [{ type: 'damage', amount: dmg, kind: 'blunt' }, { type: 'push', force: speed * 0.3 }],
+              effects: [{ type: 'damage', amount: dmg, kind: it?.weapon?.kind ?? 'blunt' }, { type: 'push', force: speed * 0.3 }],
               source: by,
               from: { x: e.pos.x - e.vel.x, y: e.pos.y - e.vel.y },
             });

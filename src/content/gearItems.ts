@@ -77,6 +77,7 @@ export function gearItem(t: GearTables, id: ItemId): ItemDef | null {
       tint,
       ...(w.swings ? { swings: [...w.swings] } : {}),
       ...(w.charge !== undefined ? { charge: w.charge } : {}),
+      ...(w.handling ? { handling: w.handling } : {}),
       ...(en?.hit ? { effects: en.hit } : {}),
     };
     const armour: ArmourStats | undefined = f.armor !== undefined && f.slot !== HAND_SLOT ? { region: f.slot, armor: Math.round(f.armor * power * 10) / 10, resist: resistOf(mat.resist, en?.resist) } : undefined;

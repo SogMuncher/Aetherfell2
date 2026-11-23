@@ -1,4 +1,5 @@
 import type { DamageKind, Effect } from './effects';
+import type { HandlingDef } from './defs/handling';
 import type { MaterialId } from './defs';
 import type { ItemId } from './defs';
 import type { Surface, Vec3 } from './art';
@@ -59,6 +60,8 @@ export interface GearWeaponBase {
   push?: number;
   swings?: readonly ('left' | 'right' | 'thrust' | 'overhead')[];
   charge?: number;
+  /** How it handles where that differs from its kind and weight (types/defs/handling.ts). */
+  handling?: HandlingDef;
 }
 
 /**

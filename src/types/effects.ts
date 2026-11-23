@@ -51,6 +51,9 @@ export interface EffectRequest {
   swing?: SwingDir | null;
   /** How wound-up a melee blow was, 0 (a tap) .. 1 (fully charged): more hitstop, hitstun and guard-breaking. */
   charge?: number;
+  /** Multiplies the hitstop and hitstun a melee blow causes (the weapon's heft). Default 1. */
+  hitstop?: number;
+  hitstun?: number;
   /** Multiplies every amount (spell power, swing strength). Default 1. */
   scale?: number;
   /** Bodies of this faction are spared (friendly spells). */

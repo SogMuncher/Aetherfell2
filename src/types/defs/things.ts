@@ -4,6 +4,7 @@ import type { Color } from '../math';
 import type { DamageKind, Effect } from '../effects';
 import type { SwingDir } from '../input';
 import type { AirDef } from '../sky';
+import type { HandlingDef } from './handling';
 
 
 /** Which family of sounds a material makes underfoot and when struck. */
@@ -60,6 +61,8 @@ export interface WeaponStats {
   swings?: SwingDir[];
   /** 0..1: how often a creature winds a blow up for a heavy one before swinging (a brute with a hammer telegraphs). */
   charge?: number;
+  /** How it handles, where it differs from what its damage kind and weight give (content/handling.ts). */
+  handling?: HandlingDef;
 }
 
 /** A burst of effects around a point. */

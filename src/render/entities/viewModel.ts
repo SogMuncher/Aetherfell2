@@ -1,10 +1,14 @@
+// The held item in first person: its picture warped along the swing paths, with trail, impact flash and flame.
 import type { Entity, HandPose, SimEvent, SimState, SwingDir } from '../../types';
-import { CONTENT, heldLight, itemDef } from '../../content';
+import { CONTENT, actorHandling, chargeTicks, heldLight, itemDef, thingDef } from '../../content';
 import type { Env, LightMap } from '../lighting';
-import { addPixel, blendPixel, glowDisc, glowLine, glowTriangle } from '../vfx/glow';
+import { glowDisc, glowLine, glowTriangle } from '../vfx/glow';
 import type { Surface } from '../vfx/glow';
 import { blitWarped, heldSprite, warpPoints } from './spriteWarp';
 import type { Warp, WarpPoints } from './spriteWarp';
+import { ViewMotes } from './viewFx';
+import { arcAt, fromHand, mix, settle, smooth, swingIn, swingOut, toHand } from './viewPose';
+import type { Pose3, SwingStart } from './viewPose';
 
 /**
  * The item in your hand: its flat item picture (itemArt.ts), tilted, foreshortened, slanted and
@@ -14,37 +18,9 @@ import type { Warp, WarpPoints } from './spriteWarp';
  */
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
-const smooth = (t: number): number => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
-const rgbR = (c: number): number => (c >> 16) & 255;
-const rgbG = (c: number): number => (c >> 8) & 255;
-const rgbB = (c: number): number => c & 255;
-
-const mixPose = (a: HandPose, b: HandPose, t: number): HandPose => ({
-  x: lerp(a.x, b.x, t),
-  y: lerp(a.y, b.y, t),
-  z: lerp(a.z, b.z, t),
-  lean: lerp(a.lean, b.lean, t),
-  pitch: lerp(a.pitch, b.pitch, t),
-  roll: lerp(a.roll, b.roll, t),
-  reach: lerp(a.reach, b.reach, t),
-});
 
 
-interface Mote {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  age: number;
-  size: number;
-  r: number;
-  g: number;
-  b: number;
-  /** 'flame' and 'spark' add light; 'drop' and 'puff' cover what is behind. */
-  kind: 'flame' | 'spark' | 'drop' | 'puff' | 'ember';
-}
 
 export interface ViewFrame {
   yaw: number;
@@ -58,10 +34,21 @@ export interface ViewFrame {
 
 export class ViewModel {
   private readonly pts: WarpPoints = { tip: { x: 0, y: 0 }, mid: { x: 0, y: 0 } };
-  private readonly motes: Mote[] = [];
+  private readonly motes = new ViewMotes();
+  /** The pose being shown (settles toward where the hand should be), and where the current swing set off from. */
+  private cur: Pose3 | null = null;
+  private start: SwingStart | null = null;
+  private swingDir: SwingDir | null = null;
+  private swingT = 0;
+  /** While winding up: how far along the arc the hand is aiming (below 0 = drawn back past the start) and how drawn back it is (0..1). */
+  private aimS = 0;
+  private drawn = 0;
   /** Remembered tip and ribbon-start positions on screen, newest last. */
   private readonly trail: { tx: number; ty: number; mx: number; my: number; t: number }[] = [];
   private kick = { z: 0, vz: 0, r: 0, vr: 0 };
+  /** Seconds left of the flash where a blow landed, and how hard it was. */
+  private flash = 0;
+  private flashPower = 0;
   private swayX = 0;
   private swayY = 0;
   private lastYaw = 0;
@@ -69,16 +56,15 @@ export class ViewModel {
   private tipSpeed = 0;
   private lastTip: { x: number; y: number } | null = null;
   private lastWeapon: string | null | undefined = undefined;
-  private spawnFlame = 0;
 
-  /** Remembers blows you land so the next frames can flash, throw sparks and kick the weapon. */
   /** Remembers blows you land so the next frames can flash, throw sparks and kick the weapon. */
   onEvent(e: SimEvent, state: SimState, localId: number | null): void {
     if (localId === null) return;
     const me = state.entities.get(localId);
     if (!me?.actor) return;
     if (e.type === 'hit' && e.source === localId) {
-      const power = clamp((e.power ?? 0) + Math.min(0.6, e.damage / 40), 0, 1.2);
+      // Heavier blows (longer hitstop) ring harder.
+      const power = clamp((e.power ?? 0) + Math.min(0.6, e.damage / 40) + (e.hold ?? 0) * 0.08, 0, 1.4);
       this.blow(power);
     } else if (e.type === 'strike' && Math.hypot(me.pos.x - e.x, me.pos.y - e.y) < 3.5) {
       this.blow(clamp(e.power, 0, 1.2));
@@ -95,6 +81,8 @@ export class ViewModel {
     const kk = vm.kick;
     this.kick.vz -= kk.push * (0.5 + power) * 14;
     this.kick.vr += (Math.random() < 0.5 ? -1 : 1) * kk.twist * (0.5 + power) * 8;
+    this.flash = Math.max(this.flash, vm.impact.flash * (0.6 + power * 0.6));
+    this.flashPower = power;
   }
 
   draw(vp: Surface, e: Entity, env: Env, lm: LightMap, f: ViewFrame): void {
@@ -117,38 +105,47 @@ export class ViewModel {
     const frozen = (e.freeze ?? 0) > 0;
     const al = frozen ? 0 : f.alpha;
 
-    // --- Where the hand is: the swing's pose, mixed from the keyframes in content/viewmodel.ts.
-    let pose: HandPose = { ...vm.rest };
+    // --- Where the hand is: along the swing's arc (content/viewmodel.ts), settling smoothly between poses.
+    const mo = vm.motion;
+    const rest = fromHand(a.guard ? vm.guard : vm.rest);
+    const cur = this.cur ?? (this.cur = { ...rest });
     let shake = 0;
     let glow = 0;
     const sw = a.swing;
     const c = a.charge;
     if (sw) {
-      const wind = 0.5 + 0.5 * sw.power;
-      const wp = vm.wind[sw.dir] ?? vm.rest;
-      const ep = vm.end[sw.dir] ?? vm.rest;
-      const start = mixPose(vm.rest, wp, wind);
+      const arc = vm.arcs[sw.dir] ?? vm.arcs['thrust'];
+      // A new swing sets off from wherever the hand was.
+      if (!this.start || sw.dir !== this.swingDir || sw.t < this.swingT) this.start = { pose: { ...cur }, s0: this.aimS, drawn: this.drawn };
+      this.swingDir = sw.dir;
+      this.swingT = sw.t;
       const at = sw.t + al;
-      if (at < sw.strikeAt) {
-        const t = at / Math.max(1, sw.strikeAt);
-        pose = mixPose(start, ep, t * t);
-      } else {
-        const after = (at - sw.strikeAt) / Math.max(1, sw.recover - sw.strikeAt);
-        // Follows through a little past the end of the blow, lingers, then eases home.
-        const over = Math.sin(clamp(after * 3, 0, 1) * Math.PI) * 0.12 * (1 - clamp(after, 0, 1));
-        const home = smooth((after - 0.25) / 0.75);
-        pose = mixPose(mixPose(ep, start, -over), vm.rest, home);
-      }
+      const after = (at - sw.strikeAt) / Math.max(1, sw.recover - sw.strikeAt);
+      if (arc && at < sw.strikeAt) Object.assign(cur, swingIn(arc, this.start, at / Math.max(1, sw.strikeAt), mo.tapWind, mo.lag));
+      else if (arc && after < mo.through) Object.assign(cur, swingOut(arc, after / mo.through, mo.lag));
+      else settle(cur, rest, mo.home, dt);
       glow = sw.power * (1 - Math.min(1, sw.t / Math.max(1, sw.recover)));
-    } else if (c) {
-      const draw = smooth((c.t + al) / 10);
-      const frac = c.t <= ch.tap ? 0 : Math.min(1, (c.t - ch.tap) / Math.max(1, ch.full - ch.tap));
-      pose = mixPose(vm.rest, vm.wind[c.dir] ?? vm.rest, draw * (0.7 + 0.3 * frac));
-      shake = frac * 0.006 + (c.full ? 0.004 : 0);
-      glow = c.full ? 0.6 + 0.4 * Math.sin((c.t + al) * 0.9) : frac * 0.35;
-    } else if (a.guard) {
-      pose = { ...vm.guard };
+    } else {
+      this.start = null;
+      this.aimS = 0;
+      this.drawn = 0;
+      const arc = c ? vm.arcs[c.dir] : undefined;
+      if (c && arc) {
+        // Winding up: drawn back along the arc (further the longer it is held), and when the mouse
+        // picks another way of swinging the hand glides over to it instead of jumping.
+        const hd = actorHandling(CONTENT, thingDef(CONTENT, e.def), a.weapon);
+        const full = chargeTicks(CONTENT, hd, c.dir);
+        const frac = c.t <= ch.tap ? 0 : Math.min(1, (c.t + al - ch.tap) / Math.max(1, full - ch.tap));
+        this.drawn = smooth((c.t + al) / 6);
+        this.aimS = -mo.draw * frac;
+        settle(cur, mix(rest, arcAt(arc, this.aimS), this.drawn), mo.aim, dt);
+        shake = frac * 0.006 + (c.full ? 0.004 : 0);
+        glow = c.full ? 0.6 + 0.4 * Math.sin((c.t + al) * 0.9) : frac * 0.35;
+      } else {
+        settle(cur, rest, a.guard ? mo.aim : mo.home, dt);
+      }
     }
+    const pose: HandPose = toHand(cur);
     const walk = Math.abs(Math.sin(f.bob));
     if (!sw && !c) {
       // Walking bobs the hand in a figure of eight; breathing lifts it a little.
@@ -249,92 +246,24 @@ export class ViewModel {
     if (sprite) blitWarped(vp, sprite, warp, pts);
 
     // --- Light on top: the flame and its glow, a charged item's gleam.
-    if (sprite && held?.flame) this.flame(vp, pts.tip.x, pts.tip.y, warp.side / (H * 0.65), held, f, dt, H);
+    if (sprite && held?.flame) this.motes.flame(vp, pts.tip.x, pts.tip.y, warp.side / (H * 0.65), held, f, dt, H);
     if (glow > 0.05 && sprite) {
       const gr = item?.weapon?.tint ?? { r: 255, g: 220, b: 160 };
       glowDisc(vp, pts.tip.x, pts.tip.y, H * (0.02 + glow * 0.05), lerp(gr.r, 255, 0.5), lerp(gr.g, 255, 0.5), lerp(gr.b, 255, 0.4), 0.25 + glow * 0.4);
     }
-    this.fx(vp, dt, H);
-  }
-
-  /** Flames at the head of a brand: motes that rise from where it is, and are left behind when it moves. */
-  private flame(vp: Surface, fx: number, fy: number, size: number, light: { r: number; g: number; b: number }, f: ViewFrame, dt: number, H: number): void {
-    const scale = (H / 200) * size * 1.15;
-    this.spawnFlame += dt * 110;
-    const em = CONTENT.effects['torchFlame'];
-    const c0 = em?.colour ?? 0xff9632;
-    const c1 = em?.colourTo ?? 0xffdc32;
-    while (this.spawnFlame >= 1) {
-      this.spawnFlame -= 1;
-      const k = Math.random();
-      this.motes.push({
-        x: fx + (Math.random() - 0.5) * 5 * scale,
-        y: fy + (Math.random() - 0.3) * 3 * scale,
-        vx: (Math.random() - 0.5) * 14 * scale,
-        vy: -(30 + Math.random() * 40) * scale,
-        life: 0.3 + Math.random() * 0.3,
-        age: 0,
-        size: (3.4 + Math.random() * 3.4) * scale,
-        r: lerp(rgbR(c0), rgbR(c1), k) * (0.55 + light.r * 0.45),
-        g: lerp(rgbG(c0), rgbG(c1), k) * (0.55 + light.g * 0.45),
-        b: lerp(rgbB(c0), rgbB(c1), k) * (0.55 + light.b * 0.45),
-        kind: 'flame',
-      });
+    // A landed blow flashes where the weapon meets it: a bright core and a short star of streaks.
+    if (this.flash > 0 && sprite) {
+      const k = this.flash / Math.max(0.01, vm.impact.flash);
+      const r = H * (0.025 + this.flashPower * 0.03) * (1.4 - k * 0.4);
+      glowDisc(vp, pts.tip.x, pts.tip.y, r * 1.8, 255, 236, 200, 0.35 * k);
+      glowDisc(vp, pts.tip.x, pts.tip.y, r * 0.6, 255, 255, 255, 0.8 * k);
+      for (let i = 0; i < 4; i++) {
+        const an = i * 1.5708 + 0.4;
+        glowLine(vp, pts.tip.x, pts.tip.y, pts.tip.x + Math.cos(an) * r * 2.4, pts.tip.y + Math.sin(an) * r * 2.4, 255, 245, 220, 0.7 * k, 0.15);
+      }
+      this.flash = Math.max(0, this.flash - dt);
     }
-    // Rising smoke is left to the world; the glow round the flame lights the hand and the air.
-    const flick = 0.85 + Math.sin(f.time * 23) * 0.08 + Math.sin(f.time * 41) * 0.07;
-    glowDisc(vp, fx, fy, 26 * scale * flick, light.r * 255, light.g * 190, light.b * 100, 0.22);
-    glowDisc(vp, fx, fy, 9 * scale * flick, 255, 210, 130, 0.55);
-  }
-
-  /** Motes, flashes and sparks: advance them and paint them. */
-  private fx(vp: Surface, dt: number, H: number): void {
-    const g = CONTENT.viewmodel.impact.gravity * H;
-    for (let i = this.motes.length - 1; i >= 0; i--) {
-      const m = this.motes[i] as Mote;
-      m.age += dt;
-      if (m.age >= m.life) {
-        this.motes.splice(i, 1);
-        continue;
-      }
-      const t = m.age / m.life;
-      const px = m.x;
-      const py = m.y;
-      m.x += m.vx * dt;
-      m.y += m.vy * dt;
-      if (m.kind === 'spark' || m.kind === 'drop' || m.kind === 'ember') {
-        m.vy += g * dt;
-        m.vx *= 1 - dt * 1.2;
-      } else if (m.kind === 'puff') {
-        m.vx *= 1 - dt * 3;
-        m.vy = m.vy * (1 - dt * 3) - H * 0.02 * dt;
-      } else {
-        m.vx *= 1 - dt * 1.5;
-      }
-      if (m.kind === 'flame') {
-        // Hot white-yellow at birth, orange, then deep red as it dies; and smaller.
-        const heat = 1 - t;
-        const sz = m.size * (1 - t * 0.55);
-        glowDisc(vp, m.x, m.y, sz, m.r, m.g * (0.45 + 0.55 * heat), m.b * heat * heat, 0.7 * (1 - t * t), 0.4);
-      } else if (m.kind === 'spark') {
-        glowLine(vp, m.x, m.y, px - (m.x - px) * 1.2, py - (m.y - py) * 1.2, m.r, m.g, m.b, 0.95 * (1 - t), 0.1);
-        addPixel(vp, m.x, m.y, 255, 255, 255, 0.7 * (1 - t));
-      } else if (m.kind === 'ember') {
-        addPixel(vp, m.x, m.y, m.r, m.g, m.b, 0.9 * (1 - t));
-        addPixel(vp, m.x, m.y - 1, m.r, m.g * 0.7, m.b * 0.4, 0.5 * (1 - t));
-      } else if (m.kind === 'drop') {
-        blendPixel(vp, m.x, m.y, m.r, m.g, m.b, 0.9 * (1 - t * 0.5));
-        blendPixel(vp, m.x, m.y + 1, m.r, m.g, m.b, 0.55 * (1 - t));
-      } else {
-        const rr = (m.size + t * 4) * (H / 200);
-        for (let j = -2; j <= 2; j++) {
-          for (let k = -2; k <= 2; k++) {
-            if (j * j + k * k > rr) continue;
-            blendPixel(vp, m.x + k, m.y + j, m.r, m.g, m.b, 0.38 * (1 - t));
-          }
-        }
-      }
-    }
+    this.motes.fx(vp, dt, H);
   }
 }
 

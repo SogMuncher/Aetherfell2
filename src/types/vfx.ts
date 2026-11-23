@@ -38,6 +38,24 @@ export interface HandPose {
   reach: number;
 }
 
+/** One moment of a swing: where the hand is (m from the eye, x right, y up, z forward), where the blade points (need not be unit length), and the twist of its flat. */
+export interface ArcKey {
+  at: readonly [number, number, number];
+  d: readonly [number, number, number];
+  roll: number;
+}
+
+/**
+ * A swing as a path: the hand curves about `pivot` (m from the eye) while the blade turns from `from`
+ * (drawn back) through `hit` (the moment it lands) to `to` (end of the follow-through), always the short way round.
+ */
+export interface SwingArcDef {
+  pivot: readonly [number, number, number];
+  from: ArcKey;
+  hit: ArcKey;
+  to: ArcKey;
+}
+
 /** The first-person held item (content/viewmodel.ts): poses for every swing, and how it moves and reacts. */
 export interface ViewmodelDef {
   /** Focal length in screen heights (smaller = the item looks farther off and flatter). */
@@ -46,9 +64,15 @@ export interface ViewmodelDef {
   warp: { side: number; flat: number; shear: number; taper: number };
   rest: HandPose;
   guard: HandPose;
-  /** Drawn back, ready to strike, and where the blow ends, for each way of swinging. */
-  wind: Readonly<Record<string, HandPose>>;
-  end: Readonly<Record<string, HandPose>>;
+  /** The path of each way of swinging (render/entities/viewPose.ts). */
+  arcs: Readonly<Record<string, SwingArcDef>>;
+  /**
+   * How it moves between poses: `aim` and `home` are how fast (1/s) it settles on the wound-up pose while you
+   * turn the mouse, and back to rest after a blow; `draw` = how much further back (share of the arc) a full
+   * charge draws it; `lag` = how far the tip trails the hand into the blow and whips past it after;
+   * `through` = share of the recovery spent following through; `tapWind` = share of a quick tap spent drawing back.
+   */
+  motion: { aim: number; home: number; draw: number; lag: number; through: number; tapWind: number };
   /** The hand dips when carrying something in the other. */
   carry: { y: number };
   /** Walking, breathing and turning move the weapon: metres of travel, and how fast it catches up with the view. */

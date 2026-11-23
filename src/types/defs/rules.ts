@@ -5,6 +5,7 @@ import type { ItemStack } from '../items';
 import type { SkillId } from '../entities';
 import type { SwingDir } from '../input';
 import type { ItemCategory } from './items';
+import type { HandlingDef } from './handling';
 
 
 /**
@@ -117,6 +118,12 @@ export interface RulesDef {
       /** Extra ticks a fully charged blow keeps a guard staggered. */
       guardBreak: number;
     };
+    /**
+     * How weapons handle unless they say otherwise (content/handling.ts): a profile per damage kind,
+     * then weight: every kg above `mid` multiplies wind-up, swing, charge and stamina by `slow`, and
+     * hitstop, hitstun and knockback by `heft` (below `mid`, the other way). `thrown` = an item with no weapon of its own.
+     */
+    handling: { kinds: Partial<Record<DamageKind, HandlingDef>>; mid: number; slow: number; heft: number; thrown: number };
     /** Hitstun: a landed blow makes the one hit flinch. Ticks of `status`. */
     hitstun: { status: StatusId; base: number; perDamage: number; charged: number; max: number };
     /** Hitstop: a solid blow freezes both bodies for a moment (ticks). */

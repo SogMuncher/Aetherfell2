@@ -54,6 +54,20 @@ export const RULES: RulesDef = {
     },
     // Hold the button to wind up: it costs stamina every moment, hits harder and shoves further.
     charge: { tap: 4, full: 18, stamina: 1.5, begin: 8, damage: 2.1, push: 2.6, reach: 1.1, regen: 0, slow: 0.55, snap: 2, guardBreak: 14 },
+    // How weapons handle unless they say otherwise (gear.ts forms can): by damage kind, then weight.
+    // Angle damage never goes above 1; an angle a weapon is not made for just hits weaker.
+    handling: {
+      kinds: {
+        cut: { angles: { thrust: { damage: 0.7, knock: 0.7 } }, chargeDamage: 1.9, hitstop: 0.85, hitstun: 0.9, thrown: 0.6 },
+        // Swinging a point sideways hits with the shaft.
+        pierce: {
+          angles: { left: { windup: 1.15, swing: 1.1, damage: 0.55, knock: 0.8, kind: 'blunt' }, right: { windup: 1.15, swing: 1.1, damage: 0.55, knock: 0.8, kind: 'blunt' }, overhead: { damage: 0.75, knock: 0.7 }, thrust: { windup: 0.85, swing: 0.85 } },
+          chargeDamage: 1.9, hitstop: 0.7, hitstun: 0.8, thrown: 1.6,
+        },
+        blunt: { angles: { thrust: { windup: 0.9, damage: 0.6, knock: 0.8 }, overhead: { knock: 1.15 } }, chargeDamage: 2.3, hitstop: 1.25, hitstun: 1.25, thrown: 0.8 },
+      },
+      mid: 2, slow: 1.06, heft: 1.08, thrown: 1,
+    },
     hitstun: { status: 'staggered', base: 2, perDamage: 0.12, charged: 6, max: 14 },
     hitstop: { base: 1, perDamage: 0.07, charged: 2, max: 4, blocked: 1, parried: 3, kill: 1 },
     surface: {

@@ -138,7 +138,7 @@ export function applyToEntity(ctx: SimContext, e: Entity, r: EffectRequest): voi
     const hs = combat.hitstop;
     if (parried) hold = hs.parried;
     else if (blocked) hold = hs.blocked;
-    else if (dmg > 0) hold = Math.min(hs.max, Math.round(hs.base + dmg * hs.perDamage + hs.charged * (r.charge ?? 0))) + (killed ? hs.kill : 0);
+    else if (dmg > 0) hold = Math.round(Math.min(hs.max, hs.base + dmg * hs.perDamage + hs.charged * (r.charge ?? 0)) * (r.hitstop ?? 1)) + (killed ? hs.kill : 0);
     if (hold > 0) {
       e.freeze = Math.max(e.freeze ?? 0, hold);
       if (src && src !== e && src.actor) src.freeze = Math.max(src.freeze ?? 0, hold);
@@ -164,7 +164,7 @@ export function applyToEntity(ctx: SimContext, e: Entity, r: EffectRequest): voi
   // Hitstun: whoever takes a clean blow flinches (more for a hard, wound-up or chopping one), which also breaks their own swing.
   if (r.swing && !blocked && !parried && e.actor && !killed) {
     const hu = combat.hitstun;
-    const ticks = Math.min(hu.max, hu.base + dmg * hu.perDamage + combat.swings[r.swing].stun + hu.charged * (r.charge ?? 0));
+    const ticks = Math.min(hu.max, hu.base + dmg * hu.perDamage + combat.swings[r.swing].stun + hu.charged * (r.charge ?? 0)) * (r.hitstun ?? 1);
     addStatus(ctx, e, hu.status, Math.round(ticks));
   }
   e.invuln = Math.max(e.invuln, 2);
