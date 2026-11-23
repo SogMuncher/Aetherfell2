@@ -238,5 +238,15 @@ export function buildArt(def: ArtDef, seed: number, dress?: DressDef): Built {
   const byName = new Map<string, number>();
   joints.forEach((j, i) => j.name && byName.set(j.name, i));
   for (const j of joints) j.parent = j.parentName ? (byName.get(j.parentName) ?? -1) : -1;
+  const st = dress?.stretch;
+  if (st) {
+    // Each solid keeps its place relative to the others; its own axes stretch by how they line up with the stretch.
+    for (const s of solids) {
+      s.c = [s.c[0] * st[0], s.c[1] * st[1], s.c[2] * st[2]];
+      const k = (ax: number): number => Math.hypot((s.a[ax] ?? 0) * st[0], (s.a[3 + ax] ?? 0) * st[1], (s.a[6 + ax] ?? 0) * st[2]);
+      s.size = [s.size[0] * k(0), s.size[1] * k(1), s.size[2] * k(2)];
+    }
+    for (const j of joints) j.pivot = [j.pivot[0] * st[0], j.pivot[1] * st[1], j.pivot[2] * st[2]];
+  }
   return { solids, joints, features: [...has].sort() };
 }

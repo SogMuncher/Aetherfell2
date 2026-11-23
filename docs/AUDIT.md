@@ -29,7 +29,7 @@ Read-only review. Nothing was fixed. Evidence is from `check:sim` (502 PASS, 0 F
 6. **Armour is a second item system (duplication, L).** `content/gear.ts`, `types/gear.ts`, `paperdoll.ts` (690 lines):
    items as `gear:<form>:<material>:<quality>` strings plus `itemDef()`. Break the "anything can affect anything" rule
    and every item feature must be written twice. Fold into item traits.
-7. **PARTLY DONE (one assembler for looks, forms, props: `assembler.ts`; items still separate).** **Four picture painters (duplication, L).** `bodyArt`+`bodyPaint` (573), `formArt` (257), `itemArt` (828),
+7. **DONE (one assembler for creatures, forms, props and items: `assembler.ts`; held-item `mesh`/`viewModel` left to its own thread).** **Four picture painters (duplication, L).** `bodyArt`+`bodyPaint` (573), `formArt` (257), `itemArt` (828),
    `mesh`/`viewModel` (polygon, already being replaced). One parts-to-sprite painter fed by data.
 8. **Entities are never slept (perf, M).** 130 entities for a normal seed is fine, but ecology/site fill scales with how
    many places are near any player; 4 players in different directions multiply the cost. Same fix as 1.

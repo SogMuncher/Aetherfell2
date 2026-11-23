@@ -16,7 +16,7 @@
 | `items`, `gear`, `loot` | goods; weapons + armour (`gear:<form>:<material>:<quality>[:<enchant>]`, worn ids end `@wear`); drops |
 | `runes`, `spellcraft`, `statuses`, `effects` | spell syllables, ongoing conditions, mote bursts |
 | `sites`, `roles`, `structures`, `shapes` | places, villager jobs, building recipes, 3D shapes (append-only ledger) |
-| `art` (from `looks`, `forms`, `smallForms`, `props`) | every picture built from parts (`ArtDef`, types/art.ts): creatures, trees/rocks/plants, made objects; one assembler draws all |
+| `art` (from `looks`, `forms`, `smallForms`, `props`, `itemGearArt`, `itemGoodsArt`) | every picture built from parts (`ArtDef`, types/art.ts): creatures, trees/rocks/plants, made objects, item pieces (`item.<name>`); one assembler draws all |
 | `realms`, `sky`, `day` | spaces; cloud layers; the day clock |
 | `rules`, `hud`, `cheats`, `viewmodel` | world-wide numbers/choices; screen colours; debug entries; held-item poses |
 
@@ -27,7 +27,7 @@ Thing traits (systems act on these): `body` `health` `material` `actor` `brain` 
 - Creature: `things` + `habitats` entry. New behaviour *kind* needs code (see RPG.md).
 - Potion/food: `items.use: Effect[]`. Throwable: `thrown {speed}`. Break reaction: `onBreak {radius, effects, into}`. Light: `items.light`.
   Any item can be held, swung, thrown and broken by default (`rules.items`); `durability`/`weapon` only to override.
-- Weapon or armour: one entry in `gear.ts` (form with `slot` + `parts`, material, quality, body part). Enchantment: one
+- Weapon or armour: one entry in `gear.ts` (form with `slot` + `parts` naming art pieces `item.<part>`, material, quality, body part). Enchantment: one
   `gear.enchants` entry (`hit` effects, `resist`, multipliers). Resolve with `itemDef()`, never `items[id]`.
 - Rune: `runes` entry (+ stone item `rune:<id>`, loot). Condition: `statuses`. Material behaviour: `materials`.
 - Tile/building material: `tiles` entry (+ `surfaces`); code uses `tileCode('id')`. Landscape: `biomes` (order matters).

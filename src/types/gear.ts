@@ -56,7 +56,7 @@ export interface GearWeaponBase {
 
 /**
  * A kind of gear: a garment for one part of the body, or something made to be held and swung
- * (content/gear.ts, `forms`). Its picture is put together from `parts` (render/entities/itemParts.ts).
+ * (content/gear.ts, `forms`). Its picture is put together from `parts` (art pieces 'item.<name>', content/itemGearArt.ts).
  */
 export interface GearFormDef {
   name: string;

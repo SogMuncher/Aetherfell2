@@ -89,6 +89,7 @@ export function poseSolids(asm: Assembled, pose: Pose, frame: number): Solid[] {
   } else if (pose === 'down') {
     body = about(rollM(88), [0, 0, 0]);
   }
+  if (def.tilt) body = compose(about(tiltM(def.tilt), [0, 0, 0]), body);
   const out: Solid[] = [];
   for (const s of asm.solids) {
     const x = s.joint >= 0 ? compose(body, place(s.joint, 0)) : body;
@@ -118,6 +119,20 @@ function extent(s: Solid, k: number): [number, number] {
 function extentMin(s: Solid, k: number): number {
   const [o, h] = extent(s, k);
   return o - h;
+}
+
+/** The box a set of solids fills: [min, max] along forward, up and side. */
+export function solidBox(solids: readonly Solid[]): { min: [number, number, number]; max: [number, number, number] } {
+  const min: [number, number, number] = [Infinity, Infinity, Infinity];
+  const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+  for (const s of solids) {
+    for (let k = 0; k < 3; k++) {
+      const [o, h] = extent(s, k);
+      min[k] = Math.min(min[k] ?? 0, (s.c[k] ?? 0) + o - h);
+      max[k] = Math.max(max[k] ?? 0, (s.c[k] ?? 0) + o + h);
+    }
+  }
+  return { min, max };
 }
 
 /** Room a set of poses needs: radius around the foot and height. */

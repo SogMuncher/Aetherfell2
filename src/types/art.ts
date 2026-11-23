@@ -137,9 +137,14 @@ export interface ArtDef {
   gait?: GaitDef;
   /** The whole body leans forward (degrees) and lunges (metres) as it strikes. */
   attack?: { lean: number; lunge: number };
+  /** The whole thing tips its top forward by this many degrees: a sword lying corner to corner in its picture. */
+  tilt?: number;
 }
 
-/** Clothing and features a role or faction puts on an individual (a smith's apron, an elder's beard). */
+/**
+ * What one individual's own circumstances lay over its recipe: a job's clothes (a smith's apron, an
+ * elder's beard), or an item's material, quality and numbers (steel colour, a gem, a longer blade).
+ */
 export interface DressDef {
   /** Replaces the def's choices for these colour slots. */
   colors?: Readonly<Record<string, readonly string[]>>;
@@ -147,4 +152,6 @@ export interface DressDef {
   features?: readonly string[];
   /** Never has these features. */
   without?: readonly string[];
+  /** Stretched along [forward, up, side] (a long spear, a heavy axe head). Default [1, 1, 1]. */
+  stretch?: Vec3;
 }
