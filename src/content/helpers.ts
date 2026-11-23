@@ -1,5 +1,5 @@
 import { CONTENT } from './index';
-import type { Content, Creature, Entity, ItemStack, Rng, ThingDef } from '../types';
+import type { Content, Creature, Entity, ItemDef, ItemStack, Rng, ThingDef } from '../types';
 import { itemDef } from './itemDefs';
 import { rollGear } from './gearItems';
 
@@ -94,4 +94,9 @@ export function stackWeight(items: readonly ItemStack[]): number {
   let w = 0;
   for (const s of items) w += (itemDef(CONTENT, s.id)?.weight ?? 0) * s.count;
   return w;
+}
+
+/** How fast an item leaves the hands at a full throw: light things fly further, things made to be thrown at their own speed. */
+export function throwSpeed(def: ItemDef, might: number): number {
+  return (def.thrown?.speed ?? Math.max(5, 13 - def.weight * 1.2)) * (1 + might * 0.03);
 }

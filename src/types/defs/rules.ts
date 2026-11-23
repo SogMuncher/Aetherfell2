@@ -162,6 +162,8 @@ export interface RulesDef {
   skills: Record<SkillId, { maxHp?: number; maxMana?: number; maxStamina?: number }>;
   /** How far away (metres) you can reach a loose item to pull it into your open bag with the mouse. */
   pickReach: number;
+  /** How fast everything falls (m/s²): physics uses it, and so does anyone aiming a throw. */
+  gravity: number;
   /** Rules every item follows, whatever it is. */
   items: ItemRules;
   /**

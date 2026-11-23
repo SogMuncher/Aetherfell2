@@ -40,7 +40,19 @@ export type BehaviourDef =
   /** Sits still in its patch and only now and then shuffles a little way. */
   | { do: 'lurk'; roam: number; chance: number }
   /** Strolls around its home. */
-  | { do: 'wander'; roam: number; chance: number };
+  | { do: 'wander'; roam: number; chance: number }
+  /**
+   * Walks over to loose items it can see within `within` metres and puts them in its bag, the same
+   * pick-up a player makes, until it carries `keep` things. With `throwables` it only wants things
+   * made to be thrown. `chance` is how readily it goes for one when it stops to think.
+   */
+  | { do: 'grab'; within: number; keep: number; chance: number; throwables?: boolean }
+  /**
+   * Throws something from its bag at an enemy it can see `range` metres away, the same throw a
+   * player makes: things made to be thrown first, and with `anything` whatever else it carries.
+   * `chance` is how readily it throws when it stops to think.
+   */
+  | { do: 'throw'; range: [number, number]; chance: number; anything?: boolean };
 
 /** Every behaviour name in the library. */
 export type BehaviourKind = BehaviourDef['do'];

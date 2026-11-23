@@ -5,7 +5,9 @@
 
 - `player/playerSystem.ts`: first-person movement, swim, glide, carry/throw, runebook preparing, "poke" -> use request.
 - `rpg/rpgSystem.ts`: skills grow by doing, pick up/use/drop/wear items, shared party quest log. Bag layout is UI-only.
-- `ai/` : one thinking loop for every creature. `behaviours.ts` is the library (`BehaviourDef` in `types/defs/brains.ts`);
+  The bag is `actor.inventory` (players and creatures alike, `bagOf(e)`); a thing's `carries` loot fills it at spawn and
+  all of it drops on death (plus `onDestroy.loot`). Creatures ask for the player's pick-up/throw via `actor.wantPick/wantThrow`.
+- `ai/` : one thinking loop for every creature. `senses.ts` gathers what it notices; `handling.ts` = `grab`/`throw` behaviours. `behaviours.ts` is the library (`BehaviourDef` in `types/defs/brains.ts`);
   a creature's brain is an ordered data list in `content/living.ts`. Villagers are creatures with a brain + role.
   Sensing counts height and needs a clear line eye to eye (`matter.clearLine`: ground, walls, doors, 3D cells); an attacker
   is noticed anyway. Night eyesight and wildlife both ask `isDark` (content/day.ts): the underworld is always dark.
@@ -21,4 +23,4 @@
 - Villager job: `roles` entry listed in a site's `villagers`.
 
 ## Checks
-`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`.
+`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`, `handsSmoke.ts`.

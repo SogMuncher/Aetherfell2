@@ -38,7 +38,7 @@ import { check, failures, hit, makeRng, nextSeq, run, spawner, world } from './s
 {
   const { sim, me } = world();
   check('travellers begin dressed', !!me.worn?.torso && !!me.worn?.legs && !me.worn?.head);
-  const inv = me.player?.inventory ?? [];
+  const inv = me.actor?.inventory ?? [];
   addItem(inv, 'gear:helm:steel:common', 1);
   addItem(inv, 'gear:helm:iron:fine', 1);
   run(sim, 2, { wear: { do: 'wear', item: 'gear:helm:steel:common' } });

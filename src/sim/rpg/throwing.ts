@@ -1,19 +1,22 @@
 import type { Entity, ItemId, PlayerData, SimContext, ThrowAim } from '../../types';
-import { addItem, removeItem } from '../../types';
-import { itemDef } from '../../content';
+import { bagOf, addItem, removeItem } from '../../types';
+import { itemDef, throwSpeed } from '../../content';
 
 /** Below this much of the screen height, letting go is a gentle drop instead of a throw. */
 const DROP_BELOW = 0.15;
 
+/** A traveller who is down can do nothing with their hands. */
+const down = (e: Entity): boolean => (e.player?.downed ?? 0) > 0;
+
 /**
- * An item dragged out of the bag and let go over the view. The cursor point is the direction:
- * left or right of centre turns the throw that way, higher up the screen throws harder and further,
- * and near the bottom you simply set it down in front of you. Any item can be thrown; things with
- * a `thrown` burst still burst where they land.
+ * An item thrown from the bag: by a player (dragged out and let go over the view) or a creature
+ * (its brain's `throw` behaviour). The aim's yaw turns the throw, `lift` raises it, `power` 0..1 is
+ * how hard; very gentle simply sets it down in front. Any item can be thrown; things with a
+ * `thrown` burst still burst where they land.
  */
-export function throwFromBag(ctx: SimContext, e: Entity, p: PlayerData, aim: ThrowAim): void {
-  if (p.downed > 0 || !itemDef(ctx.content, aim.item) || !removeItem(p.inventory, aim.item, 1)) return;
-  letGo(ctx, e, p, aim);
+export function throwFromBag(ctx: SimContext, e: Entity, aim: ThrowAim): void {
+  if (down(e) || !itemDef(ctx.content, aim.item) || !removeItem(bagOf(e), aim.item, 1)) return;
+  letGo(ctx, e, aim);
 }
 
 /**
@@ -23,15 +26,15 @@ export function throwFromBag(ctx: SimContext, e: Entity, p: PlayerData, aim: Thr
 export function throwHeld(ctx: SimContext, e: Entity, p: PlayerData): void {
   const a = e.actor;
   const item = a?.weapon;
-  if (!a || !item || p.downed > 0) return;
+  if (!a || !item || down(e)) return;
   a.weapon = null;
   ctx.emit({ type: 'equip', entity: e.id, item: null });
-  const down = p.input.pitch < ctx.content.rules.items.dropPitch;
-  letGo(ctx, e, p, { item, yaw: e.angle, lift: p.input.pitch * 0.9, power: down ? 0 : 1 }, down);
+  const atFeet = p.input.pitch < ctx.content.rules.items.dropPitch;
+  letGo(ctx, e, { item, yaw: e.angle, lift: p.input.pitch * 0.9, power: atFeet ? 0 : 1 }, atFeet);
 }
 
-/** One item leaving a traveller: set down in front (or at the feet), or thrown along the aim. */
-function letGo(ctx: SimContext, e: Entity, p: PlayerData, aim: ThrowAim, atFeet = false): void {
+/** One item leaving someone's hands: set down in front (or at the feet), or thrown along the aim. */
+function letGo(ctx: SimContext, e: Entity, aim: ThrowAim, atFeet = false): void {
   const def = itemDef(ctx.content, aim.item);
   if (!def) return;
   const yaw = Number.isFinite(aim.yaw) ? aim.yaw : e.angle;
@@ -51,8 +54,7 @@ function letGo(ctx: SimContext, e: Entity, p: PlayerData, aim: ThrowAim, atFeet 
     });
     return;
   }
-  // Light things fly further; anything made to be thrown flies at its own speed.
-  const full = (def.thrown?.speed ?? Math.max(5, 13 - def.weight * 1.2)) * (1 + p.stats.might * 0.03);
+  const full = throwSpeed(def, e.player?.stats.might ?? 5);
   const t = (power - DROP_BELOW) / (1 - DROP_BELOW);
   const sp = 2.5 + (full - 2.5) * t;
   const z = e.z + 1.4;
@@ -68,19 +70,23 @@ function letGo(ctx: SimContext, e: Entity, p: PlayerData, aim: ThrowAim, atFeet 
 }
 
 /**
- * A loose item dragged from the view into the open bag. It is picked up only if it is still lying
- * there, within reach (rules.pickReach) and not behind a wall, closed door, tree or hillside.
+ * A loose item taken into the bag: a player drags it from the view, a creature's `grab` behaviour
+ * reaches for it. Only if it is still lying there, within reach (rules.pickReach) and not behind a
+ * wall, closed door, tree or hillside.
  */
-export function pickFromView(ctx: SimContext, e: Entity, p: PlayerData, id: number): ItemId | null {
+export function pickFromView(ctx: SimContext, e: Entity, id: number): ItemId | null {
   const it = ctx.state.entities.get(id);
-  if (!it?.item || it.dead || it.heldBy !== null || p.downed > 0) return null;
+  const tell = (text: string): void => {
+    if (e.player) ctx.emit({ type: 'notice', player: e.id, text });
+  };
+  if (!it?.item || it.dead || it.heldBy !== null || !e.actor || down(e)) return null;
   const eyeZ = e.z + 1.5;
   const dx = it.pos.x - e.pos.x;
   const dy = it.pos.y - e.pos.y;
   const dz = it.z + 0.1 - eyeZ;
   const dist = Math.hypot(dx, dy, dz);
   if (dist > ctx.content.rules.pickReach) {
-    ctx.emit({ type: 'notice', player: e.id, text: 'That is too far away to reach.' });
+    tell('That is too far away to reach.');
     return null;
   }
   const { tiles } = ctx;
@@ -95,11 +101,11 @@ export function pickFromView(ctx: SimContext, e: Entity, p: PlayerData, id: numb
     const z = eyeZ + dz * k;
     const g = tiles.ground(x, y);
     if (z < g - 0.05 || (tiles.blocked(x, y) && z < g + tiles.info(x, y).height)) {
-      ctx.emit({ type: 'notice', player: e.id, text: 'You cannot reach it from here.' });
+      tell('You cannot reach it from here.');
       return null;
     }
   }
-  addItem(p.inventory, it.item.id, it.item.count);
+  addItem(bagOf(e), it.item.id, it.item.count);
   it.dead = true;
   ctx.emit({ type: 'pickup', player: e.id, item: it.item.id, count: it.item.count });
   return it.item.id;

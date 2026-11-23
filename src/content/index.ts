@@ -30,7 +30,7 @@ import { VIEWMODEL } from './viewmodel';
 import { WORLD } from './world';
 import { validateContent } from './validate';
 
-export { fillText, pluralName, siteBaseName, thingDef, isCreature, looksDangerous, moveFactor, isDisabled, isPanicking, rollLoot, skillXp, stackWeight } from './helpers';
+export { fillText, pluralName, siteBaseName, thingDef, isCreature, looksDangerous, moveFactor, isDisabled, isPanicking, rollLoot, skillXp, stackWeight, throwSpeed } from './helpers';
 export { validateContent } from './validate';
 
 export { cloudDensity3, cloudPattern, layerCover, layerDensity, airColumn, airAt, rainAt, airMoisture, setAirMoisture, moistCell, MOIST_CELL, sunThrough } from './skyField';

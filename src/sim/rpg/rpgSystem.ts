@@ -1,5 +1,5 @@
 import type { Entity, ItemId, PlayerData, SimContext, SimSystem, SkillId } from '../../types';
-import { addItem, countItem, removeItem } from '../../types';
+import { bagOf, addItem, countItem, removeItem } from '../../types';
 import { itemDef, pluralName, skillXp, thingDef } from '../../content';
 import { changeClothes, hold, putOn } from './gearHandling';
 import { pickFromView, throwFromBag, throwHeld } from './throwing';
@@ -17,9 +17,20 @@ export const rpgSystem: SimSystem = (ctx: SimContext) => {
     const it = state.entities.get(u.entity);
     const pl = state.entities.get(u.player);
     if (!it?.item || it.dead || !pl?.player) continue;
-    addItem(pl.player.inventory, it.item.id, it.item.count);
+    addItem(bagOf(pl), it.item.id, it.item.count);
     it.dead = true;
     ctx.emit({ type: 'pickup', player: pl.id, item: it.item.id, count: it.item.count });
+  }
+
+  // Creatures pick up and throw with the same hands players use (their brain asks via wantPick / wantThrow).
+  for (const e of state.entities.values()) {
+    const a = e.actor;
+    if (!a || e.player || e.dead) continue;
+    const pick = a.wantPick ?? null;
+    if (pick !== null) pickFromView(ctx, e, pick);
+    if (a.wantThrow) throwFromBag(ctx, e, a.wantThrow);
+    a.wantPick = null;
+    a.wantThrow = null;
   }
 
   for (const id of Object.values(state.players)) {
@@ -28,7 +39,7 @@ export const rpgSystem: SimSystem = (ctx: SimContext) => {
     if (!e || !p) continue;
     learnRunes(ctx, e, p);
     if (p.input.useItem) useItem(ctx, e, p, p.input.useItem);
-    if (p.input.dropItem && removeItem(p.inventory, p.input.dropItem, 1)) {
+    if (p.input.dropItem && removeItem(bagOf(e), p.input.dropItem, 1)) {
       const z = e.z + 1;
       ctx.spawn('looseItem', e.pos.x + Math.cos(e.angle) * 0.8, e.pos.y + Math.sin(e.angle) * 0.8, {
         z,
@@ -38,9 +49,9 @@ export const rpgSystem: SimSystem = (ctx: SimContext) => {
         item: { id: p.input.dropItem, count: 1 },
       });
     }
-    if (p.input.throwItem) throwFromBag(ctx, e, p, p.input.throwItem);
+    if (p.input.throwItem) throwFromBag(ctx, e, p.input.throwItem);
     if (p.input.throwHeld) throwHeld(ctx, e, p);
-    if (p.input.pickUp !== null) pickFromView(ctx, e, p, p.input.pickUp);
+    if (p.input.pickUp !== null) pickFromView(ctx, e, p.input.pickUp);
     if (p.input.wear) changeClothes(ctx, e, p, p.input.wear);
     // Skill growth from what the player has been doing.
     const moved = Math.hypot(e.pos.x - e.prev.x, e.pos.y - e.prev.y);
@@ -94,7 +105,7 @@ function questProgress(ctx: SimContext): void {
     if (q.kind === 'fetch') {
       let most = 0;
       for (const id of Object.values(state.players)) {
-        const inv = state.entities.get(id)?.player?.inventory;
+        const inv = state.entities.get(id)?.actor?.inventory;
         if (inv) most = Math.max(most, countItem(inv, q.targetKind));
       }
       q.progress = Math.min(q.needed, most);
@@ -117,21 +128,21 @@ function questProgress(ctx: SimContext): void {
  */
 function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): void {
   // '@throwable' means "whatever I can throw".
-  const id = wanted === '@throwable' ? (p.inventory.find((s) => itemDef(ctx.content, s.id)?.thrown)?.id ?? '') : wanted;
+  const id = wanted === '@throwable' ? (bagOf(e).find((s) => itemDef(ctx.content, s.id)?.thrown)?.id ?? '') : wanted;
   const def = itemDef(ctx.content, id);
-  if (!def || !p.inventory.some((s) => s.id === id)) return;
+  if (!def || !bagOf(e).some((s) => s.id === id)) return;
   // Armour is worn, not used up; weapons go into the hands (anything else can be put there on the paperdoll).
   if (def.armour) {
-    putOn(ctx, e, p, id);
+    putOn(ctx, e, id);
     return;
   }
   if (def.weapon) {
-    hold(ctx, e, p, id);
+    hold(ctx, e, id);
     return;
   }
   if (def.thrown) {
     if (p.holding !== null) return;
-    removeItem(p.inventory, id, 1);
+    removeItem(bagOf(e), id, 1);
     const pitch = p.input.pitch * 0.9;
     const sp = def.thrown.speed * (1 + p.stats.might * 0.03);
     const cos = Math.cos(e.angle);
@@ -149,7 +160,7 @@ function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): voi
     return;
   }
   if (def.use) {
-    removeItem(p.inventory, id, 1);
+    removeItem(bagOf(e), id, 1);
     ctx.state.queues.effects.push({ target: { kind: 'entity', id: e.id }, effects: def.use, source: e.id, from: null });
     ctx.emit({ type: 'notice', player: e.id, text: `Used ${def.name.toLowerCase()}.` });
     return;
@@ -161,11 +172,11 @@ function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): voi
 
 /** Rune stones in the satchel teach their rune; the stone crumbles the first time. */
 function learnRunes(ctx: SimContext, e: Entity, p: PlayerData): void {
-  for (const s of [...p.inventory]) {
+  for (const s of [...bagOf(e)]) {
     const rune = itemDef(ctx.content, s.id)?.teaches;
     if (!rune || p.runes.includes(rune)) continue;
     p.runes.push(rune);
-    removeItem(p.inventory, s.id, 1);
+    removeItem(bagOf(e), s.id, 1);
     const name = ctx.content.runes[rune]?.name ?? rune;
     ctx.emit({ type: 'runeLearned', player: e.id, rune });
     ctx.state.journal.push({ tick: ctx.state.tick, day: ctx.state.weather.day, text: `${p.name} learned the ${name} rune.` });

@@ -3,7 +3,7 @@
 import { Simulation, createState } from '../src/sim';
 import { CONTENT, composeSpell, describeSpell, spellFor, spellKey, validateContent } from '../src/content';
 import type { Entity, InputSnapshot, RuneId } from '../src/types';
-import { Tile, emptyInput } from '../src/types';
+import { Tile, bagOf, emptyInput } from '../src/types';
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = ''): void {
@@ -175,13 +175,13 @@ function cast(sim: Simulation, pitch = 0): string[] {
   const { sim, me } = world();
   const p = me.player;
   if (!p) throw new Error('no player data');
-  p.inventory.push({ id: 'rune:mend', count: 1 });
+  bagOf(me).push({ id: 'rune:mend', count: 1 });
   const ev = run(sim, 1);
   check('carrying a rune stone teaches its rune', p.runes.includes('mend') && ev.includes('runeLearned'));
-  check('and the stone is used up', !p.inventory.some((s) => s.id === 'rune:mend'));
-  p.inventory.push({ id: 'rune:mend', count: 1 });
+  check('and the stone is used up', !bagOf(me).some((s) => s.id === 'rune:mend'));
+  bagOf(me).push({ id: 'rune:mend', count: 1 });
   run(sim, 1);
-  check('a stone for a rune you know is kept', p.inventory.some((s) => s.id === 'rune:mend'));
+  check('a stone for a rune you know is kept', bagOf(me).some((s) => s.id === 'rune:mend'));
   prepare(sim, ['mend']);
   me.hp = 20;
   p.mana = p.maxMana;

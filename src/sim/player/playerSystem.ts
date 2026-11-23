@@ -1,5 +1,5 @@
 import type { Entity, SimContext, SimSystem } from '../../types';
-import { unpackSpot } from '../../types';
+import { bagOf, unpackSpot } from '../../types';
 import { composeSpell, isDisabled, moveFactor, stackWeight, thingDef, wornWeight } from '../../content';
 
 const JUMP_SPEED = 7.2;
@@ -57,7 +57,7 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
     const surf = tiles.waterLevel(e.pos.x, e.pos.y);
     const swimming = tiles.ground(e.pos.x, e.pos.y) < surf - 0.6 && e.z < surf;
     const carryLimit = 30 + p.stats.might * 4;
-    const load = stackWeight(p.inventory) + wornWeight(content, e.worn) + (heldDef ? heldDef.body.mass * 0.25 : 0);
+    const load = stackWeight(bagOf(e)) + wornWeight(content, e.worn) + (heldDef ? heldDef.body.mass * 0.25 : 0);
     let speed = (def.actor?.speed ?? 4) * (1 + (p.skills.athletics.level - 1) * 0.03);
     const winding = a.charge != null;
     const sprinting = input.sprint && p.stamina > 1 && len > 0.1 && !swimming && !winding;
@@ -69,7 +69,7 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
     speed *= moveFactor(content, e.status);
 
     // Gliding: hold jump while falling to open the glider. Wind carries you; fires below lift you.
-    const glide = gliderOf(ctx, p.inventory);
+    const glide = gliderOf(ctx, bagOf(e));
     const wantGlide = !!glide && input.jumpHeld && !a.onGround && !swimming && (p.gliding || e.vz < 0) && !isDisabled(content, e.status);
     if (wantGlide !== p.gliding) {
       p.gliding = wantGlide;

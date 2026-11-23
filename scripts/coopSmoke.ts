@@ -32,7 +32,7 @@ function party(seed = 777): Simulation {
   return sim;
 }
 function count(e: Entity, item: string): number {
-  return e.player?.inventory.find((s) => s.id === item)?.count ?? 0;
+  return e.actor?.inventory.find((s) => s.id === item)?.count ?? 0;
 }
 let hostSeq = 0;
 /** One tick: the host's own input is always there, the friend's only when given. */
@@ -46,7 +46,7 @@ function tick(sim: Simulation, friend: Partial<InputSnapshot>[] = []): void {
 {
   const sim = party();
   const f = player(sim, 'friend');
-  f.player?.inventory.push({ id: 'manaTonic', count: 10 });
+  f.actor?.inventory.push({ id: 'manaTonic', count: 10 });
   const before = count(f, 'manaTonic');
   tick(sim, [{ seq: 1, useItem: 'manaTonic' }]);
   for (let i = 0; i < 10; i++) tick(sim);
@@ -138,7 +138,7 @@ function tick(sim: Simulation, friend: Partial<InputSnapshot>[] = []): void {
   const sim = party(2024);
   const f = player(sim, 'friend');
   const fid = f.id;
-  f.player?.inventory.push({ id: 'manaTonic', count: 7 });
+  f.actor?.inventory.push({ id: 'manaTonic', count: 7 });
   const hid = player(sim, 'local').id;
   const bytes = sim.save();
   const loaded = Simulation.fromSave(bytes);

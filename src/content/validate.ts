@@ -73,6 +73,7 @@ export function validateContent(c: Content): string[] {
       if (t.container.lock) need(t.container.lock in c.items, w, `key item '${t.container.lock}'`);
     }
     if (t.onDestroy?.loot) need(t.onDestroy.loot in c.loot, w, `loot '${t.onDestroy.loot}'`);
+    if (t.carries) need(t.carries in c.loot, w, `loot '${t.carries}'`);
     if (t.onDestroy?.effects) effects(t.onDestroy.effects, w);
     if (t.onImpact) effects(t.onImpact.effects, w);
     if (t.contact) effects(t.contact.effects, w);

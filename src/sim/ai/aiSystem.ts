@@ -1,7 +1,8 @@
 import type { Creature, SimContext, SimSystem, Vec2 } from '../../types';
 import { SWING_DIRS } from '../../types';
 import { isCreature, isDark, isDisabled, isPanicking, moveFactor, thingDef, weaponStats } from '../../content';
-import { decide, sense } from './behaviours';
+import { decide } from './behaviours';
+import { sense } from './senses';
 
 /**
  * Every creature (animal, monster or villager) thinks the same way: now and then it senses what is

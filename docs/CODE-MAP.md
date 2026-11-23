@@ -34,6 +34,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `smokeKit.ts` (63) Shared helpers for the headless smoke checks: seeded rng, flat arena, a joined traveller, PASS/FAIL counting
 - `matterFireSmoke.ts` (85) MATTER and fire: a timber wall burns like brush, thatch catches from burning grass, fire climbs, and fire
 - `matterKit.ts` (52) Shared helpers for the matter checks: a calm world, flat ground, stepping, PASS/FAIL counting, common cells
+- `handsSmoke.ts` (67) Headless checks: creatures carry a bag (players' own kind), spill all of it when they die, and their brains
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
@@ -76,19 +77,19 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gearItems.ts` (163) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
 - `gearCheck.ts` (60) gearProblems: the gear tables are sound
 - `itemDefs.ts` (107) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
-- `helpers.ts` (97) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
+- `helpers.ts` (102) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
 - `index.ts` (83) collects every table into CONTENT, re-exports helpers, runs validation
 - `items.ts` (103) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
-- `living.ts` (126) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
+- `living.ts` (128) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (284) creature looks as solid parts (D)
-- `loot.ts` (103) Drop tables: each entry rolls on its own.
+- `loot.ts` (110) Drop tables: each entry rolls on its own.
 - `materials.ts` (29) How stuff reacts physically. Every tile and thing made of a material behaves the same way.
 - `palettes.ts` (62) Palettes: the colours that fill the colour regions of every picture (creatures, trees, rocks,
 - `props.ts` (232) Props as forms: barrels, crates, chests, urns, torches, campfires and trap plates are put
 - `realms.ts` (67) The spaces the world is made of. A realm is a place with its own ground, light and sky; the whole
 - `roles.ts` (108) Villager jobs: what they add to a greeting, what they keep on the rack, the trouble they ask
-- `rules.ts` (112) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
+- `rules.ts` (113) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
 - `shapes.ts` (234) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
 - `sites.ts` (364) named places: odds, layout, population (D)
@@ -102,14 +103,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `things.ts` (196) entity archetypes by trait (D)
 - `tileCodes.ts` (17) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (201) all tile kinds + code assignment from the ledger
-- `validate.ts` (267) validateContent: every reference must point at something that exists
+- `validate.ts` (268) validateContent: every reference must point at something that exists
 - `viewmodel.ts` (33) held-item hand poses (viewmodel thread)
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
 - `artCheck.ts` (38) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
 - `smallForms.ts` (253) Bushes, rocks, plants and small heaps (haystacks, woodpiles, wells, rubble) grown from parts, like trees (form
 - `itemGearArt.ts` (124) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
 - `itemGoodsArt.ts` (125) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
-- `creatures.ts` (152) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
+- `creatures.ts` (153) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
 
 ## src/input/
 - `input.ts` (177) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -191,7 +192,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `paperdollStats.ts` (52) the paperdoll's side panel: health, protection, hands, skills
 - `settingsMenu.ts` (257) Esc/O menu built from settings data + cheat tab
 - `style.ts` (132) HUD CSS from content/hud.ts
-- `ui.ts` (657) GameUI: HUD, dialogue, journal, map, runebook (C)
+- `ui.ts` (658) GameUI: HUD, dialogue, journal, map, runebook (C)
 
 ## src/render/vfx/
 - `particleKinds.ts` (90) particle kinds, physics, mote look tables
@@ -203,8 +204,10 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `settings.ts` (222) settings as data + localStorage store
 
 ## src/sim/ai/
-- `aiSystem.ts` (172) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is
-- `behaviours.ts` (261) The shared library of behaviours every creature brain picks from (content/living.ts).
+- `aiSystem.ts` (173) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is
+- `behaviours.ts` (153) The shared library of behaviours every creature brain picks from (content/living.ts).
+- `handling.ts` (51) Brain behaviours for hands: grabbing loose items into the bag and throwing them at enemies (the player's own p
+- `senses.ts` (127) What a creature notices when it stops to think, and the small moves every behaviour shares.
 
 ## src/sim/cheats/
 - `cheatSystem.ts` (216) debug cheats executed as sim actions
@@ -214,7 +217,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/effects/
 - `effectsSystem.ts` (81) effect queue loop
-- `entityEffects.ts` (263) effects on bodies: guard, armour, reactions, death
+- `entityEffects.ts` (265) effects on bodies: guard, armour, reactions, death
 - `spotEffects.ts` (123) effects on tiles/cells: ignite, strike, soak, coat
 - `temperature.ts` (107) temperature of tiles/cells: heat dries then burns, cold freezes wet, spots settle back
 - `touch.ts` (53) What bodies get from what they stand in or on: one data-driven pass over ground tiles and 3D cells alike
@@ -222,9 +225,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/sim/
 - `breakage.ts` (18) ctx.breakItem: an item's onBreak burst + what it breaks into
 - `inputQueue.ts` (45) queueing/folding of guest inputs
-- `simLoop.ts` (500) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
-- `simState.ts` (97) rng, createState, newPlayer
-- `templates.ts` (37) Builds an entity from its definition. Only instance data lives on the entity.
+- `simLoop.ts` (489) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
+- `simState.ts` (96) rng, createState, newPlayer
+- `templates.ts` (65) Builds an entity from its definition. Only instance data lives on the entity.
 
 ## src/sim/interaction/
 - `interactionSystem.ts` (261) The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
@@ -241,7 +244,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/physics/
 - `impacts.ts` (77) fast loose things hurt, onImpact bursts, thrown items take a blow and break
-- `physicsSystem.ts` (267) Knockback left after each tick (it fades in about a third of a second).
+- `physicsSystem.ts` (266) Knockback left after each tick (it fades in about a third of a second).
 - `spatialHash.ts` (41) Uniform grid of entities, rebuilt once per tick. Answers "what is near here?" cheaply.
 
 ## src/sim/player/
@@ -249,8 +252,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/rpg/
 - `gearHandling.ts` (67) put on / take off armour, hold anything in the hands
-- `throwing.ts` (107) throw from the bag, G throw/drop from the hands, pick up from the view
-- `rpgSystem.ts` (173) Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
+- `throwing.ts` (113) throw from the bag, G throw/drop from the hands, pick up from the view
+- `rpgSystem.ts` (184) Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
 
 ## src/sim/social/
 - `socialSystem.ts` (227) Conversation: greetings that depend on the hour and on what the party has done, rumours that
@@ -301,12 +304,12 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
 - `defs.ts` (79) Content type + re-exports of defs/*
 - `effects.ts` (60) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
-- `entities.ts` (226) Entity and its components
+- `entities.ts` (231) Entity and its components
 - `events.ts` (64) Things that happened during a tick. Audio, render effects, UI and the network react to these.
 - `gear.ts` (196) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
 - `index.ts` (20) re-exports all types
 - `input.ts` (93) Letting go of an item from the bag over the view: where the cursor was decides the throw.
-- `items.ts` (43) Inventory helpers shared by every system that touches items.
+- `items.ts` (48) Inventory helpers shared by every system that touches items.
 - `math.ts` (10) 
 - `matter.ts` (94) MATTER — one way to talk about "the stuff at a place", whatever holds it.
 - `net.ts` (53) co-op message types
@@ -322,11 +325,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `art.ts` (165) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
 
 ## src/types/defs/
-- `brains.ts` (103) BehaviourDef, BrainDef, loot, habitats, population
+- `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population
 - `ids.ts` (23) id string types
 - `items.ts` (96) ItemDef, ItemLook
 - `magic.ts` (194) SpellDef, RuneDef, StatusDef and spell look
-- `rules.ts` (220) RulesDef, SwingDef, DayRules, HudTheme
+- `rules.ts` (222) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (146) SiteDef, layouts, city, districts
 - `social.ts` (62) quests, trade, roles, factions
-- `things.ts` (185) MaterialDef, ThingDef, RealmDef, light, weapon stats
+- `things.ts` (187) MaterialDef, ThingDef, RealmDef, light, weapon stats

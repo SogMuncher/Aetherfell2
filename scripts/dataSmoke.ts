@@ -8,7 +8,7 @@ import { kindFor } from '../src/sim/world/sites';
 import { hudVariables } from '../src/render/ui/style';
 import { QuickSlots } from '../src/input/quickSlots';
 import type { Entity, SiteDef } from '../src/types';
-import { Tile, emptyInput } from '../src/types';
+import { Tile, bagOf, emptyInput } from '../src/types';
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = ''): void {
@@ -106,7 +106,7 @@ check('content  validates', problems.length === 0, problems.join('; '));
   if (!p) throw new Error('no player data');
   sim.state.quests.push({ id: 900, title: 'Pelts', giver: 0, giverName: 'Smith', kind: 'fetch', targetKind: 'wolfPelt', targetLocation: null, needed: 2, progress: 0, state: 'active', reward: 5, since: sim.state.tick });
   sim.state.quests.push({ id: 901, title: 'Stones', giver: 0, giverName: 'Trader', kind: 'explore', targetKind: 'stones', what: 'the stones', targetLocation: null, needed: 1, progress: 0, state: 'active', reward: 5, since: sim.state.tick });
-  p.inventory.push({ id: 'wolfPelt', count: 2 });
+  bagOf(me).push({ id: 'wolfPelt', count: 2 });
   sim.state.locations.push({ id: 950, kind: 'stones', name: 'Old Ring', pos: { x: 1e6, y: 1e6 }, radius: 10, discovered: true, populated: true, discoveredAt: sim.state.tick - 100 });
   run(sim, 25);
   const fetch = sim.state.quests.find((q) => q.id === 900);

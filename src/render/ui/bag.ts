@@ -1,7 +1,7 @@
 import { AREA_H, AREA_W, DROP_BELOW, type Drag, ICON, type Icon, PICK_PAD, STORE, type Spot, type WorldDrag, clamp01, describe, esc, iconUrl, leatherUrl, readStore } from './bagParts';
 import { CONTENT, itemDef, stackWeight, thingDef, weaponStats, wornWeight } from '../../content';
 import type { Entity, ItemId, ItemStack, SimState, ThrowAim } from '../../types';
-import { HAND_SLOT } from '../../types';
+import { bagOf, HAND_SLOT } from '../../types';
 import { type Projection, toScreen } from '../raycaster/camera';
 import { itemWorldSize } from '../entities/itemArt';
 import { rhash } from '../color';
@@ -106,7 +106,7 @@ export class BagWindow {
     const p = e.player;
     if (!this.open || !p) return;
     const now = performance.now();
-    this.sync(p.inventory, now);
+    this.sync(bagOf(e), now);
     if (this.labelUntil && now > this.labelUntil) {
       this.labelled = '';
       this.label.classList.add('hidden');
@@ -114,7 +114,7 @@ export class BagWindow {
     }
     const a = e.actor;
     const wpn = a ? weaponStats(CONTENT, thingDef(CONTENT, e.def), a.weapon) : null;
-    const load = stackWeight(p.inventory) + wornWeight(CONTENT, e.worn);
+    const load = stackWeight(bagOf(e)) + wornWeight(CONTENT, e.worn);
     const key = `${load.toFixed(1)}|${p.stats.might}|${a?.weapon ?? ''}|${Object.values(p.skills).map((s) => s.level).join(',')}`;
     if (key === this.footKey) return;
     this.footKey = key;
