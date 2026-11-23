@@ -3,7 +3,6 @@ import { GROUND_Z, SHOWN_STATES } from '../../types';
 import { thingDef } from '../../content';
 import { impacts } from './impacts';
 
-const GRAVITY = 22;
 const MAX_STEP = 0.55;
 /** Knockback left after each tick (it fades in about a third of a second). */
 const KB_FADE = 0.8;
@@ -166,7 +165,7 @@ export const physicsSystem: SimSystem = (ctx: SimContext) => {
     // Vertical. Gliders sink slowly; the player system sets their fall speed.
     const floor = floorUnder(tiles, vol, e, d);
     // Gliders and flyers (a debug cheat) steer their own climb and fall.
-    if (!e.player?.gliding && !e.player?.cheats?.fly) e.vz -= GRAVITY * dt;
+    if (!e.player?.gliding && !e.player?.cheats?.fly) e.vz -= ctx.content.rules.gravity * dt;
     e.z += e.vz * dt;
     if (e.vz > 0 && vol.bricks.size > 0) {
       // Heads bump on ceilings, rafters and the undersides of floors above.

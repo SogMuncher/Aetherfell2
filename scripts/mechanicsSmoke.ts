@@ -127,10 +127,10 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
   const y = 15000;
   arena(sim, x, y);
   put(me, sim, x + 0.5, y + 0.5);
-  me.player?.inventory.push({ id: 'gear:hammer:iron:common', count: 1 });
+  me.actor?.inventory.push({ id: 'gear:hammer:iron:common', count: 1 });
   run(sim, 1, () => ({ useItem: 'gear:hammer:iron:common' }));
   check('wield a found weapon', me.actor?.weapon === 'gear:hammer:iron:common');
-  check('old weapon goes back in the pack', !!me.player?.inventory.some((s) => s.id === 'gear:sword:iron:common'));
+  check('old weapon goes back in the pack', !!me.actor?.inventory.some((s) => s.id === 'gear:sword:iron:common'));
   const c = spawner(sim).spawn('crate', x + 1.8, y + 0.5, { z: sim.tiles.ground(x + 1.8, y + 0.5) });
   const heldWear = (): number => (me.actor?.weapon ? (itemDef(CONTENT, me.actor.weapon)?.wear ?? 0) : 0);
   const wear0 = heldWear();
@@ -151,11 +151,11 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
   const chest = ctx.spawn('ruinChest', x + 1.6, y + 0.5, { z: sim.tiles.ground(x + 1.6, y + 0.5) });
   let ev = run(sim, 6, (i) => ({ interact: i === 0 }));
   check('locked chest refuses', ev.includes('locked') && !chest.container?.opened);
-  me.player?.inventory.push({ id: 'ruinKey', count: 1 });
+  me.actor?.inventory.push({ id: 'ruinKey', count: 1 });
   ev = run(sim, 30, (i) => ({ interact: i === 0 }));
   const items = [...sim.state.entities.values()].filter((e) => e.item).length;
   check('the key opens it', ev.includes('unlocked') && !!chest.container?.opened, `${items} items spilled out`);
-  check('the key is used up', !me.player?.inventory.some((s) => s.id === 'ruinKey'));
+  check('the key is used up', !me.actor?.inventory.some((s) => s.id === 'ruinKey'));
   const urn = ctx.spawn('keyUrn', x - 2, y + 0.5, { z: sim.tiles.ground(x - 2, y + 0.5) });
   sim.state.queues.effects.push({ target: { kind: 'entity', id: urn.id }, effects: [{ type: 'damage', amount: 5, kind: 'blunt' }], source: me.id, from: null });
   run(sim, 20);
@@ -203,13 +203,13 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
     const { sim, me } = world();
     arena(sim, x, y, 30);
     put(me, sim, x + 0.5, y + 0.5);
-    me.player?.inventory.push({ id: item, count: 2 });
+    me.actor?.inventory.push({ id: item, count: 2 });
     const before = new Set(sim.state.entities.keys());
     const events = run(sim, 60, (i) => (i === 0 ? { throwItem: { item, yaw, lift, power } } : {}));
     const thrown = [...sim.state.entities.values()].find((e) => !before.has(e.id) && !!e.item?.id.startsWith(item));
     let oil = 0;
     for (let j = -30; j <= 30; j++) for (let i = -30; i <= 30; i++) oil += sim.tiles.oil(x + i, y + j);
-    const left = me.player?.inventory.find((s) => s.id === item)?.count ?? 0;
+    const left = me.actor?.inventory.find((s) => s.id === item)?.count ?? 0;
     return { dx: thrown ? thrown.pos.x - me.pos.x : NaN, dy: thrown ? thrown.pos.y - me.pos.y : NaN, events, left, oil };
   };
   const drop = toss('gear:sword:iron:fine', 0, -0.5, 0.05);
@@ -272,7 +272,7 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
   } else check('found a village to visit', false);
   // A fresh traveller carries the starting kit from the rules.
   const fresh = world().me;
-  check('a new traveller carries the starting kit from the rules', JSON.stringify(fresh.player?.inventory) === JSON.stringify(CONTENT.rules.start.inventory) && fresh.actor?.weapon === CONTENT.rules.start.wield);
+  check('a new traveller carries the starting kit from the rules', JSON.stringify(fresh.actor?.inventory) === JSON.stringify(CONTENT.rules.start.inventory) && fresh.actor?.weapon === CONTENT.rules.start.wield);
 }
 
 // New content added purely as data (the fen round): cider warms you, quake composes, peat
@@ -397,7 +397,7 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
     it.z = it.prevZ = sim.tiles.ground(it.pos.x, it.pos.y);
     return it;
   };
-  const has = (): number => me.player?.inventory.find((s) => s.id === 'antidote')?.count ?? 0;
+  const has = (): number => me.actor?.inventory.find((s) => s.id === 'antidote')?.count ?? 0;
   const near = lay(3, 0);
   run(sim, 1, () => ({ pickUp: near.id }));
   check('drag a nearby item into the bag', has() === 1 && near.dead);
@@ -450,7 +450,7 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
       sim.enqueue({ type: 'input', playerId: 'local', input: { ...emptyInput(i, 0), attack: i < hold + 1, swingDir: dir } });
       const evs = sim.step();
       spent = Math.max(spent, stamina0 - (me.player?.stamina ?? 0));
-      if (evs.some((e) => e.type === 'hit')) {
+      if (evs.some((e) => e.type === 'hit' && e.target === them.id)) {
         kb = { x: them.kb?.x ?? 0, y: them.kb?.y ?? 0 };
         frozen = Math.min(them.freeze ?? 0, me.freeze ?? 0);
         break;

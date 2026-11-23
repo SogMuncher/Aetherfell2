@@ -1,4 +1,5 @@
 import type { BodyRegionId, CheatValue, Entity, ItemId, ItemStack, NetStatus, ThrowAim, RuneId, SimEvent, SimState, WorldSampler, BiomeId } from '../../types';
+import { bagOf } from '../../types';
 import { CONTENT, MAX_SPELL_RUNES, itemDef, isNight, composeSpell, describeSpell, rainAt, spellFor, spellKey, thingDef } from '../../content';
 import type { Projection } from '../raycaster/camera';
 import { toScreen } from '../raycaster/camera';
@@ -335,7 +336,7 @@ export class GameUI {
       this.st.style.width = `${(100 * p.stamina) / p.maxStamina}%`;
       this.mp.style.width = `${(100 * p.mana) / p.maxMana}%`;
       this.updateSpellbar(e);
-      this.updateQuickbar(p.inventory, f.quick);
+      this.updateQuickbar(bagOf(e), f.quick);
       if (this.bookOpen) this.updateBook(e);
       this.downedEl.classList.toggle('hidden', p.downed <= 0);
       if (p.downed > 0) this.downedEl.textContent = `You are down — a friend can revive you (E). Waking in ${Math.ceil(p.downed / 20)}s`;

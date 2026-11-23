@@ -1,5 +1,5 @@
 import type { DamageKind, Entity } from '../../types';
-import { DAMAGE_KINDS } from '../../types';
+import { bagOf, DAMAGE_KINDS } from '../../types';
 import { CONTENT, gearCondition, gearEffect, itemDef, skillXp, stackWeight, thingDef, weaponStats, wornWeight } from '../../content';
 
 /** The side of the "you" window: health, protection, stats, what is in your hands, skills, afflictions. */
@@ -38,7 +38,7 @@ export function dollStats(e: Entity): string {
     .filter(([, t]) => t > 0)
     .map(([id, t]) => `<span class="doll-status">${esc(CONTENT.statuses[id]?.name ?? id)} <small>${Math.ceil(t / 20)}s</small></span>`)
     .join('');
-  const load = stackWeight(p.inventory) + wornWeight(CONTENT, e.worn);
+  const load = stackWeight(bagOf(e)) + wornWeight(CONTENT, e.worn);
   const limit = 30 + p.stats.might * 4;
   return `<div class="doll-name">${esc(p.name)}</div>
     ${bar('hp', e.hp, e.maxHp, 'Health')}${bar('st', p.stamina, p.maxStamina, 'Stamina')}${bar('mp', p.mana, p.maxMana, 'Aether')}

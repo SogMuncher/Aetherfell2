@@ -1,4 +1,4 @@
-import { CONTENT, itemDef, rollOutfit, setAirMoisture } from '../content';
+import { CONTENT, setAirMoisture } from '../content';
 import { breakItem } from './breakage';
 import { type Command, type Entity, type InputSnapshot, type ItemStack, type SimContext, type SimEvent, type SimState, type SimSystem, type SpawnInit, TICK_DT, type ThingId, type WorldSampler, emptyInput, emptyQueues, unpackKey } from '../types';
 import { LatticeSampler, generateLatticeChunk } from './world/underworld';
@@ -15,7 +15,7 @@ import { effectsSystem } from './effects';
 import { generateChunk } from './world/chunkgen';
 import { interactionSystem } from './interaction';
 import { magicSystem } from './magic';
-import { makeEntity } from './templates';
+import { dress, makeEntity, startKit } from './templates';
 import { makeRng, newPlayer } from './simState';
 import { meleeSystem } from './melee';
 import { openFloorNear, swapRealm } from './world/realms';
@@ -101,13 +101,7 @@ export class Simulation {
     const rng = makeRng(state);
     const spawn = (thing: ThingId, x: number, y: number, init?: SpawnInit): Entity => {
       const e = makeEntity(CONTENT, state.nextEntityId++, thing, x, y, init);
-      // Anyone with an outfit is found wearing and holding real gear from it, unless they were handed theirs.
-      const d = CONTENT.things[thing];
-      if (d?.outfit && !e.worn && !e.actor?.weapon) {
-        const got = rollOutfit(CONTENT.gear, rng, d.outfit, d.wears ?? []);
-        if (got.worn) e.worn = got.worn;
-        if (got.held && e.actor) e.actor.weapon = got.held;
-      }
+      dress(CONTENT, e, rng);
       state.entities.set(e.id, e);
       return e;
     };
@@ -299,12 +293,7 @@ export class Simulation {
           const spawn = this.findSpawn();
           const z = this.tiles.ground(spawn.x, spawn.y);
           const e = this.ctx.spawn('player', spawn.x, spawn.y, { z, prevZ: z, player: newPlayer(c.playerId, c.name, spawn) });
-          const wield = CONTENT.rules.start.wield;
-          if (e.actor && wield) e.actor.weapon = wield;
-          for (const id of CONTENT.rules.start.worn) {
-            const region = itemDef(CONTENT, id)?.armour?.region;
-            if (region) (e.worn ??= {})[region] = id;
-          }
+          startKit(CONTENT, e);
           state.players[c.playerId] = e.id;
           this.events.push({ type: 'playerJoined', playerId: c.playerId, name: c.name });
           if (state.tick > 1) state.journal.push({ tick: state.tick, day: state.weather.day, text: `${c.name} joined the party.` });

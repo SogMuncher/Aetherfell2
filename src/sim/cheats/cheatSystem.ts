@@ -1,5 +1,5 @@
 import type { CheatDef, CheatValue, Entity, SimContext, SimSystem } from '../../types';
-import { addItem } from '../../types';
+import { bagOf, addItem } from '../../types';
 
 const FLY_SPEED = 12;
 /** Keeps a dive slower than the speed at which landing starts to hurt. */
@@ -42,7 +42,7 @@ export function applyCheat(ctx: SimContext, e: Entity, def: CheatDef, value: Che
       const item = typeof value === 'string' ? content.items[value] : undefined;
       if (!item || typeof value !== 'string') return tell('no such item.');
       const count = def.arg.kind === 'item' ? def.arg.count : 1;
-      addItem(p.inventory, value, count);
+      addItem(bagOf(e), value, count);
       ctx.emit({ type: 'pickup', player: e.id, item: value, count });
       break;
     }

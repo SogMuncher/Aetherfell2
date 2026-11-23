@@ -41,3 +41,8 @@ export function joinWear(base: ItemId, wear: number | undefined, durability: num
   if (wear === undefined || wear >= durability) return base;
   return `${base}@${Math.max(0, Math.round(wear))}`;
 }
+
+/** The bag an entity carries: players and creatures alike (ActorData.inventory). Things without hands carry nothing. */
+export function bagOf(e: { actor?: { inventory: ItemStack[] } }): ItemStack[] {
+  return e.actor?.inventory ?? [];
+}

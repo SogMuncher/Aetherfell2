@@ -1,6 +1,6 @@
 import type { Vec2 } from './math';
 import type { ItemStack } from './items';
-import type { InputSnapshot, SwingDir } from './input';
+import type { InputSnapshot, SwingDir, ThrowAim } from './input';
 import type { BehaviourKind, FactionId, ItemId, RoleId, RuneId, SpellId, StatusId, ThingId } from './defs';
 import type { PlayerCheats } from './cheats';
 import type { BodyRegionId } from './gear';
@@ -49,6 +49,8 @@ export interface ActorData {
    * the definition. Whatever it is gets swung; how worn it is rides in its id (`id@wear`).
    */
   weapon: ItemId | null;
+  /** The bag: everything carried but not worn or held. Players and creatures alike; it all drops when a creature dies. */
+  inventory: ItemStack[];
   swing: SwingState | null;
   /** Direction currently guarded, or null if not blocking. */
   guard: SwingDir | null;
@@ -71,6 +73,10 @@ export interface ActorData {
   castCooldown?: number;
   /** Set by a controller (AI) to cast this spell (a rune list key, see spellKey); the magic system consumes it. */
   wantCast?: SpellId | null;
+  /** Set by a controller (AI) to throw an item from the bag; the same throw a player makes (sim/rpg/throwing.ts). */
+  wantThrow?: ThrowAim | null;
+  /** Set by a controller (AI) to pick up this loose item into the bag, the same pick-up a player makes. */
+  wantPick?: number | null;
 }
 
 export interface DialogueOption {
@@ -104,7 +110,6 @@ export interface PlayerData {
   holding: number | null;
   stats: Stats;
   skills: Record<SkillId, Skill>;
-  inventory: ItemStack[];
   dialogue: DialogueView | null;
   /** Ticks until the next interact is allowed. */
   cooldown: number;

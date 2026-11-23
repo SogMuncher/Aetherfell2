@@ -174,6 +174,8 @@ export interface ThingDef {
   wears?: BodyRegionId[];
   /** Armour it is found wearing: each entry is tried on its own when it first appears. */
   outfit?: OutfitEntry[];
+  /** What it carries in its bag (a loot table rolled when it first appears). The whole bag drops when it dies. */
+  carries?: LootId;
   /** Wanders off the map when no player is within this distance. */
   despawn?: number;
   /** Procedural sprite; null = drawn only by particles (bolts, sparks). */

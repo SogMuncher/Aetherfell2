@@ -203,7 +203,7 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
       const cdef = tdef.container;
       if (!cdef || !t.container || t.container.opened) continue;
       if (t.container.locked && cdef.lock) {
-        const inv = pl.player?.inventory;
+        const inv = pl.actor?.inventory;
         if (!inv || countItem(inv, cdef.lock) === 0) {
           ctx.emit({ type: 'locked', entity: t.id, x: t.pos.x, y: t.pos.y });
           const keyName = content.items[cdef.lock]?.name.toLowerCase() ?? 'key';

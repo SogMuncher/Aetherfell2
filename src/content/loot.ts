@@ -7,12 +7,19 @@ export const LOOT: Record<LootId, LootDef> = {
   villager: { entries: [{ item: 'coin', min: 5, max: 14, chance: 1 }] },
   // Hedge-mages carry a little magic with them: a tonic, now and then a rune stone.
   hexer: { entries: [{ item: 'coin', min: 4, max: 16, chance: 0.9 }, { item: 'manaTonic', min: 1, max: 1, chance: 0.4 }, { item: 'rune:frost', min: 1, max: 1, chance: 0.12 }, { item: 'rune:gust', min: 1, max: 1, chance: 0.12 }] },
-  raider: {
+  // What raiders carry in their bag (all of it drops when they die), including things to throw.
+  raiderBag: {
     entries: [
       { item: 'coin', min: 3, max: 12, chance: 0.9 },
+      { item: 'healingDraught', min: 1, max: 1, chance: 0.2 },
+      { item: 'firePot', min: 1, max: 2, chance: 0.35 },
+      { item: 'oilFlask', min: 1, max: 1, chance: 0.25 },
+    ],
+  },
+  raider: {
+    entries: [
       { item: '', gear: { region: 'hand', qualities: ['crude'] }, min: 1, max: 1, chance: 0.3 },
       { item: '', gear: { region: 'hand', qualities: ['common', 'fine'] }, min: 1, max: 1, chance: 0.08 },
-      { item: 'healingDraught', min: 1, max: 1, chance: 0.2 },
       // What they wear drops with them (gear rules); this is a spare piece they carried.
       { item: '', gear: { qualities: ['crude', 'common'] }, min: 1, max: 1, chance: 0.12 },
     ],

@@ -104,6 +104,7 @@ export const RULES: RulesDef = {
     speech: {},
   },
   pickReach: 4.5,
+  gravity: 22,
   sites: { fill: 180, keep: 280 },
   awake: 200,
   coop: { timeout: 20 },

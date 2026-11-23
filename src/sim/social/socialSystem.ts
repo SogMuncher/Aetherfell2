@@ -1,5 +1,5 @@
 import type { DialogueOption, DialogueView, Entity, Location, Quest, RoleDef, SimContext, SimSystem } from '../../types';
-import { addItem, countItem, removeItem } from '../../types';
+import { bagOf, addItem, countItem, removeItem } from '../../types';
 import { dayPart, fillText, itemDef, mended, pluralName, rainAt, siteBaseName, thingDef } from '../../content';
 
 const COMPASS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
@@ -106,7 +106,7 @@ function questGoal(ctx: SimContext, q: Quest): { goal: string; plural: string } 
 /** Is the job done, as far as this traveller can show? (A fetch needs the goods in their own bag.) */
 function questReady(q: Quest, pl: Entity | undefined): boolean {
   if (q.state !== 'active') return false;
-  if (q.kind === 'fetch') return !!pl?.player && countItem(pl.player.inventory, q.targetKind) >= q.needed;
+  if (q.kind === 'fetch') return !!pl?.player && countItem(bagOf(pl), q.targetKind) >= q.needed;
   return q.progress >= q.needed;
 }
 
@@ -165,10 +165,10 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
     case 'turnIn': {
       const q = state.quests.find((x) => x.id === npc.npc?.questId);
       if (q && questReady(q, pl)) {
-        if (q.kind === 'fetch' && !removeItem(p.inventory, q.targetKind, q.needed)) break;
+        if (q.kind === 'fetch' && !removeItem(bagOf(pl), q.targetKind, q.needed)) break;
         q.progress = q.needed;
         q.state = 'done';
-        addItem(p.inventory, coin, q.reward);
+        addItem(bagOf(pl), coin, q.reward);
         const fv = state.factions[npc.faction];
         if (fv) fv[pl.faction] = Math.min(1, (fv[pl.faction] ?? 0) + 0.3);
         text = roleOf(ctx, npc)?.quest?.thanks ?? 'You have our thanks.';
@@ -184,7 +184,7 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
       const a = pl.actor;
       const held = a?.weapon ? itemDef(ctx.content, a.weapon) : undefined;
       if (trade.mend && a?.weapon && held && (held.wear ?? 0) < (held.durability ?? 0)) {
-        if (removeItem(p.inventory, coin, trade.mend.price)) {
+        if (removeItem(bagOf(pl), coin, trade.mend.price)) {
           a.weapon = mended(a.weapon);
           text = trade.mend.done;
         } else text = trade.mend.broke;
@@ -192,14 +192,14 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
       }
       if (trade.sellStock) {
         // Sell the first thing on the rack you can afford.
-        const coins = countItem(p.inventory, coin);
+        const coins = countItem(bagOf(pl), coin);
         const stock = npc.npc.stock;
         const offer = stock.find((st) => (itemDef(ctx.content, st.id)?.value ?? 999) <= coins);
         if (offer) {
           const it = itemDef(ctx.content, offer.id);
-          removeItem(p.inventory, coin, it?.value ?? 0);
+          removeItem(bagOf(pl), coin, it?.value ?? 0);
           removeItem(stock, offer.id, 1);
-          addItem(p.inventory, offer.id, 1);
+          addItem(bagOf(pl), offer.id, 1);
           text = `The ${it?.name.toLowerCase() ?? 'goods'}? ${it?.value ?? 0} silver. Use it well.`;
         } else text = stock.length ? trade.sellStock.broke : trade.sellStock.empty;
         break;
@@ -208,15 +208,15 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
       if (!bt) break;
       let sold = 0;
       for (const id of bt.buys) {
-        const s = p.inventory.find((x) => x.id === id);
+        const s = bagOf(pl).find((x) => x.id === id);
         if (!s) continue;
         const value = (itemDef(ctx.content, id)?.value ?? 1) * s.count;
         sold += value;
-        removeItem(p.inventory, id, s.count);
+        removeItem(bagOf(pl), id, s.count);
       }
-      if (sold > 0) addItem(p.inventory, coin, sold);
-      const bought = removeItem(p.inventory, coin, itemDef(ctx.content, bt.sells)?.value ?? 0);
-      if (bought) addItem(p.inventory, bt.sells, 1);
+      if (sold > 0) addItem(bagOf(pl), coin, sold);
+      const bought = removeItem(bagOf(pl), coin, itemDef(ctx.content, bt.sells)?.value ?? 0);
+      if (bought) addItem(bagOf(pl), bt.sells, 1);
       text = `${sold > 0 ? fillText(bt.sold, { silver: sold }) : ''}${bought ? bt.bought : bt.broke}`;
       p.skills.speech.xp += 2;
       break;

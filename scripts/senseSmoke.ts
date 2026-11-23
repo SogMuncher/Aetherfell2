@@ -3,7 +3,7 @@ import { Simulation, createState } from '../src/sim';
 import { CONTENT, isCreature, isDark, thingDef } from '../src/content';
 import { shapeId } from '../src/content/shapes';
 import { tileCode } from '../src/content/tiles';
-import { sense } from '../src/sim/ai/behaviours';
+import { sense } from '../src/sim/ai/senses';
 import type { Creature, Entity, SimContext } from '../src/types';
 import { GROUND_Z, Tile, shapeByte } from '../src/types';
 

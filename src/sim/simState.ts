@@ -86,7 +86,6 @@ export function newPlayer(peerId: string, name: string, at: { x: number; y: numb
     holding: null,
     stats: { might: 5, grace: 5, will: 5 },
     skills: { blade: { level: 1, xp: 0 }, evocation: { level: 1, xp: 0 }, athletics: { level: 1, xp: 0 }, speech: { level: 1, xp: 0 } },
-    inventory: CONTENT.rules.start.inventory.map((s) => ({ ...s })),
     dialogue: null,
     cooldown: 0,
     respawn: { x: at.x, y: at.y },

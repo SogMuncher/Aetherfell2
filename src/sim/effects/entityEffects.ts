@@ -259,5 +259,7 @@ export function destroy(ctx: SimContext, e: Entity, src: Entity | null): void {
   if (def.container && e.container && !e.container.opened) drops.push(...rollLoot(content, def.container.loot, ctx.rng));
   // Whatever it wore or held may be found on it.
   for (const id of [...Object.values(e.worn ?? {}), ...(e.actor?.weapon ? [e.actor.weapon] : [])]) if (ctx.rng.chance(content.gear.rules.dropChance)) drops.push({ id, count: 1 });
+  // Everything in its bag always spills out, on top of its own drops.
+  if (e.actor) drops.push(...e.actor.inventory.splice(0));
   if (drops.length) ctx.dropItems(e.pos.x, e.pos.y, e.z + 0.5, drops);
 }

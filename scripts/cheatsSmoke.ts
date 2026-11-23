@@ -5,7 +5,7 @@ import { CONTENT } from '../src/content';
 import { CHEATS } from '../src/content/cheats';
 import { SETTINGS, SettingsStore } from '../src/settings';
 import type { CheatValue, Entity, InputSnapshot } from '../src/types';
-import { emptyInput } from '../src/types';
+import { bagOf, emptyInput } from '../src/types';
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = ''): void {
@@ -94,12 +94,12 @@ function cheat(sim: Simulation, id: string, value: CheatValue = null, who = 'loc
   const p = me.player;
   if (!p) throw new Error('no player data');
   const item = Object.keys(CONTENT.items)[0] ?? '';
-  const before = p.inventory.find((s) => s.id === item)?.count ?? 0;
+  const before = bagOf(me).find((s) => s.id === item)?.count ?? 0;
   cheat(sim, 'giveItem', item);
   cheat(sim, 'giveItem', 'notARealItem');
   run(sim, 1);
-  check('give item adds to the bag', (p.inventory.find((s) => s.id === item)?.count ?? 0) === before + 5);
-  check('unknown items are refused', !p.inventory.some((s) => s.id === 'notARealItem'));
+  check('give item adds to the bag', (bagOf(me).find((s) => s.id === item)?.count ?? 0) === before + 5);
+  check('unknown items are refused', !bagOf(me).some((s) => s.id === 'notARealItem'));
 
   cheat(sim, 'allRunes');
   run(sim, 1);
