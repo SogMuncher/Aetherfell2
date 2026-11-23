@@ -101,11 +101,12 @@ export class Simulation {
     const rng = makeRng(state);
     const spawn = (thing: ThingId, x: number, y: number, init?: SpawnInit): Entity => {
       const e = makeEntity(CONTENT, state.nextEntityId++, thing, x, y, init);
-      // Anyone who wears armour is found with some on (their definition's outfit), unless they were handed theirs.
+      // Anyone with an outfit is found wearing and holding real gear from it, unless they were handed theirs.
       const d = CONTENT.things[thing];
-      if (d?.outfit && d.wears && !e.worn) {
-        const worn = rollOutfit(CONTENT.gear, rng, d.outfit, d.wears);
-        if (worn) e.worn = worn;
+      if (d?.outfit && !e.worn && !e.actor?.weapon) {
+        const got = rollOutfit(CONTENT.gear, rng, d.outfit, d.wears ?? []);
+        if (got.worn) e.worn = got.worn;
+        if (got.held && e.actor) e.actor.weapon = got.held;
       }
       state.entities.set(e.id, e);
       return e;

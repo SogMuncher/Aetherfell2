@@ -17,6 +17,9 @@
   `rules.items.improvised`). Every item has durability (`rules.items.durability` by category); wear rides in the id
   (`id@wear`, `content/itemDefs.ts`). At 0 it breaks via `ctx.breakItem` (`sim/breakage.ts`): its `onBreak` burst + `into`.
   Thrown items take a blow when they strike (`physics/impacts.ts`). G (`throwHeld`) throws the held item or drops it when looking down.
+- Creatures are geared like travellers: a thing's `outfit` rolls armour onto `worn` and a HAND_SLOT roll into `actor.weapon`
+  at spawn (`rollOutfit`), so they swing, wear and drop real items. `actor.weapon` in a definition (`content/creatures.ts`)
+  is only the bare body (FISTS for people, fangs for a wolf).
 - Magic (`sim/magic`, `content/spellcraft.ts`, `runes.ts`): up to 3 runes (>=1 essence, <=1 shape) compose a spell;
   casters in creatures use a brain `cast` behaviour and the same code as the player.
 - Fire (`interactionSystem`, numbers in `rules.fire`): spread chance/beat, fuel-left damping, no world cap (a cap once stopped all fire after big blazes), `sleep` (fires far from players burn out but
@@ -39,4 +42,4 @@
 - The first-person weapon picture is render-side (see RENDER.md); combat never reads it.
 
 ## Checks
-`scripts/mechanicsSmoke.ts`, `runebookSmoke.ts`, `fireSmoke.ts`, `gearSmoke.ts`, `torchSmoke.ts`, `senseSmoke.ts`.
+`scripts/mechanicsSmoke.ts`, `runebookSmoke.ts`, `fireSmoke.ts`, `gearSmoke.ts`, `outfitSmoke.ts`, `torchSmoke.ts`, `senseSmoke.ts`.

@@ -141,18 +141,20 @@ export function rollGear(t: GearTables, rng: Rng, roll: GearRoll, wearShare = 1)
   return wearShare < 1 ? joinWear(id, Math.max(1, Math.round(full * wearShare)), full) : id;
 }
 
-/** What a creature of this kind is found wearing (and holding). Null when nothing was put on. */
-export function rollOutfit(t: GearTables, rng: Rng, outfit: readonly OutfitEntry[], regions: readonly BodyRegionId[]): Record<BodyRegionId, ItemId> | null {
+/** What a creature of this kind is found wearing, and holding (a HAND_SLOT roll), like a traveller's own gear. */
+export function rollOutfit(t: GearTables, rng: Rng, outfit: readonly OutfitEntry[], regions: readonly BodyRegionId[]): { worn: Record<BodyRegionId, ItemId> | null; held: ItemId | null } {
   let worn: Record<BodyRegionId, ItemId> | null = null;
+  let held: ItemId | null = null;
   for (const o of outfit) {
     if (!rng.chance(o.chance)) continue;
-    // What people are found wearing is plain unless their outfit asks for magic.
+    // What people are found with is plain unless their outfit asks for magic.
     const id = rollGear(t, rng, { enchant: 0, ...o.roll }, rng.range(t.rules.droppedWear[0], t.rules.droppedWear[1]));
     const slot = id ? t.forms[parseGear(t, id.split('@')[0] ?? '')?.form ?? '']?.slot : undefined;
-    if (!id || !slot || !regions.includes(slot) || worn?.[slot]) continue;
-    (worn ??= {})[slot] = id;
+    if (!id || !slot) continue;
+    if (slot === HAND_SLOT) held ??= id;
+    else if (regions.includes(slot) && !worn?.[slot]) (worn ??= {})[slot] = id;
   }
-  return worn;
+  return { worn, held };
 }
 
 /** Which part of the body a blow lands on: by how much of the fight lands there, leaning with the way it was swung. */

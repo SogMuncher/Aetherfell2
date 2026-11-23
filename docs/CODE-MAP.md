@@ -12,8 +12,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
 - `fireBench.ts` (30) Benchmark (manual): lights a big brush field, prints burning count, burn-out time and tick cost.
 - `fireSmoke.ts` (21) Headless check that a grass/brush fire spreads with wind and stops in rain.
-- `gearSmoke.ts` (318) check: gear (weapons, armour, enchantments), hand slot, wear/break on ground and 3D cell, G throw
-- `matterSmoke.ts` (353) MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
+- `gearSmoke.ts` (221) check: gear (weapons, armour, enchantments), hand slot, wear/break on ground and 3D cell, G throw
+- `matterSmoke.ts` (245) MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
 - `mechanicsSmoke.ts` (520) check: core mechanics (combat, items, fire, traps, statuses) on ground and cells
 - `realmSmoke.ts` (239) REALMS: the underworld is a second set of tiles, cells and things swapped in for the surface; every
 - `runebookSmoke.ts` (275) Headless checks for the runebook: composing spells from runes, preparing them, learning runes
@@ -30,6 +30,10 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `check.mjs` (78) One runner for every check, with short output (only failures + one summary line per script).
 - `codemap.mjs` (81) Keeps docs/CODE-MAP.md true by itself: refreshes every line count, adds new files (purpose taken
 - `senseSmoke.ts` (108) Checks: creatures see in 3D (height and line of sight), one "is it dark here" check, and what bodies stand in
+- `outfitSmoke.ts` (105) Headless checks: creatures are found wearing and holding real gear (their outfit), fight with what they hold
+- `smokeKit.ts` (63) Shared helpers for the headless smoke checks: seeded rng, flat arena, a joined traveller, PASS/FAIL counting
+- `matterFireSmoke.ts` (85) MATTER and fire: a timber wall burns like brush, thatch catches from burning grass, fire climbs, and fire
+- `matterKit.ts` (52) Shared helpers for the matter checks: a calm world, flat ground, stepping, PASS/FAIL counting, common cells
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
@@ -68,9 +72,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `day.ts` (41) The one day-and-night clock. Times are a share of the day: 0 is midnight, 0.25 six in the
 - `effects.ts` (38) Bursts of motes for things that happen in the world (not spells: those have their own look in
 - `forms.ts` (187) trees, bushes, rocks, stones, plants as pieces (D)
-- `gear.ts` (59) gear as data: body parts, hand slot, forms (garments + weapons), materials, qualities, enchantments
-- `gearItems.ts` (161) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
-- `gearCheck.ts` (58) gearProblems: the gear tables are sound
+- `gear.ts` (61) gear as data: body parts, hand slot, forms (garments + weapons), materials, qualities, enchantments
+- `gearItems.ts` (163) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
+- `gearCheck.ts` (60) gearProblems: the gear tables are sound
 - `itemDefs.ts` (107) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (97) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
@@ -95,7 +99,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (466) building recipes for the 3D layer (D)
 - `surfaces.ts` (223) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
-- `things.ts` (332) entity archetypes by trait (D)
+- `things.ts` (196) entity archetypes by trait (D)
 - `tileCodes.ts` (17) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (201) all tile kinds + code assignment from the ledger
 - `validate.ts` (267) validateContent: every reference must point at something that exists
@@ -105,6 +109,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `smallForms.ts` (253) Bushes, rocks, plants and small heaps (haystacks, woodpiles, wells, rubble) grown from parts, like trees (form
 - `itemGearArt.ts` (124) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
 - `itemGoodsArt.ts` (125) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
+- `creatures.ts` (152) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
 
 ## src/input/
 - `input.ts` (177) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -217,7 +222,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/sim/
 - `breakage.ts` (18) ctx.breakItem: an item's onBreak burst + what it breaks into
 - `inputQueue.ts` (45) queueing/folding of guest inputs
-- `simLoop.ts` (499) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
+- `simLoop.ts` (500) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
 - `simState.ts` (97) rng, createState, newPlayer
 - `templates.ts` (37) Builds an entity from its definition. Only instance data lives on the entity.
 
