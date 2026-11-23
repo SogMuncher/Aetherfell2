@@ -41,9 +41,10 @@ uniform vec3 uEye, uFog; uniform float uFogDist, uRainWet, uTime;
 in vec3 vPos; flat in float fMat; flat in int vInst; layout(location = 0) out vec4 o;
 void main(){
   vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos)));
+  surfLodFrom(max(fwidth(vPos.xy), fwidth(vPos.zz)) * 16.0);
   vec3 col; vec2 suv;
-  if (abs(n.z) > 0.6) { suv = vPos.xy * 16.0; col = surf(int(fMat), false, suv, floor(vPos - n * 0.01)); }
-  else { float across = abs(n.x) > abs(n.y) ? vPos.y : vPos.x; suv = vec2(across * 16.0, -vPos.z * 16.0); col = surf(int(fMat), true, suv, floor(vPos - n * 0.01)); }
+  if (abs(n.z) > 0.6) { suv = vPos.xy * 16.0; col = surf(int(fMat), false, suv, ivec3(floor(vPos - n * 0.01))); }
+  else { float across = abs(n.x) > abs(n.y) ? vPos.y : vPos.x; suv = vec2(across * 16.0, -vPos.z * 16.0); col = surf(int(fMat), true, suv, ivec3(floor(vPos - n * 0.01))); }
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2(vInst % ${ST_W}, vInst / ${ST_W}), suv, uRainWet, 0.75 + 0.25 * sin(uTime * 40.0 + vPos.x * 1.7 + vPos.y * 2.3), glow);
   surfaceOut(col, dot(n, uEye - vPos) < 0.0 ? -n : n, 1.0);

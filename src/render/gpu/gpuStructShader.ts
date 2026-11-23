@@ -1,4 +1,4 @@
-import { SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
+import { SURFACE_MIX, SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
 import { STATE_SHADER } from './gpuStates';
 
 /** Shader text for GPU structures (docs/GPU-RENDER.md stage 2): each brick's box is rasterised, the pixel walks the cells inside it. */
@@ -72,7 +72,7 @@ bool covered(ivec3 c){
 vec3 nextFace(ivec3 c, ivec3 e, vec3 n, ivec3 dom, vec3 t, bool wall, vec2 uv){
   float k = dot(n, vec3(e)); ivec3 q = c + e; uvec2 sm = cellWorld(q);
   if (sm.x == 0u && abs(k) > 0.05){ q -= int(sign(k)) * dom; sm = cellWorld(q); }
-  return sm.x == 0u ? t : surf(int(sm.y), wall, uv, vec3(q));
+  return sm.x == 0u ? t : surf(int(sm.y), wall, uv, q);
 }
 void main(){
   vec2 nd = gl_FragCoord.xy / uRes.xy * 2.0 - 1.0;
@@ -124,7 +124,9 @@ void main(){
   }
   bool open = !covered(ivec3(floor(vec3(cell) + 0.5 + n * 0.7))); // from the middle of the cell, not the exact pixel, so a wall face is lit evenly
   // Neighbour cells meet by the ground's one edge rule (edgeLean), same material too, so each cell's colour drift fades into the next.
-  vec3 col = surf(mat, wall, suv, vec3(cell)), t0 = col; vec2 lean = edgeLean(fc, tx);
+  // Texels per screen pixel from distance and slant (no derivatives: the ray walk differs per pixel).
+  surfLodFrom(vec2(th * 32.0 * uRes.z / uRes.y / max(abs(dot(n, d)), 0.2)));
+  vec3 col = surf(mat, wall, suv, cell), t0 = col; vec2 lean = edgeLean(fc, tx, ${SURFACE_MIX.cellBlend.toFixed(1)});
   if (lean.x + lean.y > 0.0) {
     ivec3 sa = ea * (fc.x < 0.5 ? -1 : 1), sb = eb * (fc.y < 0.5 ? -1 : 1);
     col = mix(mix(col, nextFace(cell, sa, n, dom, t0, wall, suv), lean.x), mix(nextFace(cell, sb, n, dom, t0, wall, suv), nextFace(cell, sa + sb, n, dom, t0, wall, suv), lean.x), lean.y);

@@ -66,6 +66,18 @@ function bricks(x: number, y: number, bw: number, bh: number): { mortar: boolean
 
 type Amount = number | RGB;
 
+/** Texel (x, y) of a layer painted `turn` quarter turns round the tile (it stays tileable). */
+function turned(x: number, y: number, turn: number): [number, number] {
+  const m = TEX - 1;
+  return turn === 1 ? [y, m - x] : turn === 2 ? [m - x, m - y] : turn === 3 ? [m - y, x] : [x, y];
+}
+
+/** A wave frequency (radians per texel) snapped to whole waves per tile, so waves meet across tile edges. */
+function whole(freq: number): number {
+  const step = (2 * Math.PI) / TEX;
+  return Math.round(freq / step) * step;
+}
+
 function amt(a: Amount, ch: number): number {
   return typeof a === 'number' ? a : (a[ch] ?? 0);
 }
@@ -75,7 +87,7 @@ function amt(a: Amount, ch: number): number {
  * to: a layer that covers only some texels (speckle, lines, mortar, seams, patches) makes them its own region, so the
  * renderer can drift each component's colour on its own per placed cell.
  */
-function paintSurface(def: SurfaceDef, x: number, y: number): [number, number, number, number] {
+function paintSurface(def: SurfaceDef, px: number, py: number): [number, number, number, number] {
   const base = def.base;
   const c: [number, number, number, number] = [base[0], base[1], base[2], 0];
   const add = (a: Amount, k: number): void => {
@@ -83,8 +95,11 @@ function paintSurface(def: SurfaceDef, x: number, y: number): [number, number, n
     c[1] += amt(a, 1) * k;
     c[2] += amt(a, 2) * k;
   };
+  let x = px;
+  let y = py;
   for (const [i, l] of def.layers.entries()) {
     const own = (k: RGB): [number, number, number, number] => [k[0], k[1], k[2], i + 1];
+    [x, y] = turned(px, py, l.turn ?? 0);
     switch (l.kind) {
       case 'grain':
         add(l.amount, grain(x, y, l.salt));
@@ -97,7 +112,7 @@ function paintSurface(def: SurfaceDef, x: number, y: number): [number, number, n
         break;
       case 'waves': {
         const warp = l.warp ? tn(x, y, l.warp.cells, l.warp.salt) * l.warp.amount : 0;
-        const s = Math.sin((x + warp) * l.freq + y * (l.tilt ?? 0));
+        const s = Math.sin((x + warp) * whole(l.freq) + y * whole(l.tilt ?? 0));
         if (l.line !== undefined) {
           if (Math.abs(s) < l.line) { add(l.amount, 1); c[3] = i + 1; }
         } else add(l.amount, s * 0.5 + 0.5);
@@ -131,7 +146,7 @@ function paintSurface(def: SurfaceDef, x: number, y: number): [number, number, n
       }
       case 'rings': {
         const board = Math.floor(x / l.board);
-        const ring = Math.sin((y + rhash(board, 0, l.salt) * 30) * l.freq + tn(x, y, l.warp.cells, l.warp.salt) * l.warp.amount) * 0.5 + 0.5;
+        const ring = Math.sin((y + rhash(board, 0, l.salt) * 30) * whole(l.freq) + tn(x, y, l.warp.cells, l.warp.salt) * l.warp.amount) * 0.5 + 0.5;
         add(l.amount, ring);
         break;
       }
