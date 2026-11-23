@@ -22,7 +22,9 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
   palettes at draw time (`palette.ts`). Missing sprite = magenta checks, never a crash.
 - Gear on bodies (`gearArt.ts`): parts marked `wear` (a body region or 'hand') show what the entity wears and holds. A worn piece is a shell over each marked part, fit by the region's `fit` (content/gear.ts), coloured and textured by its material (`GearMaterialDef.surface`; dress `surfaces`), so leather and iron share one silhouette. The held item is its picture's pieces at the 'hand' part, sized by `GEAR.hand.hold`. Item pictures get a dark ring outside so they read on any background.
 - `vfx/particles.ts` + `particleKinds.ts`: spell/effect looks come from rune `look` data.
-- Held item: `entities/viewModel.ts` and `mesh.ts` (being replaced by sprites in another thread; do not extend).
+- Held item: `entities/viewModel.ts` warps the item's picture to a pose; `viewPose.ts` moves it: each swing is a path in
+  `content/viewmodel.ts` `arcs` (hand curves about a pivot, blade turns from drawn back through the hit to the follow-through,
+  tip lags then whips), and wind-up/rest poses settle smoothly (`motion`), so changing the aim while charging glides. `viewFx.ts` = flame motes.
 - Blow effects (sparks, dust, blood, embers) are world motes from `vfx/particles.ts`, chosen by material and weapon data; the held item only kicks.
 
 

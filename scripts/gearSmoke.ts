@@ -1,12 +1,13 @@
 // Headless checks for gear: generated pieces, the paperdoll requests, protection and wear, weapons, breaking, G throw.
 // (Creatures found with gear: outfitSmoke.ts.) Prints PASS/FAIL per check.
 import type { Simulation } from '../src/sim';
-import { CONTENT, gearItem, itemDef, parseGear, rollGear, validateContent, weaponStats } from '../src/content';
+import { CONTENT, gearItem, handlingOf, itemDef, parseGear, rollGear, thrownDamage, validateContent, weaponStats } from '../src/content';
 import { ITEM_FORMS } from '../src/render/entities/itemArt';
 import type { MatterAccess } from '../src/types';
 import { shapeId } from '../src/content/shapes';
 import { tileCode } from '../src/content/tiles';
-import { GROUND_Z, HAND_SLOT, Tile, addItem, countItem, emptyInput, shapeByte } from '../src/types';
+import { GROUND_Z, HAND_SLOT, SWING_DIRS, Tile, addItem, countItem, emptyInput, shapeByte } from '../src/types';
+import type { SimEvent } from '../src/types';
 import { check, failures, hit, makeRng, nextSeq, run, spawner, world } from './smokeKit';
 
 // The tables are sound and every id means what it says.
@@ -183,6 +184,53 @@ import { check, failures, hit, makeRng, nextSeq, run, spawner, world } from './s
   c.me.angle = 0;
   for (let i = 0; i < 40; i++) run(c.sim, 1, { attack: i % 20 < 2, swingDir: 'thrust' });
   check('a weapon wears with blows (its id carries how worn)', !!c.me.actor?.weapon?.startsWith('gear:sword:iron:common@'), c.me.actor?.weapon ?? 'none');
+}
+
+// Handling: every weapon favours some angles (never above full damage), heavy and blunt ones land
+// with more hitstop, and some are better thrown. The same on the ground and on a 3D cell.
+{
+  const hd = (id: string) => {
+    const d = itemDef(CONTENT, id);
+    return d?.weapon ? handlingOf(CONTENT, d.weapon, d.weight) : null;
+  };
+  const forms = Object.keys(CONTENT.gear.forms).filter((f) => CONTENT.gear.forms[f]?.weapon);
+  const all = forms.map((f) => hd(`gear:${f}:${CONTENT.gear.forms[f]?.families.includes('wood') ? 'oak' : 'iron'}:common`));
+  check('no angle ever hits harder than full', all.every((h) => !!h && SWING_DIRS.every((d) => h.angles[d].damage <= 1)));
+  const axe = hd('gear:axe:iron:common');
+  check('the back of an axe is blunt and weaker than its edge', axe?.angles.right.kind === 'blunt' && axe.angles.right.damage < axe.angles.left.damage);
+  const spear = hd('gear:spear:iron:common');
+  check('a spear swung sideways is weaker and slower than its thrust', !!spear && spear.angles.left.damage < spear.angles.thrust.damage && spear.angles.left.windup > spear.angles.thrust.windup);
+  check('a spear is better thrown than a sword', thrownDamage(CONTENT, 'gear:spear:iron:common') > thrownDamage(CONTENT, 'gear:sword:iron:common'));
+  // A real blow: the hammer's hitstop holds longer than the sword's.
+  const blow = (weapon: string, onCell: boolean): number => {
+    const { sim, me } = world();
+    const x = Math.floor(me.pos.x);
+    const y = Math.floor(me.pos.y);
+    let z = me.z;
+    if (onCell) {
+      const z0 = Math.floor(me.z) + 1;
+      for (let i = -1; i <= 3; i++) for (let j = -1; j <= 1; j++) sim.state.volume.set(x + i, y + j, z0, shapeByte(shapeId('cube'), 0), tileCode('stoneWall'));
+      z = me.z = me.prevZ = z0 + 1;
+    }
+    const foe = spawner(sim).spawn('raider', me.pos.x + 1.3, me.pos.y, { z, prevZ: z });
+    if (me.actor) me.actor.weapon = weapon;
+    me.angle = 0;
+    let hold = 0;
+    for (let i = 0; i < 30 && hold === 0; i++) {
+      sim.enqueue({ type: 'input', playerId: 'local', input: { ...emptyInput(nextSeq(), 0), attack: i < 2, swingDir: 'left' } });
+      for (const ev of sim.step() as SimEvent[]) if (ev.type === 'hit' && ev.target === foe.id && !ev.blocked) hold = ev.hold ?? 0;
+      // Keep the foe standing still in reach, not fighting back.
+      foe.pos.x = foe.prev.x = me.pos.x + 1.3;
+      foe.pos.y = foe.prev.y = me.pos.y;
+      if (foe.actor) Object.assign(foe.actor, { guard: null, swing: null, charge: null, wantSwing: null });
+    }
+    return hold;
+  };
+  for (const onCell of [false, true]) {
+    const sword = blow('gear:sword:iron:common', onCell);
+    const hammer = blow('gear:hammer:iron:common', onCell);
+    check(`a hammer blow holds longer than a sword's${onCell ? ' (3D cell)' : ''}`, hammer > sword && sword > 0, `${hammer} vs ${sword} ticks`);
+  }
 }
 
 // G: what is in the hands is thrown where you look, or set at your feet when you look down.

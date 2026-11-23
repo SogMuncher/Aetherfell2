@@ -43,6 +43,7 @@ export { GEAR } from './gear';
 export { gearEffect, gearId, gearItem, parseGear, pickRegion, rollGear, rollOutfit } from './gearItems';
 export { breakOf, gearCondition, heldLight, itemDef, itemWeapon, mended, takeBlows, weaponStats, withWear, wornWeight } from './itemDefs';
 export { gearProblems } from './gearCheck';
+export { actorHandling, chargeTicks, handlingOf, thrownDamage } from './handling';
 
 /** Every definition in the game, in one object. */
 export const CONTENT: Content = {

@@ -12,7 +12,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
 - `fireBench.ts` (30) Benchmark (manual): lights a big brush field, prints burning count, burn-out time and tick cost.
 - `fireSmoke.ts` (21) Headless check that a grass/brush fire spreads with wind and stops in rain.
-- `gearSmoke.ts` (221) check: gear (weapons, armour, enchantments), hand slot, wear/break on ground and 3D cell, G throw
+- `gearSmoke.ts` (269) check: gear (weapons, armour, enchantments), hand slot, wear/break on ground and 3D cell, G throw
 - `matterSmoke.ts` (245) MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
 - `mechanicsSmoke.ts` (520) check: core mechanics (combat, items, fire, traps, statuses) on ground and cells
 - `realmSmoke.ts` (239) REALMS: the underworld is a second set of tiles, cells and things swapped in for the surface; every
@@ -80,13 +80,13 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `day.ts` (41) The one day-and-night clock. Times are a share of the day: 0 is midnight, 0.25 six in the
 - `effects.ts` (38) Bursts of motes for things that happen in the world (not spells: those have their own look in
 - `forms.ts` (187) trees, bushes, rocks, stones, plants as pieces (D)
-- `gear.ts` (61) gear as data: body parts, hand slot, forms (garments + weapons), materials, qualities, enchantments
-- `gearItems.ts` (163) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
+- `gear.ts` (62) gear as data: body parts, hand slot, forms (garments + weapons), materials, qualities, enchantments
+- `gearItems.ts` (164) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
 - `gearCheck.ts` (60) gearProblems: the gear tables are sound
 - `itemDefs.ts` (107) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (102) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
-- `index.ts` (83) collects every table into CONTENT, re-exports helpers, runs validation
+- `index.ts` (84) collects every table into CONTENT, re-exports helpers, runs validation
 - `items.ts` (103) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
 - `living.ts` (128) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (284) creature looks as solid parts (D)
@@ -96,7 +96,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `props.ts` (232) Props as forms: barrels, crates, chests, urns, torches, campfires and trap plates are put
 - `realms.ts` (67) The spaces the world is made of. A realm is a place with its own ground, light and sky; the whole
 - `roles.ts` (108) Villager jobs: what they add to a greeting, what they keep on the rack, the trouble they ask
-- `rules.ts` (113) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
+- `rules.ts` (127) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
 - `shapes.ts` (234) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
 - `sites.ts` (364) named places: odds, layout, population (D)
@@ -111,13 +111,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `tileCodes.ts` (17) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (201) all tile kinds + code assignment from the ledger
 - `validate.ts` (268) validateContent: every reference must point at something that exists
-- `viewmodel.ts` (33) held-item hand poses (viewmodel thread)
+- `viewmodel.ts` (36) held-item hand poses (viewmodel thread)
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
 - `artCheck.ts` (38) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
 - `smallForms.ts` (253) Bushes, rocks, plants and small heaps (haystacks, woodpiles, wells, rubble) grown from parts, like trees (form
 - `itemGearArt.ts` (124) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
 - `itemGoodsArt.ts` (125) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
 - `creatures.ts` (153) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
+- `handling.ts` (64) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
 
 ## src/input/
 - `input.ts` (177) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -151,13 +152,15 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
 - `spriteRenderer.ts` (128) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
-- `viewModel.ts` (341) held weapon as small 3D scene (being replaced by sprites)
+- `viewModel.ts` (270) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
 - `artGrow.ts` (252) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
 - `artSprites.ts` (106) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
 - `assembler.ts` (223) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
 - `itemLook.ts` (93) What an item looks like, worked out from its definition: base shape, colours, size, gear parts (no item ids)
 - `gearArt.ts` (129) Worn armour and the held item laid onto any creature's art recipe: shells over the parts each slot covers, the
+- `viewFx.ts` (109) Motes over the held item: flames at a burning head, sparks, drops and puffs, advanced and painted each frame.
+- `viewPose.ts` (129) Held-item motion: poses as a hand position + blade direction, swing paths along arcs, and smooth settling betw
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (200) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
@@ -244,13 +247,13 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/melee/
 - `meleeSurface.ts` (91) striking walls/doors/trees; wearHeld (held item wears and breaks)
-- `meleeSystem.ts` (222) How hard a shove of weight 1 pushes, in m/s (the weapon's own push and the swing's knock scale it).
+- `meleeSystem.ts` (233) How hard a shove of weight 1 pushes, in m/s (the weapon's own push and the swing's knock scale it).
 
 ## src/sim/persistence/
 - `persistence.ts` (263) save/load with fflate
 
 ## src/sim/physics/
-- `impacts.ts` (77) fast loose things hurt, onImpact bursts, thrown items take a blow and break
+- `impacts.ts` (79) fast loose things hurt, onImpact bursts, thrown items take a blow and break
 - `physicsSystem.ts` (266) Knockback left after each tick (it fades in about a third of a second).
 - `spatialHash.ts` (41) Uniform grid of entities, rebuilt once per tick. Answers "what is near here?" cheaply.
 
@@ -309,11 +312,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/types/
 - `cheats.ts` (68) Debug cheats: shapes only. The list of cheats is data (src/content/cheats.ts), the menu builds
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
-- `defs.ts` (79) Content type + re-exports of defs/*
-- `effects.ts` (60) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
+- `defs.ts` (80) Content type + re-exports of defs/*
+- `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
 - `entities.ts` (231) Entity and its components
 - `events.ts` (64) Things that happened during a tick. Audio, render effects, UI and the network react to these.
-- `gear.ts` (196) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
+- `gear.ts` (199) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
 - `index.ts` (20) re-exports all types
 - `input.ts` (93) Letting go of an item from the bag over the view: where the cursor was decides the throw.
 - `items.ts` (48) Inventory helpers shared by every system that touches items.
@@ -325,7 +328,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `state.ts` (133) SimState and queues
 - `structures.ts` (173) StructureDef, planned structures, house geometry
 - `tiles.ts` (217) tile/chunk types, TileInfo, keys
-- `vfx.ts` (62) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
+- `vfx.ts` (86) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
 - `volume.ts` (135) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (202) surface, biome, water and world-generation defs
@@ -336,7 +339,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `ids.ts` (23) id string types
 - `items.ts` (96) ItemDef, ItemLook
 - `magic.ts` (194) SpellDef, RuneDef, StatusDef and spell look
-- `rules.ts` (222) RulesDef, SwingDef, DayRules, HudTheme
+- `rules.ts` (229) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (146) SiteDef, layouts, city, districts
 - `social.ts` (62) quests, trade, roles, factions
-- `things.ts` (187) MaterialDef, ThingDef, RealmDef, light, weapon stats
+- `things.ts` (190) MaterialDef, ThingDef, RealmDef, light, weapon stats
+- `handling.ts` (49) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult

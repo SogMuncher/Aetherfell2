@@ -17,6 +17,11 @@
   `rules.items.improvised`). Every item has durability (`rules.items.durability` by category); wear rides in the id
   (`id@wear`, `content/itemDefs.ts`). At 0 it breaks via `ctx.breakItem` (`sim/breakage.ts`): its `onBreak` burst + `into`.
   Thrown items take a blow when they strike (`physics/impacts.ts`). G (`throwHeld`) throws the held item or drops it when looking down.
+- Handling (`content/handling.ts`, types `types/defs/handling.ts`): every weapon gets one flat `Handling`: per swing angle
+  wind-up, swing time, damage (never above 1), knockback, stamina and optional damage kind (back of an axe = blunt), plus
+  charge time, charge damage, stamina, hitstop, hitstun and thrown damage. Worked out from `rules.combat.handling` (profile per
+  damage kind, then weight and push), then the weapon's own `handling` overrides (gear forms). Melee, effects and thrown
+  impacts read it via `actorHandling` / `thrownDamage`; creatures use the same.
 - Creatures are geared like travellers: a thing's `outfit` rolls armour onto `worn` and a HAND_SLOT roll into `actor.weapon`
   at spawn (`rollOutfit`), so they swing, wear and drop real items. `actor.weapon` in a definition (`content/creatures.ts`)
   is only the bare body (FISTS for people, fangs for a wolf).

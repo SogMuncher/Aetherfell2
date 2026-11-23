@@ -203,7 +203,7 @@ export function validateContent(c: Content): string[] {
     }
   }
   for (const d of SWING_DIRS) {
-    need(!!c.viewmodel.wind[d] && !!c.viewmodel.end[d], 'viewmodel', `poses for swing '${d}'`);
+    need(!!c.viewmodel.arcs[d], 'viewmodel', `arc for swing '${d}'`);
   }
   for (const [id, it] of Object.entries(c.items)) if (it.light && !(it.light.radius > 0)) out.push(`item '${id}': a light needs a radius`);
   for (const [id, t] of Object.entries(c.things)) if (t.mount && !(t.mount.height >= 0 && t.mount.flush >= 0 && t.mount.flush <= 0.5)) out.push(`thing '${id}': mount height must be 0 or more and flush between 0 and 0.5`);

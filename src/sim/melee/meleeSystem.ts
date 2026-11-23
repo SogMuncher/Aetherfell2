@@ -1,5 +1,5 @@
-import type { Entity, SimContext, SimSystem, SwingDir, SwingState, WeaponStats } from '../../types';
-import { isDisabled, thingDef, weaponStats } from '../../content';
+import type { Entity, Handling, SimContext, SimSystem, SwingDir, SwingState, WeaponStats } from '../../types';
+import { actorHandling, chargeTicks, isDisabled, thingDef, weaponStats } from '../../content';
 import { strikeSurface, wearHeld } from './meleeSurface';
 
 /** How hard a shove of weight 1 pushes, in m/s (the weapon's own push and the swing's knock scale it). */
@@ -15,7 +15,8 @@ const KNOCK = 4.6;
  *                       holding the swing still)
  *
  * What each direction does (reach, arc, damage, where it throws foes, hitstun) and how charging
- * scales a blow is data: content/rules.ts, `combat`. Creatures use the very same machinery: the AI
+ * scales a blow is data: content/rules.ts, `combat`; each weapon's handling (content/handling.ts)
+ * scales that per angle (timing, damage, knockback, stamina) and for charging, impact and stamina. Creatures use the very same machinery: the AI
  * asks for a swing (and how long to wind it up) and this system carries it out.
  * Produces effect requests; the effects system does the hurting.
  */
@@ -28,7 +29,8 @@ export const meleeSystem: SimSystem = (ctx: SimContext) => {
     if (!a || e.dead) continue;
     const p = e.player;
     const disabled = isDisabled(content, e.status) || (p !== undefined && (p.downed > 0 || p.gliding));
-    const weapon = weaponStats(content, thingDef(content, e.def), a.weapon);
+    const def = thingDef(content, e.def);
+    const weapon = weaponStats(content, def, a.weapon);
 
     // Intent: players from input, everyone else from their controller.
     let held = false;
@@ -82,11 +84,12 @@ export const meleeSystem: SimSystem = (ctx: SimContext) => {
     // Winding up.
     const c = a.charge;
     if (c && !a.swing) {
+      const hd = actorHandling(content, def, a.weapon);
       let release = false;
       if (p) {
         c.dir = aim;
         if (held) {
-          if (c.t >= ch.tap) p.stamina = Math.max(0, p.stamina - ch.stamina);
+          if (c.t >= ch.tap && !p.cheats?.endless) p.stamina = Math.max(0, p.stamina - ch.stamina * (hd?.stamina ?? 1));
           c.t++;
           if (p.stamina <= 0 && c.t > ch.tap) release = true;
         } else {
@@ -97,11 +100,11 @@ export const meleeSystem: SimSystem = (ctx: SimContext) => {
       } else {
         c.t++;
       }
-      if (!c.full && c.t >= ch.full) {
+      if (!c.full && c.t >= chargeTicks(ctx.content, hd, c.dir)) {
         c.full = true;
         ctx.emit({ type: 'charge', entity: e.id, stage: 'full', x: e.pos.x, y: e.pos.y });
       }
-      if (release) launch(ctx, e, c.dir, c.t, weapon);
+      if (release) launch(ctx, e, c.dir, c.t, weapon, hd);
     }
 
     const sw = a.swing;
@@ -124,24 +127,25 @@ export function allowed(swings: Record<SwingDir, { else: SwingDir[] }>, w: Weapo
 }
 
 /** How wound up a blow held for `t` ticks is, 0 (a tap) .. 1 (full strength). */
-export function chargeFraction(ctx: SimContext, t: number): number {
+export function chargeFraction(ctx: SimContext, t: number, hd: Handling | null, dir: SwingDir): number {
   const ch = ctx.content.rules.combat.charge;
   if (t <= ch.tap) return 0;
-  return Math.min(1, (t - ch.tap) / Math.max(1, ch.full - ch.tap));
+  return Math.min(1, (t - ch.tap) / Math.max(1, chargeTicks(ctx.content, hd, dir) - ch.tap));
 }
 
 /** Lets a wound-up blow go: sets the swing in motion. A quick tap still has most of its windup ahead; a charged blow snaps out. */
-function launch(ctx: SimContext, e: Entity, dir: SwingDir, held: number, weapon: WeaponStats | null): void {
+function launch(ctx: SimContext, e: Entity, dir: SwingDir, held: number, weapon: WeaponStats | null, hd: Handling | null): void {
   const a = e.actor;
   if (!a) return;
   const rules = ctx.content.rules.combat;
   const sh = rules.swings[dir];
-  const frac = chargeFraction(ctx, held);
+  const frac = chargeFraction(ctx, held, hd, dir);
   const slow = weapon?.speed ?? 1;
-  const strikeAt = frac > 0 ? Math.max(1, rules.charge.snap) : Math.max(1, Math.round(sh.windup * slow) - held);
-  const recover = strikeAt + Math.round(sh.recover * slow * (1 + frac * 0.35));
+  const ang = hd?.angles[dir];
+  const strikeAt = frac > 0 ? Math.max(1, Math.round(rules.charge.snap * (ang?.swing ?? 1))) : Math.max(1, Math.round(sh.windup * slow * (ang?.windup ?? 1)) - held);
+  const recover = strikeAt + Math.round(sh.recover * slow * (ang?.swing ?? 1) * (1 + frac * 0.35));
   const p = e.player;
-  if (p && !p.cheats?.endless) p.stamina = Math.max(0, p.stamina - sh.stamina * (1 + frac * 0.5));
+  if (p && !p.cheats?.endless) p.stamina = Math.max(0, p.stamina - sh.stamina * (1 + frac * 0.5) * (hd?.stamina ?? 1) * (ang?.stamina ?? 1));
   a.charge = null;
   a.swing = { dir, t: 0, strikeAt, recover, struck: false, power: frac };
   ctx.emit({ type: 'swing', entity: e.id, dir, x: e.pos.x, y: e.pos.y, power: frac });
@@ -162,14 +166,19 @@ function strike(ctx: SimContext, e: Entity, sw: SwingState): void {
   if (!a) return;
   const { content } = ctx;
   const rules = content.rules.combat;
-  const w = weaponStats(content, thingDef(content, e.def), a.weapon);
-  if (!w) return;
+  const def = thingDef(content, e.def);
+  const base = weaponStats(content, def, a.weapon);
+  const hd = actorHandling(content, def, a.weapon);
+  if (!base || !hd) return;
+  const ang = hd.angles[sw.dir];
+  // This angle may hit with another part of it (the back of an axe).
+  const w = ang.kind && ang.kind !== base.kind ? { ...base, kind: ang.kind } : base;
   const sh = rules.swings[sw.dir];
   const frac = sw.power;
   const reach = w.reach * sh.reach * (1 + frac * (rules.charge.reach - 1));
   const might = e.player?.stats.might ?? 4;
   const blade = e.player?.skills.blade.level ?? 1;
-  const skill = (1 + might * 0.04 + (blade - 1) * 0.06) * (1 + frac * (rules.charge.damage - 1));
+  const skill = (1 + might * 0.04 + (blade - 1) * 0.06) * (1 + frac * (hd.chargeDamage - 1));
   const cos = Math.cos(e.angle);
   const sin = Math.sin(e.angle);
   // Which way "to the right" is from where this one faces; a left sweep throws foes to the left.
@@ -199,7 +208,7 @@ function strike(ctx: SimContext, e: Entity, sw: SwingState): void {
     const kx = ux * sh.knock.along + -sin * side * sh.knock.side;
     const ky = uy * sh.knock.along + cos * side * sh.knock.side;
     const mag = Math.hypot(kx, ky);
-    const force = KNOCK * w.push * mag * (1 + frac * (rules.charge.push - 1));
+    const force = KNOCK * w.push * mag * ang.knock * (1 + frac * (rules.charge.push - 1));
     ctx.state.queues.effects.push({
       target: { kind: 'entity', id: o.id },
       // The blow itself, then whatever else the weapon carries (venom, frost, fire…).
@@ -208,15 +217,17 @@ function strike(ctx: SimContext, e: Entity, sw: SwingState): void {
         { type: 'push', force, lift: sh.knock.lift + frac * 1.6, angle: mag > 0.001 ? Math.atan2(ky, kx) : undefined },
         ...(w.effects ?? []),
       ],
-      scale: sh.damage * skill * (0.9 + ctx.rng.next() * 0.2),
+      scale: sh.damage * ang.damage * skill * (0.9 + ctx.rng.next() * 0.2),
       source: e.id,
       from: { x: e.pos.x, y: e.pos.y },
       swing: sw.dir,
       charge: frac,
+      hitstop: hd.hitstop,
+      hitstun: hd.hitstun,
     });
     landed++;
   }
   if (landed > 0) wearHeld(ctx, e, landed, e.pos.x + cos * reach * 0.6, e.pos.y + sin * reach * 0.6);
   // Nobody there: what is in front of you? A wall, a door, a tree…
-  if (landed === 0) strikeSurface(ctx, e, sw, w, reach, skill);
+  if (landed === 0) strikeSurface(ctx, e, sw, w, reach, skill * ang.damage);
 }
