@@ -7,6 +7,9 @@ import { artColours } from '../src/render/entities/artGrow';
 import { swatch } from '../src/render/palette';
 import { outfitted } from '../src/render/entities/gearArt';
 import type { ArtDef, Entity } from '../src/types';
+import { SpriteRenderer } from '../src/render/entities/spriteRenderer';
+import { project, type Camera } from '../src/render/raycaster/camera';
+import { spawner, world } from './smokeKit';
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = ''): void {
@@ -124,6 +127,31 @@ check('content (palettes, prop forms, dress colours) validates', validateContent
   check('a held item is drawn in the hand and swings with its arm', added(armed).length >= 3 && added(armed).every((p) => p.parent === hand?.parent));
   const plain = outfitted('raider', bare, { id: 4, actor: { weapon: null } } as unknown as Entity);
   check('nothing worn or held leaves the body as it is', plain === null);
+}
+
+// 9. Creatures and people animate in the real draw order: each frame's painting time opens before
+// anything picks a picture, so a walker shows new moments of its stride from every side, not one still per side.
+{
+  const { sim, me } = world();
+  const { spawn } = spawner(sim);
+  const sprites = new SpriteRenderer();
+  for (const kind of ['wolf', 'villager']) {
+    const w = spawn(kind, me.pos.x + 6, me.pos.y, {});
+    if (w.ai) w.ai.think = 1e9;
+    const pics = new Set<unknown>();
+    for (let f = 0; f < 240; f++) {
+      const a = (f / 240) * Math.PI * 2;
+      w.vel.x = Math.cos(a) * 1.5;
+      w.vel.y = Math.sin(a) * 1.5;
+      const cam = { x: me.pos.x, y: me.pos.y, z: me.z + 1.6, yaw: 0, pitch: 0 } as Camera;
+      artPaintBudget(-1); // last frame's painting time is long over
+      const bb = sprites.collect(project(cam, 320, 200), sim.state, sim.tiles, me.id, 1, f / 60, new Map());
+      const mine = bb.find((b) => Math.abs(b.x - w.pos.x) < 0.01 && Math.abs(b.y - w.pos.y) < 0.01);
+      if (mine) pics.add(mine.sprite);
+    }
+    sim.state.entities.delete(w.id);
+    check(`a walking ${kind} shows many pictures while turning a full circle (stride frames from every side)`, pics.size >= 24, `${pics.size} pictures`);
+  }
 }
 
 if (failed) throw new Error(`${failed} art check(s) failed`);
