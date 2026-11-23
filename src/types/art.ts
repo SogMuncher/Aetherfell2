@@ -46,6 +46,12 @@ export interface ArtPart {
   feature?: string;
   /** Each copy is lighter or darker by up to this share (0.1 = ±10%). */
   shade?: number;
+  /**
+   * The gear slot that covers or holds at this fixed part (a body region 'head', 'torso'…, or 'hand').
+   * Worn armour is drawn as a shell over every part of its region (fit from the region's data); a
+   * held item is drawn at the 'hand' part. Any creature with these marks shows its gear.
+   */
+  wear?: string;
   /** Parts that grow from this one (from the last link of a chain, or a random link for `along`). */
   children?: readonly ArtPart[];
 
@@ -154,4 +160,6 @@ export interface DressDef {
   without?: readonly string[];
   /** Stretched along [forward, up, side] (a long spear, a heavy axe head). Default [1, 1, 1]. */
   stretch?: Vec3;
+  /** The texture of every part in these colour slots: an armour shell is cloth, leather or metal by its material. */
+  surfaces?: Readonly<Record<string, Surface>>;
 }

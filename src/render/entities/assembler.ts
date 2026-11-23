@@ -161,7 +161,7 @@ export function artPaintBudget(ms: number): void {
 /**
  * Every picture of one individual, painted the first time it is needed. Frames of a pose share one
  * canvas size so the body does not jump. When the frame's painting budget is spent, an already
- * painted side of the same moment stands in for a moment.
+ * painted moment seen from the same side stands in (never another side: it would face the wrong way).
  */
 export class ArtBank {
   private pics: (Sprite | undefined)[] = [];
@@ -204,8 +204,14 @@ export class ArtBank {
     const hit = this.pics[base + d];
     if (hit) return hit;
     if (performance.now() > budgetEnd) {
-      for (let k = 1; k <= n; k++) {
-        const near = this.pics[base + ((d + (k >> 1) * (k & 1 ? 1 : -1) + n) % n)];
+      // Out of time: stand in with a picture that FACES THE SAME WAY (another moment of this pose,
+      // then of any pose), so it never turns sideways; one side it was never drawn from is painted anyway.
+      for (let k = 1; k < nf; k++) {
+        const near = this.pics[(POSES.indexOf(pose) * 8 + ((f + k) % nf)) * VIEW_DIRS + d];
+        if (near) return near;
+      }
+      for (let i = 0; i < POSES.length * 8; i++) {
+        const near = this.pics[i * VIEW_DIRS + d];
         if (near) return near;
       }
     }

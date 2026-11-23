@@ -89,7 +89,7 @@ export function gearItem(t: GearTables, id: ItemId): ItemDef | null {
       tint: mat.tint,
       material: mat.material,
       durability: durabilityOf(f, mat, q, en),
-      look: { parts: f.parts, shell: mat.tint, glow, sparkle: q.sheen > 0.8 || !!en, plate: Math.min(1, (f.plate + mat.plate) / 2 + 0.05) },
+      look: { parts: f.parts, shell: mat.tint, glow, sparkle: q.sheen > 0.8 || !!en, plate: Math.min(1, (f.plate + mat.plate) / 2 + 0.05), surface: mat.surface },
       ...(weapon ? { weapon } : {}),
       ...(armour ? { armour } : {}),
     };

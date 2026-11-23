@@ -13,12 +13,12 @@ import type { GearTables } from '../types';
  */
 export const GEAR: GearTables = {
   regions: {
-    head: { name: 'Head', cover: 0.2, aim: { overhead: 2.4, left: 0.8, right: 0.8, thrust: 0.9 }, at: [{ x: 0.34, y: 0.02, w: 0.32, h: 0.2 }] },
-    torso: { name: 'Torso', cover: 0.45, aim: { thrust: 1.5, overhead: 0.8 }, at: [{ x: 0.28, y: 0.24, w: 0.44, h: 0.34 }] },
-    arms: { name: 'Arms', cover: 0.15, aim: { left: 1.7, right: 1.7, thrust: 0.6, overhead: 0.5 }, at: [{ x: 0.08, y: 0.25, w: 0.18, h: 0.34 }, { x: 0.74, y: 0.25, w: 0.18, h: 0.34 }] },
-    legs: { name: 'Legs', cover: 0.2, aim: { left: 1.3, right: 1.3, thrust: 0.9 }, at: [{ x: 0.3, y: 0.6, w: 0.18, h: 0.38 }, { x: 0.52, y: 0.6, w: 0.18, h: 0.38 }] },
+    head: { name: 'Head', cover: 0.2, aim: { overhead: 2.4, left: 0.8, right: 0.8, thrust: 0.9 }, at: [{ x: 0.34, y: 0.02, w: 0.32, h: 0.2 }], fit: { grow: [1.12, 0.82, 1.14], shift: [-0.04, 0.42, 0], hides: ['hat'] } },
+    torso: { name: 'Torso', cover: 0.45, aim: { thrust: 1.5, overhead: 0.8 }, at: [{ x: 0.28, y: 0.24, w: 0.44, h: 0.34 }], fit: { grow: [1.2, 1.04, 1.1], shift: [0, 0.02, 0] } },
+    arms: { name: 'Arms', cover: 0.15, aim: { left: 1.7, right: 1.7, thrust: 0.6, overhead: 0.5 }, at: [{ x: 0.08, y: 0.25, w: 0.18, h: 0.34 }, { x: 0.74, y: 0.25, w: 0.18, h: 0.34 }], fit: { grow: [1.45, 0.62, 1.45], shift: [0, -0.3, 0] } },
+    legs: { name: 'Legs', cover: 0.2, aim: { left: 1.3, right: 1.3, thrust: 0.9 }, at: [{ x: 0.3, y: 0.6, w: 0.18, h: 0.38 }, { x: 0.52, y: 0.6, w: 0.18, h: 0.38 }], fit: { grow: [1.3, 0.88, 1.3], shift: [0, 0.1, 0] } },
   },
-  hand: { name: 'Hands', at: [{ x: 0.74, y: 0.62, w: 0.22, h: 0.22 }] },
+  hand: { name: 'Hands', at: [{ x: 0.74, y: 0.62, w: 0.22, h: 0.22 }], hold: { tilt: 62, length: 1, grip: 0.12 } },
   forms: {
     cap: { name: 'cap', slot: 'head', families: ['cloth', 'hide'], armor: 1, weight: 0.3, value: 6, durability: 30, parts: ['headgear'], plate: 0 },
     helm: { name: 'helm', slot: 'head', families: ['hide', 'metal'], armor: 2.2, weight: 1.5, value: 25, durability: 60, parts: ['headgear'], plate: 0.8 },
@@ -35,12 +35,12 @@ export const GEAR: GearTables = {
     spear: { name: 'spear', slot: 'hand', families: ['metal'], weapon: { damage: 9.4, kind: 'pierce', reach: 2.9, speed: 0.9, push: 0.8, swings: ['thrust', 'overhead'], charge: 0.3 }, weight: 1.9, value: 12, durability: 82, parts: ['haft', 'spearHead'], plate: 1 },
   },
   materials: {
-    linen: { name: 'linen', family: 'cloth', material: 'cloth', tint: 0xe2d6b8, power: 0.5, weight: 0.6, durability: 0.6, value: 0.6, resist: { fire: 1.25 }, rarity: 4, plate: 0 },
-    wool: { name: 'wool', family: 'cloth', material: 'cloth', tint: 0x8d8068, power: 0.7, weight: 1, durability: 0.8, value: 0.9, resist: { cold: 0.7, fire: 1.2 }, rarity: 4, plate: 0 },
-    leather: { name: 'leather', family: 'hide', material: 'fur', tint: 0x8a5a32, power: 1, weight: 1, durability: 1.2, value: 1.2, resist: {}, rarity: 4, plate: 0.15 },
-    bronze: { name: 'bronze', family: 'metal', material: 'metal', tint: 0xb88a4a, power: 1.3, weight: 1.2, durability: 1.4, value: 2, resist: { fire: 0.9 }, rarity: 2, plate: 1 },
-    iron: { name: 'iron', family: 'metal', material: 'metal', tint: 0x9aa0a8, power: 1.6, weight: 1.3, durability: 1.7, value: 2.6, resist: { fire: 0.9 }, rarity: 2, plate: 1 },
-    steel: { name: 'steel', family: 'metal', material: 'metal', tint: 0xc4ccd8, power: 2, weight: 1.2, durability: 2.2, value: 4.5, resist: { fire: 0.85, cold: 1.05 }, rarity: 0.7, plate: 1 },
+    linen: { name: 'linen', family: 'cloth', material: 'cloth', tint: 0xe2d6b8, power: 0.5, weight: 0.6, durability: 0.6, value: 0.6, resist: { fire: 1.25 }, rarity: 4, plate: 0, surface: 'cloth' },
+    wool: { name: 'wool', family: 'cloth', material: 'cloth', tint: 0x8d8068, power: 0.7, weight: 1, durability: 0.8, value: 0.9, resist: { cold: 0.7, fire: 1.2 }, rarity: 4, plate: 0, surface: 'cloth' },
+    leather: { name: 'leather', family: 'hide', material: 'fur', tint: 0x8a5a32, power: 1, weight: 1, durability: 1.2, value: 1.2, resist: {}, rarity: 4, plate: 0.15, surface: 'skin' },
+    bronze: { name: 'bronze', family: 'metal', material: 'metal', tint: 0xb88a4a, power: 1.3, weight: 1.2, durability: 1.4, value: 2, resist: { fire: 0.9 }, rarity: 2, plate: 1, surface: 'metal' },
+    iron: { name: 'iron', family: 'metal', material: 'metal', tint: 0x9aa0a8, power: 1.6, weight: 1.3, durability: 1.7, value: 2.6, resist: { fire: 0.9 }, rarity: 2, plate: 1, surface: 'metal' },
+    steel: { name: 'steel', family: 'metal', material: 'metal', tint: 0xc4ccd8, power: 2, weight: 1.2, durability: 2.2, value: 4.5, resist: { fire: 0.85, cold: 1.05 }, rarity: 0.7, plate: 1, surface: 'metal' },
   },
   qualities: {
     crude: { name: 'Crude', power: 0.75, durability: 0.6, value: 0.5, sheen: 0, rarity: 2 },

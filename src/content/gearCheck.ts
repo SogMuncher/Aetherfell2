@@ -40,6 +40,8 @@ export function gearProblems(c: Content): string[] {
     if (th.outfit && !th.wears?.length) out.push(`thing '${id}': has an outfit but wears nothing`);
     for (const o of th.outfit ?? []) rolls.push([`thing '${id}' outfit`, o.roll]);
   }
+  // Where gear shows on a body (render/entities/gearArt.ts): top-level fixed parts, known slots.
+  for (const [id, d] of Object.entries(c.art)) for (const p of d.parts) if (p.wear && (!slotOk(p.wear) || !p.at)) out.push(`art '${id}': gear slot '${p.wear}' must be a known slot on a fixed part`);
   // Every roll must be able to make something, and with the right words.
   const probe: Rng = { next: () => 0.5, range: (a, b) => (a + b) / 2, int: (n) => Math.floor(n / 2), chance: () => false, pick: (a) => a[Math.floor(a.length / 2)] as never };
   for (const [where, r] of rolls) {

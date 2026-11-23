@@ -158,7 +158,7 @@ export function buildArt(def: ArtDef, seed: number, dress?: DressDef): Built {
       const c: [number, number, number] = [at[0], at[1], at[2] * side];
       const size = sizeOf(p);
       const lc = colorOf(p.color, p.shade ?? 0);
-      solids.push({ shape: p.shape, c, a, size, color: lc.color, region: lc.region, tone: lc.tone, surface: p.surface ?? 'smooth', joint });
+      solids.push({ shape: p.shape, c, a, size, color: lc.color, region: lc.region, tone: lc.tone, surface: dress?.surfaces?.[p.color] ?? p.surface ?? 'smooth', joint });
       const link = linkOf(p.shape, c, a, size, joint);
       for (const child of p.children ?? []) grow(child, [link], depth + 1);
     }
@@ -221,7 +221,7 @@ export function buildArt(def: ArtDef, seed: number, dress?: DressDef): Built {
         const up = col(a, 1);
         const c: [number, number, number] = p.shape === 'cone' ? [foot[0], foot[1], foot[2]] : [foot[0] + up[0] * size[1], foot[1] + up[1] * size[1], foot[2] + up[2] * size[1]];
         const lc = k === 0 || !p.shade ? color : colorOf(p.color, p.shade);
-        solids.push({ shape: p.shape, c, a, size: [size[0], size[1], size[2]], color: lc.color, region: lc.region, tone: lc.tone, surface: p.surface ?? 'smooth', joint });
+        solids.push({ shape: p.shape, c, a, size: [size[0], size[1], size[2]], color: lc.color, region: lc.region, tone: lc.tone, surface: dress?.surfaces?.[p.color] ?? p.surface ?? 'smooth', joint });
         placed.push({ foot: [foot[0], foot[1], foot[2]], a, h, joint });
         if (p.chain && k < links - 1) {
           foot = [foot[0] + up[0] * h * step, foot[1] + up[1] * h * step, foot[2] + up[2] * h * step];
