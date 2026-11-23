@@ -1,7 +1,8 @@
 // How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules.combat.handling).
-import type { Content, Handling, HandlingDef, ItemId, SwingDir, SwingFeel, ThingDef, WeaponStats } from '../types';
+import type { Content, Entity, Handling, HandlingDef, HandlingTune, ItemId, SwingDir, SwingFeel, ThingDef, WeaponStats } from '../types';
 import { SWING_DIRS } from '../types/input';
 import { itemDef, itemWeapon, weaponStats } from './itemDefs';
+import { thingDef } from './helpers';
 
 const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
 
@@ -61,4 +62,26 @@ export function actorHandling(c: Content, def: ThingDef, held: ItemId | null): H
 export function thrownDamage(c: Content, id: ItemId): number {
   const w = itemDef(c, id)?.weapon;
   return w ? handlingOf(c, w, itemDef(c, id)?.weight).thrown : c.rules.combat.handling.thrown;
+}
+
+/** The handling number `t` of whatever `e` holds (its natural weapon if empty-handed), as it is now. */
+export function tunedValue(c: Content, e: Entity, t: HandlingTune): number | undefined {
+  const def = thingDef(c, e.def);
+  const h = e.actor ? actorHandling(c, def, e.actor.weapon) : null;
+  if (!h) return undefined;
+  return t.angle ? h.angles[t.angle][t.key] : h[t.key];
+}
+
+/**
+ * Sets handling number `t` of what `e` holds to `v`, live: it is written into the weapon's own overrides,
+ * so every item of that kind handles so until the game is reloaded. Returns the weapon's name, or null.
+ */
+export function tuneHeld(c: Content, e: Entity, t: HandlingTune, v: number): string | null {
+  const def = thingDef(c, e.def);
+  const w = e.actor ? weaponStats(c, def, e.actor.weapon) : null;
+  if (!w) return null;
+  const h = (w.handling ??= {});
+  if (t.angle) ((h.angles ??= {})[t.angle] ??= {})[t.key] = v;
+  else h[t.key] = v;
+  return w.name;
 }

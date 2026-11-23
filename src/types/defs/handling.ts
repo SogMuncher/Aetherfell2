@@ -47,3 +47,5 @@ export interface HandlingDef {
   hitstun?: number;
   thrown?: number;
 }
+/** One number of a handling to read or set on the spot (the held-item debug cheats): per angle, or for the whole weapon. */
+export type HandlingTune = { angle: SwingDir; key: Exclude<keyof SwingFeel, 'kind'> } | { angle?: undefined; key: Exclude<keyof Handling, 'angles'> };

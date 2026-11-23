@@ -1,5 +1,6 @@
 import type { CheatDef, CheatValue, Entity, SimContext, SimSystem } from '../../types';
 import { bagOf, addItem } from '../../types';
+import { tuneHeld } from '../../content';
 
 const FLY_SPEED = 12;
 /** Keeps a dive slower than the speed at which landing starts to hurt. */
@@ -84,6 +85,14 @@ export function applyCheat(ctx: SimContext, e: Entity, def: CheatDef, value: Che
       const d = typeof value === 'number' && Number.isFinite(value) ? Math.max(lim.min, Math.min(lim.max, value)) : lim.min;
       moveTo(ctx, e, e.pos.x + Math.cos(e.angle) * d, e.pos.y + Math.sin(e.angle) * d);
       tell(`${Math.round(d)} m ahead.`);
+      break;
+    }
+    case 'tuneHeld': {
+      const lim = def.arg.kind === 'number' ? def.arg : { min: 0, max: 1 };
+      if (typeof value !== 'number' || !Number.isFinite(value)) break;
+      const v = Math.max(lim.min, Math.min(lim.max, value));
+      const name = tuneHeld(content, e, a.tune, v);
+      tell(name ? `${name}: ${def.name.toLowerCase()} set to ${v}.` : 'nothing in hand to tune.');
       break;
     }
     case 'setTime': {

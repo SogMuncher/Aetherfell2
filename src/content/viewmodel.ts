@@ -18,10 +18,10 @@ export const VIEWMODEL: ViewmodelDef = {
   rest: pose(0.28, -0.28, 0.52, -0.3, 0.42, 0.5),
   guard: pose(0.1, -0.2, 0.55, -1.45, 0.5, 0.2),
   arcs: {
-    // Sweep to the left: drawn back over the right shoulder, cuts flat across, ends low on the left.
-    left: arc([0.1, -0.45, 0.3], key([0.2, -0.15, 0.5], [0.35, 0.8, -0.25], 1.1), key([0.03, -0.18, 0.6], [-0.6, 0.1, 0.8], 1.35), key([-0.16, -0.2, 0.5], [-0.8, -0.2, 0.45], 1.2)),
-    // Backhand to the right: drawn across to the left shoulder, cuts across, ends out on the right.
-    right: arc([0.0, -0.45, 0.3], key([-0.17, -0.15, 0.5], [-0.45, 0.75, -0.3], -1.1), key([0.03, -0.18, 0.6], [0.6, 0.1, 0.8], -1.3), key([0.2, -0.2, 0.5], [0.85, -0.2, 0.4], -1.15)),
+    // Sweep to the left: a level cut. Hand and blade stay at one height; drawn back out to the right, across the front, out to the left.
+    left: arc([0.02, -0.08, 0.15], key([0.2, -0.08, 0.48], [0.75, 0.02, 0.6], 1.4), key([0.02, -0.08, 0.6], [-0.7, -0.04, 0.7], 1.4), key([-0.2, -0.08, 0.5], [-0.95, -0.06, 0.3], 1.4)),
+    // Backhand to the right: the same level cut, mirrored.
+    right: arc([0.0, -0.08, 0.15], key([-0.18, -0.08, 0.48], [-0.75, 0.02, 0.6], -1.4), key([0.02, -0.08, 0.6], [0.7, -0.04, 0.7], -1.4), key([0.22, -0.08, 0.5], [0.95, -0.06, 0.3], -1.4)),
     // Thrust: pulled back low and pointing ahead, driven straight out, held there.
     thrust: arc([0.2, -0.3, -2], key([0.17, -0.23, 0.42], [-0.2, 0.6, 0.75], 0.4), key([0.07, -0.15, 0.62], [-0.1, 0.55, 0.83], 0.3), key([0.07, -0.16, 0.66], [-0.1, 0.52, 0.85], 0.3)),
     // Chop: raised high over the right shoulder, brought down across the front, ends low on the left.

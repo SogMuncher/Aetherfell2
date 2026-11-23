@@ -24,7 +24,7 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 - `vfx/particles.ts` + `particleKinds.ts`: spell/effect looks come from rune `look` data.
 - Held item: `entities/viewModel.ts` warps the item's picture to a pose; `viewPose.ts` moves it: each swing is a path in
   `content/viewmodel.ts` `arcs` (hand curves about a pivot, blade turns from drawn back through the hit to the follow-through,
-  tip lags then whips), and wind-up/rest poses settle smoothly (`motion`), so changing the aim while charging glides. `viewFx.ts` = flame motes.
+  tip lags then whips; left/right sweeps keep hand and blade level so they read apart from the chop), and wind-up/rest poses settle smoothly (`motion`), so changing the aim while charging glides. `viewFx.ts` = flame motes.
 - Blow effects (sparks, dust, blood, embers) are world motes from `vfx/particles.ts`, chosen by material and weapon data; the held item only kicks.
 
 

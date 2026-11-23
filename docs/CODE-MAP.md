@@ -7,7 +7,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## scripts/
 - `buildPlay.mjs` (24) `npm run build`: typecheck + one-file play.html (CI also runs it; see docs/PIPELINE.md)
 - `artSmoke.ts` (130) check: every picture is built from parts, none hand-drawn
-- `cheatsSmoke.ts` (167) Headless checks for the settings list and the debug cheats (which travel as sim commands).
+- `cheatsSmoke.ts` (182) Headless checks for the settings list and the debug cheats (which travel as sim commands).
 - `coopSmoke.ts` (357) check: host/guest inputs, snapshots, prediction, shared record
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
 - `fireBench.ts` (30) Benchmark (manual): lights a big brush field, prints burning count, burn-out time and tick cost.
@@ -76,7 +76,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/content/
 - `biomes.ts` (102) Kinds of landscape. Each point of land takes the first biome (in this order) whose `when` fits
-- `cheats.ts` (43) Every debug cheat, as data. The Debug cheats menu builds one row per entry (in this order, under
+- `cheats.ts` (72) Every debug cheat, as data. The Debug cheats menu builds one row per entry (in this order, under
 - `day.ts` (41) The one day-and-night clock. Times are a share of the day: 0 is midnight, 0.25 six in the
 - `effects.ts` (38) Bursts of motes for things that happen in the world (not spells: those have their own look in
 - `forms.ts` (187) trees, bushes, rocks, stones, plants as pieces (D)
@@ -118,7 +118,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemGearArt.ts` (124) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
 - `itemGoodsArt.ts` (125) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
 - `creatures.ts` (153) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
-- `handling.ts` (64) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
+- `handling.ts` (87) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
 
 ## src/input/
 - `input.ts` (177) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -200,7 +200,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `bagParts.ts` (149) bag constants, icon urls, item description, layout store
 - `paperdoll.ts` (293) C key: armour slots and the hand slot, drag to take off
 - `paperdollStats.ts` (52) the paperdoll's side panel: health, protection, hands, skills
-- `settingsMenu.ts` (257) Esc/O menu built from settings data + cheat tab
+- `settingsMenu.ts` (258) Esc/O menu built from settings data + cheat tab
 - `style.ts` (132) HUD CSS from content/hud.ts
 - `ui.ts` (658) GameUI: HUD, dialogue, journal, map, runebook (C)
 
@@ -220,7 +220,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `senses.ts` (127) What a creature notices when it stops to think, and the small moves every behaviour shares.
 
 ## src/sim/cheats/
-- `cheatSystem.ts` (216) debug cheats executed as sim actions
+- `cheatSystem.ts` (225) debug cheats executed as sim actions
 
 ## src/sim/ecology/
 - `ecologySystem.ts` (107) The living world: wildlife comes and goes around the party according to habitat and time of
@@ -310,7 +310,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gateRule.ts` (13) Says which street ends of a walled place roads really use (set by roads.ts, which knows the land). A gate open
 
 ## src/types/
-- `cheats.ts` (68) Debug cheats: shapes only. The list of cheats is data (src/content/cheats.ts), the menu builds
+- `cheats.ts` (71) Debug cheats: shapes only. The list of cheats is data (src/content/cheats.ts), the menu builds
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
 - `defs.ts` (80) Content type + re-exports of defs/*
 - `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
@@ -343,4 +343,4 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `sites.ts` (146) SiteDef, layouts, city, districts
 - `social.ts` (62) quests, trade, roles, factions
 - `things.ts` (190) MaterialDef, ThingDef, RealmDef, light, weapon stats
-- `handling.ts` (49) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
+- `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
