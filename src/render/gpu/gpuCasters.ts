@@ -74,7 +74,17 @@ export class GpuCasters {
       const z = d[o + 2] ?? 0;
       const hw = (d[o + 16] ?? 0) / 2;
       const h = d[o + 17] ?? 0;
-      c.set([x, y, z, hw, d[o + 4] ?? 0, d[o + 5] ?? 0, d[o + 6] ?? 0, d[o + 7] ?? 0, h, d[o + 15] ?? 0, 0, 0], (Math.floor(i / ROW) * ROW * 3 + (i % ROW) * 3) * 4);
+      // Three texels per caster, rows of ROW casters back to back: caster i starts at float i * 12 (no per-frame arrays).
+      const q = i * 12;
+      c[q] = x;
+      c[q + 1] = y;
+      c[q + 2] = z;
+      c[q + 3] = hw;
+      for (let k = 4; k < 8; k++) c[q + k] = d[o + k] ?? 0;
+      c[q + 8] = h;
+      c[q + 9] = d[o + 15] ?? 0;
+      c[q + 10] = 0;
+      c[q + 11] = 0;
       if ((d[o + 14] ?? 0) < GPU_CASTERS.minFade || hw <= 0 || h <= 0) continue;
       const i0 = Math.max(0, Math.floor(x - hw) - ox);
       const i1 = Math.min(S - 1, Math.floor(x + hw) - ox);
