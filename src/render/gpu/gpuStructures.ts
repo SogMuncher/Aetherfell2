@@ -4,12 +4,12 @@
  * paints the hit from the material's surface textures, and writes its own depth. Shapes come from `content/shapes.ts` as textures.
  */
 import type { ReadonlyVolume, VolumeBrick } from '../../types';
-import { SHAPE_COUNT, SHAPE_PIECES, SHAPE_START } from '../../content/shapes';
 import type { Env } from '../lighting';
 import { compile, loc, makeTexture, makeTextureArray } from './glUtil';
 import { bindStateLooks, packStates, STATE_LAYERS } from './gpuStates';
 import type { CamBasis } from './glUtil';
-import { GRID, PIECE_FLOATS, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
+import { GRID, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
+import { makeShapeTextures } from './gpuSolid';
 
 /** All numbers live here. */
 export const GPU_STRUCT = { range: 170, fade: 36, slots: 1024, uploadsPerFrame: 24, freshPerFrame: 64, tile: 64 } as const;
@@ -73,16 +73,7 @@ export class GpuStructures {
     this.atlas = makeTexture(gl, gl.RG8UI, ATLAS, ATLAS, gl.RG_INTEGER, gl.UNSIGNED_BYTE);
     this.stateAtlas = makeTextureArray(gl, gl.RGBA8, ATLAS, ATLAS, STATE_LAYERS, gl.RGBA, gl.UNSIGNED_BYTE);
     this.page = makeTexture(gl, gl.R16UI, GW * GW, GRID.zCount, gl.RED_INTEGER, gl.UNSIGNED_SHORT);
-    const n = SHAPE_PIECES.length / PIECE_FLOATS;
-    this.pieces = makeTexture(gl, gl.R32F, PIECE_FLOATS, n, gl.RED, gl.FLOAT);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, PIECE_FLOATS, n, gl.RED, gl.FLOAT, SHAPE_PIECES);
-    this.shapeIdx = makeTexture(gl, gl.R32F, 256, 2, gl.RED, gl.FLOAT);
-    const idx = new Float32Array(512);
-    for (let i = 0; i < 256; i++) {
-      idx[i] = SHAPE_START[i] ?? 0;
-      idx[256 + i] = SHAPE_COUNT[i] ?? 0;
-    }
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 2, gl.RED, gl.FLOAT, idx);
+    [this.pieces, this.shapeIdx] = makeShapeTextures(gl);
   }
 
   forget(): void {

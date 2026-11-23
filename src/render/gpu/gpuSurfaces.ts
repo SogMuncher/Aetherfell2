@@ -69,15 +69,20 @@ void spriteOut(vec3 albedo, int id){ oAlb = vec4(clamp(albedo, 0.0, 1.0), 0.5); 
 export const SURFACE_SHADER = `
 uniform sampler2D uSurf;
 // Detail level for the surfaces this pixel draws: 0 = full 16x16, each level up halves (mips of the atlas), so far
-// surfaces show their average instead of shimmering. A pass sets it once per pixel from its texel footprint.
-int surfLod = 0;
-void surfLodFrom(vec2 texelsPerPixel){ surfLod = clamp(int(floor(log2(max(max(texelsPerPixel.x, texelsPerPixel.y), 1.0)) + 0.4)), 0, ${SURFACE_MIX.lods}); }
+// surfaces show their average instead of shimmering. A pass sets it once per pixel from its texel footprint. Near each
+// switch the next level fades in over a band (surfLodT), so levels never meet in a hard line.
+int surfLod = 0; float surfLodT = 0.0;
+void surfLodFrom(vec2 texelsPerPixel){
+  float y = log2(max(max(texelsPerPixel.x, texelsPerPixel.y), 1.0)) + 0.2;
+  surfLod = min(int(floor(y)), ${SURFACE_MIX.lods}); surfLodT = surfLod < ${SURFACE_MIX.lods} ? smoothstep(0.6, 1.0, fract(y)) : 0.0;
+}
 uvec3 surfPcg(uvec3 v){ v = v * 1664525u + 1013904223u; v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y; v ^= v >> 16u;
   v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y; return v; }
 /** Three steady randoms 0..1 for an integer spot (no sin, so far from the origin they never band). */
 vec3 surfRand(ivec3 k){ return vec3(surfPcg(uvec3(k)) >> 8u) / 16777216.0; }
 vec4 surfAt(int idx, ivec2 p, int lod){ int n = ${TEX} >> lod; return texelFetch(uSurf, ivec2(idx % 16, idx / 16) * n + ((p >> lod) & (n - 1)), lod); }
-vec3 surfIdx(int idx, vec2 uv){ return surfAt(idx, ivec2(floor(uv)), surfLod).rgb; }
+vec4 surfMip(int idx, ivec2 p){ vec4 a = surfAt(idx, p, surfLod); return surfLodT > 0.0 ? mix(a, surfAt(idx, p, surfLod + 1), surfLodT) : a; }
+vec3 surfIdx(int idx, vec2 uv){ return surfMip(idx, ivec2(floor(uv))).rgb; }
 // A placed surface at texel uv of the spot 'key' (a cell). A surface that may spin is turned and mirrored per cell; every
 // component (region in alpha) drifts in hue, richness and lightness on its own, by up to the surface's drift, so like
 // cells differ but read as one kind.
@@ -86,8 +91,9 @@ vec3 surf(int mat, bool wall, vec2 uv, ivec3 key){
   vec4 d = texelFetch(uSurf, ivec2(idx % ${DRIFT_W}, ${SLOT_ROWS} + idx / ${DRIFT_W}), 0) * vec4(255.0 / 4.0, 1.0, 1.0, 1.0);
   ivec2 p = ivec2(floor(uv)) & ${TEX - 1};
   if (d.a > 0.5) { uint b = surfPcg(uvec3(key + 7)).x; if ((b & 4u) != 0u) p.x = ${TEX - 1} - p.x; for (uint q = 0u; q < (b & 3u); q++) p = ivec2(${TEX - 1} - p.y, p.x); }
-  vec4 t = surfAt(idx, p, surfLod); float region = surfLod > 0 ? 0.0 : floor(surfAt(idx, p, 0).a * 255.0 + 0.5);
+  vec4 t = surfMip(idx, p); float region = surfLod > 0 ? 0.0 : floor(surfAt(idx, p, 0).a * 255.0 + 0.5);
   vec3 r = surfRand(ivec3(key.xy, key.z * 64 + int(region))) - 0.5;
+  if (region > 0.0 && surfLodT > 0.0) r = mix(r, surfRand(ivec3(key.xy, key.z * 64)) - 0.5, surfLodT); // regions merge as detail fades
   float a = radians(r.x * 2.0 * d.x); vec3 k = vec3(0.57735), c = t.rgb * cos(a) + cross(k, t.rgb) * sin(a) + k * dot(k, t.rgb) * (1.0 - cos(a));
   c = mix(vec3(dot(c, vec3(0.299, 0.587, 0.114))), c, 1.0 + r.y * 2.0 * d.y);
   return c * (1.0 + r.z * 2.0 * d.z);
