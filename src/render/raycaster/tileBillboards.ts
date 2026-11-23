@@ -5,7 +5,7 @@ import { TILES } from '../../content/tiles';
 import { rhash } from '../color';
 import { missingSprite } from '../entities/sprites';
 import type { Sprite } from '../entities/sprites';
-import { ArtBank, artPaintBudget, artVariants, assemble } from '../entities/assembler';
+import { ArtBank, artVariants, assemble } from '../entities/assembler';
 import { artColours } from '../entities/artGrow';
 
 /** Trees and rocks are drawn as pictures out to this distance (m)... */
@@ -14,8 +14,6 @@ export const FLORA_RANGE = 90;
 export const FLORA_FADE = 62;
 /** Distance by which the far terrain's canopy is at full height. */
 export const CANOPY_FULL = FLORA_RANGE + 14;
-/** Milliseconds a frame may spend painting sides of objects it has not seen before. */
-const PAINT_BUDGET_MS = 4;
 
 export interface TileBillboard {
   x: number;
@@ -126,7 +124,6 @@ export class TileBillboards {
       this.cache.clear();
     }
     if (this.banks.size > 1500) this.banks.clear();
-    artPaintBudget(PAINT_BUDGET_MS);
     // Which way the right vector turns from forward: the same turn gives each object's own "right".
     const turn = fx * ry - fy * rx > 0 ? 1 : -1;
     const camCx = Math.floor(camX / CHUNK_SIZE);

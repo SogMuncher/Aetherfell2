@@ -6,7 +6,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## scripts/
 - `buildPlay.mjs` (24) `npm run build`: typecheck + one-file play.html (CI also runs it; see docs/PIPELINE.md)
-- `artSmoke.ts` (130) check: every picture is built from parts, none hand-drawn
+- `artSmoke.ts` (158) check: every picture is built from parts, none hand-drawn
 - `cheatsSmoke.ts` (182) Headless checks for the settings list and the debug cheats (which travel as sim commands).
 - `coopSmoke.ts` (357) check: host/guest inputs, snapshots, prediction, shared record
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
@@ -150,7 +150,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
 - `bodyPaint.ts` (324) ray-intersect solids into colour-region pixels
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
-- `spriteRenderer.ts` (128) gathers billboards (trees, creatures, props, items) for the GPU
+- `spriteRenderer.ts` (135) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (270) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
@@ -193,7 +193,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `lodLooks.ts` (57) far colours of biomes
 - `terrainLod.ts` (263) cached LOD pyramid for far land (C)
 - `terrainLodPaint.ts` (184) paints changed chunks (tiles, matter states) over a LOD block's seed picture
-- `tileBillboards.ts` (172) tree/rock billboards from tiles
+- `tileBillboards.ts` (169) tree/rock billboards from tiles
 
 ## src/render/ui/
 - `bag.ts` (486) BagWindow: draggable inventory window (C)
