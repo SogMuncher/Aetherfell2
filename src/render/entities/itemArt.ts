@@ -74,6 +74,7 @@ function dressOf(def: ItemDef, L: Look): DressDef {
   if (L.sparkle) features.push('sparkle');
   if (L.level < 0.6) features.push('low');
   if ((def.look?.plate ?? 0) >= 0.5) features.push('plate');
+  const surfaces = def.look?.surface ? { shell: def.look.surface } : undefined;
   let stretch: [number, number, number] | undefined;
   if (def.weapon || L.parts.length > 1) {
     const w = def.weapon ?? PLAIN;
@@ -81,17 +82,26 @@ function dressOf(def: ItemDef, L: Look): DressDef {
     const heft = clamp((w.damage - 8) / 20, 0, 1);
     if (!def.armour) stretch = [0.8 + heft * 0.6, length * 1.2, 1];
   }
-  return { colors, features, stretch };
+  return { colors, features, stretch, surfaces };
+}
+
+/** An item's recipe and what dresses it (its own colours, features, size, textures): drawn in its picture or in a hand. */
+export function itemRecipe(def: ItemDef): { art: ArtDef; dress: DressDef; colours: Uint32Array } {
+  const L = resolveLook(def);
+  const art = combine(piecesOf(L));
+  const dress = dressOf(def, L);
+  return { art, dress, colours: artColours(art, seedOf(def), dress) };
 }
 
 /** Builds and paints one item: posed, its colours baked in, centred and fitted to the picture. */
 export function paintItem(def: ItemDef | undefined): Uint32Array {
   const out = new Uint32Array(ITEM_ART * ITEM_ART);
   const L = def ? resolveLook(def) : null;
-  const art: ArtDef = L ? combine(piecesOf(L)) : (CONTENT.art['item.lump'] as ArtDef);
-  const dress: DressDef = def && L ? dressOf(def, L) : { colors: { fill: ['#ff00ff'] } };
+  const r = def ? itemRecipe(def) : null;
+  const art: ArtDef = r ? r.art : (CONTENT.art['item.lump'] as ArtDef);
+  const dress: DressDef = r ? r.dress : { colors: { fill: ['#ff00ff'] } };
   const seed = def ? seedOf(def) : 1;
-  const colours = artColours(art, seed, dress);
+  const colours = r ? r.colours : artColours(art, seed, dress);
   const built = buildArt(art, seed, dress);
   const solids = poseSolids({ ...built, key: '', def: art, colours, ppm: ITEM_ART }, 'idle', 0);
   for (const s of solids) {
@@ -116,7 +126,22 @@ export function paintItem(def: ItemDef | undefined): Uint32Array {
   // Seen from the front (+side faces the viewer), forward to the right, never mirrored.
   const pic = paintSolids(solids, ITEM_ART, 0, -1, 0.45, 0.95);
   for (let y = 0; y < Math.min(ITEM_ART, pic.h); y++) for (let x = 0; x < Math.min(ITEM_ART, pic.w); x++) out[y * ITEM_ART + x] = pic.px[y * pic.w + x] ?? 0;
+  ring(out);
   return out;
+}
+
+/** A dark ring round the picture's outside, so it reads on any background (bag, ground, hand). */
+function ring(px: Uint32Array): void {
+  const n = ITEM_ART;
+  const near: number[] = [];
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (px[y * n + x]) continue;
+      const on = (xx: number, yy: number): boolean => xx >= 0 && yy >= 0 && xx < n && yy < n && (px[yy * n + xx] ?? 0) >>> 24 === 255;
+      if (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1)) near.push(y * n + x);
+    }
+  }
+  for (const o of near) px[o] = pack(18, 16, 14);
 }
 
 /** How big the item looks lying in the world, in metres. */

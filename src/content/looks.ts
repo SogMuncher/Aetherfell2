@@ -75,26 +75,26 @@ export function fourLegs(p: FourLegs): ArtPart[] {
 
 /**
  * A person: legs, boots, belted tunic, arms (the right one swings the weapon), hands, head, hair,
- * face, and optional robe, apron, beard, hat and cape.
+ * face, and optional robe, apron, beard, hat and cape. `wear` marks where worn armour and the held item go.
  */
 export function twoLegs(height = 1.75): ArtPart[] {
   const k = height / 1.75;
   const p = (f: number, u: number, s: number): Vec3 => [f * k, u * k, s * k];
   return [
-    { id: 'leg', shape: 'box', at: p(0, 0.46, 0.085), size: p(0.065, 0.44, 0.06), pivot: p(0, 0.9, 0.085), color: 'legs', surface: 'cloth', mirror: true, stride: { swing: 26, phase: 0 } },
+    { id: 'leg', shape: 'box', at: p(0, 0.46, 0.085), size: p(0.065, 0.44, 0.06), pivot: p(0, 0.9, 0.085), color: 'legs', surface: 'cloth', mirror: true, wear: 'legs', stride: { swing: 26, phase: 0 } },
     { parent: 'leg', shape: 'box', at: p(0.03, 0.06, 0.085), size: p(0.095, 0.06, 0.065), color: 'boots', surface: 'skin', mirror: true },
-    { id: 'torso', shape: 'box', at: p(0, 1.13, 0), size: p(0.105, 0.23, 0.18), color: 'tunic', surface: 'cloth', idle: 1 },
-    { parent: 'torso', shape: 'box', at: p(0, 0.85, 0), size: p(0.115, 0.08, 0.19), color: 'tunic', surface: 'cloth' },
+    { id: 'torso', shape: 'box', at: p(0, 1.13, 0), size: p(0.105, 0.23, 0.18), color: 'tunic', surface: 'cloth', idle: 1, wear: 'torso' },
+    { parent: 'torso', shape: 'box', at: p(0, 0.85, 0), size: p(0.115, 0.08, 0.19), color: 'tunic', surface: 'cloth', wear: 'torso' },
     { parent: 'torso', shape: 'box', at: p(0, 0.93, 0), size: p(0.118, 0.028, 0.192), color: 'belt', surface: 'skin' },
     { parent: 'torso', shape: 'box', at: p(0, 0.58, 0), size: p(0.12, 0.34, 0.19), color: 'tunic', surface: 'cloth', feature: 'robe' },
     { parent: 'torso', shape: 'box', at: p(0.118, 0.8, 0), size: p(0.012, 0.3, 0.13), color: 'apron', surface: 'skin', feature: 'apron' },
     { parent: 'torso', shape: 'box', at: p(-0.135, 1.0, 0), size: p(0.02, 0.36, 0.19), pivot: p(-0.11, 1.36, 0), color: 'cape', surface: 'cloth', feature: 'cape', stride: { swing: 7, phase: 0.25 }, idle: 2 },
     // Arms swing against the legs; the right one (negative side) raises the blow.
-    { id: 'armL', shape: 'box', at: p(0, 1.1, 0.235), size: p(0.05, 0.23, 0.05), pivot: p(0, 1.33, 0.235), color: 'sleeve', surface: 'cloth', stride: { swing: 20, phase: 0.5 } },
-    { id: 'armR', shape: 'box', at: p(0, 1.1, -0.235), size: p(0.05, 0.23, 0.05), pivot: p(0, 1.33, -0.235), color: 'sleeve', surface: 'cloth', stride: { swing: 20, phase: 0 }, strike: -120 },
+    { id: 'armL', shape: 'box', at: p(0, 1.1, 0.235), size: p(0.05, 0.23, 0.05), pivot: p(0, 1.33, 0.235), color: 'sleeve', surface: 'cloth', stride: { swing: 20, phase: 0.5 }, wear: 'arms' },
+    { id: 'armR', shape: 'box', at: p(0, 1.1, -0.235), size: p(0.05, 0.23, 0.05), pivot: p(0, 1.33, -0.235), color: 'sleeve', surface: 'cloth', stride: { swing: 20, phase: 0 }, strike: -120, wear: 'arms' },
     { parent: 'armL', shape: 'ball', at: p(0, 0.85, 0.235), size: p(0.045, 0.045, 0.045), color: 'skin', surface: 'skin' },
-    { parent: 'armR', shape: 'ball', at: p(0, 0.85, -0.235), size: p(0.045, 0.045, 0.045), color: 'skin', surface: 'skin' },
-    { id: 'head', parent: 'torso', shape: 'ball', at: p(0, 1.52, 0), size: p(0.12, 0.135, 0.11), pivot: p(0, 1.4, 0), color: 'skin', surface: 'skin', strike: 8 },
+    { parent: 'armR', shape: 'ball', at: p(0, 0.85, -0.235), size: p(0.045, 0.045, 0.045), color: 'skin', surface: 'skin', wear: 'hand' },
+    { id: 'head', parent: 'torso', shape: 'ball', at: p(0, 1.52, 0), size: p(0.12, 0.135, 0.11), pivot: p(0, 1.4, 0), color: 'skin', surface: 'skin', strike: 8, wear: 'head' },
     { parent: 'head', shape: 'ball', at: p(-0.025, 1.6, 0), size: p(0.12, 0.09, 0.117), color: 'hair', surface: 'fur', feature: '!hat' },
     { parent: 'head', shape: 'ball', at: p(-0.06, 1.5, 0), size: p(0.06, 0.1, 0.09), color: 'hair', surface: 'fur' },
     { parent: 'head', shape: 'ball', at: p(0.108, 1.535, 0.042), size: p(0.016, 0.018, 0.016), color: 'eye', surface: 'smooth', mirror: true },

@@ -1,4 +1,5 @@
 import type { ArmourStats } from '../gear';
+import type { Surface } from '../art';
 import type { HeldLightDef, WeaponStats } from './things';
 import type { Effect } from '../effects';
 import type { ItemId, MaterialId, RuneId } from './ids';
@@ -40,6 +41,8 @@ export interface ItemLook {
   size?: number;
   /** For armour: 0 (cloth) .. 1 (plates). */
   plate?: number;
+  /** Texture of the thing itself (the `shell` colour): 'cloth', 'skin' (leather), 'metal'. */
+  surface?: Surface;
   /**
    * Picture pieces put together (art pieces 'item.<name>', content/itemGearArt.ts): gear puts
    * itself together this way ('haft', 'axeBit'…). Left out, the item is the one piece `form`.

@@ -5,6 +5,7 @@ import { rhash } from '../color';
 import { sideFrom, type Projection } from '../raycaster/camera';
 import { ArtBank, VIEW_DIRS, artVariants, assemble, poseFrames, variantSeed, type Pose } from './assembler';
 import { artColours, artFeatures } from './artGrow';
+import { outfitted } from './gearArt';
 import type { Sprite } from './sprites';
 
 interface Tracked {
@@ -32,9 +33,13 @@ export class ArtSprites {
   private tracked = new Map<number, Tracked>();
   private lastPrune = 0;
 
-  pick(e: Entity, id: ArtId, def: ArtDef, p: Projection, time: number): { sprite: Sprite; scale: number; colours: Uint32Array } {
+  pick(e: Entity, id: ArtId, bare: ArtDef, p: Projection, time: number): { sprite: Sprite; scale: number; colours: Uint32Array } {
     const hand = -p.RY * p.FX + p.RX * p.FY < 0 ? -1 : 1;
-    const dress = e.npc ? CONTENT.roles[e.npc.role]?.dress : undefined;
+    // What it wears and holds is drawn on it (gearArt.ts); the individual underneath stays the same.
+    const outfit = outfitted(id, bare, e);
+    const def = outfit?.def ?? bare;
+    const role = e.npc ? CONTENT.roles[e.npc.role]?.dress : undefined;
+    const dress = outfit?.hides.length ? { ...role, without: [...(role?.without ?? []), ...outfit.hides] } : role;
     let tr = this.tracked.get(e.id);
     // A chest that opens changes recipe: it takes new colours with it.
     if (!tr || tr.def !== def) {
@@ -43,7 +48,7 @@ export class ArtSprites {
       tr = {
         def,
         variant,
-        key: `${id}|${variant}|${features.join(',')}`,
+        key: `${outfit?.id ?? id}|${variant}|${features.join(',')}`,
         colours: artColours(def, e.id * 31 + 7, dress),
         scale: 1 + (rhash(e.id, 3, 55) - 0.5) * 2 * (def.vary ?? 0),
         phase: rhash(e.id, 4, 55),

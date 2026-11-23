@@ -2,9 +2,11 @@
 // regions survive painting, and each individual wears its own colours over a shared shape.
 // Prints PASS/FAIL per check.
 import { CONTENT, validateContent } from '../src/content';
-import { ArtBank, assemble } from '../src/render/entities/assembler';
+import { ArtBank, artPaintBudget, assemble } from '../src/render/entities/assembler';
 import { artColours } from '../src/render/entities/artGrow';
 import { swatch } from '../src/render/palette';
+import { outfitted } from '../src/render/entities/gearArt';
+import type { ArtDef, Entity } from '../src/types';
 
 let failed = 0;
 function check(name: string, ok: boolean, detail = ''): void {
@@ -75,6 +77,36 @@ check('content (palettes, prop forms, dress colours) validates', validateContent
   }
   check('palette picks stay near their swatches and repeat per seed', stable && worst < 40, `furthest ${worst.toFixed(1)} away`);
   check('a fixed #colour stays exact', swatch('#102030', 9) === (0xff000000 | (0x30 << 16) | (0x20 << 8) | 0x10) >>> 0);
+}
+
+// Out of painting time, a creature never stands in with a picture from another side (it would face the wrong way).
+{
+  const bank = new ArtBank(assemble('wolf', CONTENT.art['wolf'] as ArtDef, 0), -1);
+  artPaintBudget(1000);
+  const side = bank.sprite('idle', 0, 0);
+  artPaintBudget(-1);
+  const walking = bank.sprite('walk', 3, 0);
+  const front = bank.sprite('attack', 1, 6);
+  artPaintBudget(1000);
+  check('out of time, a stand-in picture faces the same way', walking === side && front !== side);
+}
+
+// Gear shows on bodies: a shell per covered part in the piece's colour and texture, the held item at the hand.
+{
+  const bare = CONTENT.art['raider'] as ArtDef;
+  const dressed = (worn: Record<string, string>, held: string | null): ArtDef => outfitted('raider', bare, { id: 3, worn, actor: { weapon: held } } as unknown as Entity)?.def ?? bare;
+  const iron = dressed({ torso: 'gear:cuirass:iron:common', head: 'gear:helm:iron:common' }, null);
+  const hide = dressed({ torso: 'gear:cuirass:leather:common@4', head: 'gear:helm:leather:common' }, null);
+  const added = (d: ArtDef) => d.parts.slice(bare.parts.length);
+  const covered = bare.parts.filter((p) => p.wear === 'torso' || p.wear === 'head').length;
+  check('worn armour is a shell over every part it covers', added(iron).length === covered && covered > 0, `${added(iron).length} shells, ${covered} parts`);
+  const same = added(iron).every((p, i) => JSON.stringify([p.at, p.size, p.shape]) === JSON.stringify([added(hide)[i]?.at, added(hide)[i]?.size, added(hide)[i]?.shape]));
+  check('iron and leather share a silhouette, not a colour or texture', same && added(iron)[0]?.color !== added(hide)[0]?.color && added(iron)[0]?.surface === 'metal' && added(hide)[0]?.surface !== 'metal');
+  const armed = dressed({}, 'gear:sword:steel:common');
+  const hand = bare.parts.find((p) => p.wear === 'hand');
+  check('a held item is drawn in the hand and swings with its arm', added(armed).length >= 3 && added(armed).every((p) => p.parent === hand?.parent));
+  const plain = outfitted('raider', bare, { id: 4, actor: { weapon: null } } as unknown as Entity);
+  check('nothing worn or held leaves the body as it is', plain === null);
 }
 
 if (failed) throw new Error(`${failed} art check(s) failed`);

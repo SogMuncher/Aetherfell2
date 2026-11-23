@@ -1,6 +1,7 @@
 import type { DamageKind, Effect } from './effects';
 import type { MaterialId } from './defs';
 import type { ItemId } from './defs';
+import type { Surface, Vec3 } from './art';
 
 /** A part of a body that armour can cover (content/gear.ts: head, torso, arms, legs). */
 export type BodyRegionId = string;
@@ -28,6 +29,12 @@ export interface BodyRegionDef {
   aim?: Readonly<Record<string, number>>;
   /** Boxes on the paperdoll figure. Arms and legs have two. */
   at: readonly DollBox[];
+  /**
+   * How armour sits on a creature: a shell over each body part marked with this region (ArtPart.wear),
+   * its size times `grow` and moved by `shift` (shares of the part's size), [forward, up, side].
+   * `hides` are the features it covers up (a helm hides a hat).
+   */
+  fit: { grow: Vec3; shift: Vec3; hides?: readonly string[] };
 }
 
 /**
@@ -95,6 +102,8 @@ export interface GearMaterialDef {
   rarity: number;
   /** 0..1 plates in the picture. */
   plate: number;
+  /** Its texture, in the item picture and worn on a body: 'cloth', 'skin' (leather), 'metal'. */
+  surface: Surface;
 }
 
 /** How well a piece was made. */
@@ -134,8 +143,11 @@ export interface EnchantDef {
 
 export interface GearTables {
   regions: Readonly<Record<BodyRegionId, BodyRegionDef>>;
-  /** The hands on the paperdoll. */
-  hand: { name: string; at: readonly DollBox[] };
+  /**
+   * The hands on the paperdoll, and how a creature holds an item at its 'hand' part: `tilt` degrees
+   * forward, `length` metres per metre the item is long in the world, gripped `grip` of the way up.
+   */
+  hand: { name: string; at: readonly DollBox[]; hold: { tilt: number; length: number; grip: number } };
   forms: Readonly<Record<string, GearFormDef>>;
   materials: Readonly<Record<string, GearMaterialDef>>;
   qualities: Readonly<Record<string, GearQualityDef>>;
