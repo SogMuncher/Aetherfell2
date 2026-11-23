@@ -3,6 +3,7 @@
  * itself from that list, and a cheat reaches the world only as a `cheat` Command, which the host's
  * sim applies (sim/cheats). Guests ask the host; the host decides.
  */
+import type { HandlingTune } from './defs/handling';
 
 /** Ongoing cheats a traveller can have switched on. Optional so old saves load unchanged. */
 export interface PlayerCheats {
@@ -51,7 +52,9 @@ export type CheatAction =
   | { type: 'revealPlaces' }
   /** Takes the whole party to the chosen realm (the choice argument), landing at the spot beneath/above where you stand. */
   | { type: 'travelRealm' }
-  | { type: 'addSkill'; levels: number };
+  | { type: 'addSkill'; levels: number }
+  /** Sets one handling number of the item in your hand to the number argument (content/handling.ts tuneHeld). */
+  | { type: 'tuneHeld'; tune: HandlingTune };
 
 export interface CheatDef {
   id: string;

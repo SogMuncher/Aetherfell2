@@ -1,5 +1,5 @@
 import type { CheatDef, CheatValue, Entity, NetRole, SimState } from '../../types';
-import { CONTENT } from '../../content';
+import { CONTENT, tunedValue } from '../../content';
 import { CHEATS } from '../../content/cheats';
 import { SETTINGS, SETTING_GROUPS } from '../../settings';
 import type { SettingDef, SettingGroup, SettingsStore } from '../../settings';
@@ -205,7 +205,8 @@ export class SettingsMenu {
         );
       }
       case 'number': {
-        const v = typeof pick === 'number' ? pick : a.value;
+        const now = c.action.type === 'tuneHeld' ? tunedValue(CONTENT, me, c.action.tune) : undefined;
+        const v = typeof pick === 'number' ? pick : now !== undefined ? Math.round(now * 100) / 100 : a.value;
         return `<input type="range" data-arg="${esc(c.id)}" min="${a.min}" max="${a.max}" step="${a.step}" value="${v}"><span class="val" data-val="${esc(c.id)}">${esc(numberLabel(v, a.unit))}</span>`;
       }
       case 'choice':

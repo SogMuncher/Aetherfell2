@@ -22,7 +22,7 @@ export type { Delivery, SpellSound, SpellDef, MoteLook, SpellLook, EssenceLook, 
 export type { BehaviourDef, BehaviourKind, BrainDef, LootEntry, LootDef, HabitatDef, Placement, PopulationEntry } from './defs/brains';
 export type { SiteLayoutDef, CompassSide, DistrictDef, Landmark, CityLayout, WardDef, SiteDef, StreetStyle, VillageStyle } from './defs/sites';
 export type { QuestTemplate, QuestWords, TradeDef, RoleDef, FactionDef } from './defs/social';
-export type { SwingFeel, Handling, HandlingDef } from './defs/handling';
+export type { SwingFeel, Handling, HandlingDef, HandlingTune } from './defs/handling';
 export type { ReactionDef, SwingDef, RulesDef, TouchDef, HudTheme, DayRules } from './defs/rules';
 
 

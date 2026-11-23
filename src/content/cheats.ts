@@ -1,5 +1,33 @@
-import type { CheatDef } from '../types';
+import type { CheatArg, CheatDef, HandlingTune, SwingDir } from '../types';
+import { SWING_DIRS } from '../types/input';
 import { REALMS } from './realms';
+
+/** Held-item handling numbers the cheats can set: name, help, and the slider's top and step. */
+const ANGLE_TUNES = [
+  { key: 'windup', name: 'wind-up', help: 'Time to wind up (bigger = slower).', max: 3, step: 0.05 },
+  { key: 'swing', name: 'swing time', help: 'Time from letting go to the hit, and the recovery (bigger = slower).', max: 3, step: 0.05 },
+  { key: 'damage', name: 'damage', help: 'Damage share of this angle (at most 1).', max: 1, step: 0.05 },
+  { key: 'knock', name: 'knockback', help: 'How hard it shoves.', max: 5, step: 0.1 },
+  { key: 'stamina', name: 'stamina', help: 'Stamina this swing costs.', max: 4, step: 0.1 },
+] as const;
+const WHOLE_TUNES = [
+  { key: 'charge', name: 'Charge time', help: 'Time to wind up to a full charge (bigger = slower).', max: 3, step: 0.05 },
+  { key: 'chargeDamage', name: 'Full-charge damage', help: 'Damage of a fully charged blow (1 = no gain).', max: 5, step: 0.1 },
+  { key: 'stamina', name: 'Stamina', help: 'Stamina for every swing and for holding a charge.', max: 4, step: 0.1 },
+  { key: 'hitstop', name: 'Hitstop', help: 'How long a hit freezes both bodies.', max: 5, step: 0.1 },
+  { key: 'hitstun', name: 'Hitstun', help: 'How long the one hit flinches.', max: 5, step: 0.1 },
+  { key: 'thrown', name: 'Thrown damage', help: 'Damage when thrown.', max: 5, step: 0.1 },
+] as const;
+const ANGLE_NAMES: Record<SwingDir, string> = { left: 'Sweep left', right: 'Sweep right', thrust: 'Thrust', overhead: 'Overhead chop' };
+const HELD_NOTE = ' Slider starts at the held item\'s value; changes every item of that kind until you reload.';
+const tuneRow = (id: string, group: string, name: string, help: string, max: number, step: number, tune: HandlingTune): CheatDef => {
+  const arg: CheatArg = { kind: 'number', min: 0, max, step, value: 1, unit: '×' };
+  return { id, group, name, help: help + HELD_NOTE, arg, action: { type: 'tuneHeld', tune } };
+};
+const HELD_CHEATS: CheatDef[] = [
+  ...WHOLE_TUNES.map((t) => tuneRow(`held.${t.key}`, 'Held item', t.name, t.help, t.max, t.step, { key: t.key })),
+  ...SWING_DIRS.flatMap((d) => ANGLE_TUNES.map((t) => tuneRow(`held.${d}.${t.key}`, `Held item: ${ANGLE_NAMES[d].toLowerCase()}`, `${ANGLE_NAMES[d]} ${t.name}`, t.help, t.max, t.step, { angle: d, key: t.key }))),
+];
 
 /**
  * Every debug cheat, as data. The Debug cheats menu builds one row per entry (in this order, under
@@ -36,6 +64,7 @@ export const CHEATS: readonly CheatDef[] = [
   { id: 'build', group: 'World', name: 'Build a building', help: 'Raises the chosen building a few steps ahead of you, door facing you. Trees in its way come down.', arg: { kind: 'structure' }, action: { type: 'build', distance: 8 } },
   { id: 'spawn', group: 'World', name: 'Spawn creature', help: 'Brings the chosen creature to life a few steps in front of you.', arg: { kind: 'creature' }, action: { type: 'spawn', distance: 5 } },
   { id: 'banish', group: 'World', name: 'Banish nearby creatures', help: 'Removes every animal and monster within 40 m. Villagers and friends stay.', arg: { kind: 'none' }, action: { type: 'banish', radius: 40 } },
+  ...HELD_CHEATS,
 ];
 
 export function cheatDef(id: string): CheatDef | undefined {

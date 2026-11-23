@@ -15,7 +15,8 @@
 - `social/`: dialogue, trade, quests from `content/roles.ts` templates. Topics are code for now (known gap).
 - `interaction/`: the world's own rules (fire spread, drying, rain, traps, doors, containers) over `ctx.matter`.
 - `persistence/`: fflate save; also how the world is sent to joining friends. Version bump refuses old saves (fine in dev).
-- `cheats/`: debug menu entries from `content/cheats.ts`, each names an action the sim knows.
+- `cheats/`: debug menu entries from `content/cheats.ts`, each names an action the sim knows. "Held item" rows (generated from
+  lists there) set one handling number of what you hold (`tuneHeld` in `content/handling.ts`), live until reload.
 
 ## Add / change
 - Creature: `things` + `habitats` entries; new behaviour kind = type + one function in `BEHAVIOURS`.

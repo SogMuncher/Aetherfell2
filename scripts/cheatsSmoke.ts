@@ -1,7 +1,7 @@
 // Headless checks for the settings list and the debug cheats (which travel as sim commands).
 // Prints PASS/FAIL per check.
 import { Simulation, createState } from '../src/sim';
-import { CONTENT } from '../src/content';
+import { CONTENT, tunedValue } from '../src/content';
 import { CHEATS } from '../src/content/cheats';
 import { SETTINGS, SettingsStore } from '../src/settings';
 import type { CheatValue, Entity, InputSnapshot } from '../src/types';
@@ -161,6 +161,21 @@ function cheat(sim: Simulation, id: string, value: CheatValue = null, who = 'loc
   cheat(sim, 'restore', null, 'stranger');
   run(sim, 1);
   check('cheats from someone not in the world do nothing', me.hp === 5);
+}
+
+// Held-item cheats: set one number of the weapon in hand, and the sim's handling reads it at once.
+{
+  const { sim, me } = world();
+  const a = me.actor;
+  if (a) a.weapon = 'gear:sword:iron:common';
+  cheat(sim, 'held.left.knock', 3.5);
+  cheat(sim, 'held.hitstop', 2);
+  cheat(sim, 'held.overhead.damage', 9);
+  sim.step();
+  const knock = tunedValue(CONTENT, me, { angle: 'left', key: 'knock' });
+  check('held-item cheat sets one angle', knock === 3.5 && tunedValue(CONTENT, me, { angle: 'right', key: 'knock' }) !== 3.5, `${knock}`);
+  check('held-item cheat sets the whole weapon', tunedValue(CONTENT, me, { key: 'hitstop' }) === 2);
+  check('held-item cheat keeps damage within its slider', tunedValue(CONTENT, me, { angle: 'overhead', key: 'damage' }) === 1);
 }
 
 if (failed) throw new Error(`${failed} cheat check(s) failed`);
