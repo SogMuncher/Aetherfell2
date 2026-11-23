@@ -94,7 +94,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (466) building recipes for the 3D layer (D)
-- `surfaces.ts` (212) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
+- `surfaces.ts` (223) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
 - `things.ts` (332) entity archetypes by trait (D)
 - `tileCodes.ts` (17) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (201) all tile kinds + code assignment from the ledger
@@ -147,18 +147,18 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (200) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
-- `gpuTerrain.ts` (273) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
+- `gpuTerrain.ts` (274) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (63) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
 - `gpuStructures.ts` (220) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
-- `gpuStructShader.ts` (140) shader text for structures: shapes, DDA, surface textures, sun/cover light
-- `gpuTileBlocks.ts` (158) tile walls/doors/windows as boxes from tile data, with their matter states
+- `gpuStructShader.ts` (142) shader text for structures: shapes, DDA, surface textures, sun/cover light
+- `gpuTileBlocks.ts` (159) tile walls/doors/windows as boxes from tile data, with their matter states
 - `gpuSprites.ts` (254) billboards: sprite atlas + instanced quads
 - `gpuLight.ts` (194) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
 - `gpuCasters.ts` (124) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
 - `gpuFarShade.ts` (86) cloud shade + sun rays over terrain height levels far from the eye
 - `gpuSolid.ts` (151) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
-- `gpuSurfaces.ts` (89) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
+- `gpuSurfaces.ts` (105) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
 - `gpuParticles.ts` (155) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (61) held item buffer composited on top
 - `gpuSky.ts` (82) full-screen sky: gradient, sun, moon, stars, aurora
@@ -168,7 +168,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `glUtil.ts` (84) shader/texture helpers, camera basis and view-projection
 
 ## src/render/materials/
-- `textures.ts` (181) tileable procedural textures from surface layers
+- `textures.ts` (196) tileable procedural textures from surface layers
 
 ## src/render/raycaster/
 - `camera.ts` (58) per-frame projection values
@@ -314,7 +314,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `vfx.ts` (62) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
 - `volume.ts` (135) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
-- `worldgen.ts` (194) surface, biome, water and world-generation defs
+- `worldgen.ts` (201) surface, biome, water and world-generation defs
 
 ## src/types/defs/
 - `brains.ts` (103) BehaviourDef, BrainDef, loot, habitats, population

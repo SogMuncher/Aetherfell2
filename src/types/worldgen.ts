@@ -6,7 +6,12 @@ import type { AirDef } from './sky';
  * One layer of a procedural surface. Layers run in order on each texel, starting from the base
  * colour; amounts can be one number (all channels) or [r, g, b].
  */
-export type SurfaceLayer =
+export type SurfaceLayer = SurfaceLayerKind & {
+  /** Quarter turns the layer is painted at, so one component can be reused crosswise (planks, ruts, waves). */
+  readonly turn?: 0 | 1 | 2 | 3;
+};
+/** What one layer paints. */
+export type SurfaceLayerKind =
   /** Soft multi-scale noise (the usual "grain" of ground). */
   | { kind: 'grain'; salt: number; amount: number | RGB }
   /** One scale of noise: `cells` blobs across the texture. */
@@ -35,6 +40,8 @@ export interface SurfaceDef {
   readonly base: RGB;
   readonly layers: readonly SurfaceLayer[];
   readonly drift?: { readonly hue?: number; readonly sat?: number; readonly light?: number };
+  /** Each placed cell turns and mirrors the whole picture at random (for looks with no direction: grass, rock, sand). */
+  readonly spin?: boolean;
 }
 
 /** When a biome applies: first matching biome (in registry order) wins. Bounds are exclusive. */

@@ -13,7 +13,7 @@ import type { ReadonlyTiles } from '../../types';
 import { refreshGroundState } from './gpuTerrainState';
 import { CANOPY_FULL, FLORA_FADE } from '../raycaster/tileBillboards';
 import { GPU_STRUCT } from './gpuStructures';
-import { SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
+import { SURFACE_MIX, SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
 
 /** All numbers live here. */
 export const GPU_TERRAIN = { cells: 128, snapCells: 16, levels: LEVEL_CELL.length, refillEvery: 45, recolourEvery: 15, texLevels: 2, texFade: [30, 90], sink: 0.03 } as const;
@@ -48,8 +48,9 @@ float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 // A cell's floor at this texel, drifted for that cell (this tile's surface if the cell is colour only).
 vec3 floorAt(ivec2 c, uint own, vec2 uv){ uint k = texelFetch(uCode, clamp(c, ivec2(0), textureSize(uCode, 0) - 1), 0).r;
-  return surf(int(k == 255u ? own : k), false, uv, vec3(floor(uOrigin / uCell + 0.5) + vec2(c), 0.0)); }
+  return surf(int(k == 255u ? own : k), false, uv, ivec3(ivec2(floor(uOrigin / uCell + 0.5)) + c, 0)); }
 void main(){
+  surfLodFrom(fwidth(vPos.xy * 16.0)); // before any branch: screen derivatives
   if (vPos.x > uHole.x && vPos.x < uHole.z && vPos.y > uHole.y && vPos.y < uHole.w) discard;
   vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos))); if (n.z < 0.0) n = -n;
   float d = length(vPos - uEye);
@@ -60,7 +61,7 @@ void main(){
     ivec2 ci = ivec2(floor(cf)); uint code = texelFetch(uCode, ci, 0).r;
     if (code != 255u) {
       vec3 t = floorAt(ci, code, uv);
-      vec2 w = edgeLean(f, vec2(uCell * 16.0));
+      vec2 w = edgeLean(f, vec2(uCell * 16.0), ${SURFACE_MIX.blend.toFixed(1)});
       if (w.x + w.y > 0.0) {
         ivec2 s = ivec2(f.x < 0.5 ? -1 : 1, f.y < 0.5 ? -1 : 1);
         t = mix(mix(t, floorAt(ci + ivec2(s.x, 0), code, uv), w.x), mix(floorAt(ci + ivec2(0, s.y), code, uv), floorAt(ci + s, code, uv), w.x), w.y);

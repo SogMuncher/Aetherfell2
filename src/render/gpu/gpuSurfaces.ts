@@ -7,10 +7,11 @@ import { makeTexture } from './glUtil';
 import { STATE_SURFACES } from '../stateLooks';
 
 /**
- * How surfaces mix: `blend` texels to either side of any cell edge (ground and 3D cells, same and different kinds alike),
+ * How surfaces mix: `blend` texels to either side of a ground tile edge, `cellBlend` for 3D cells (same and different kinds alike),
+ * `lods` halvings of detail with distance,
  * soft `patchSize` m patches of `patchShade` brightness and `patchWarm` warmth, gone by `patchFade` m.
  */
-export const SURFACE_MIX = { blend: 5, patchSize: 6, patchShade: 0.12, patchWarm: 0.06, patchFade: [60, 260] } as const;
+export const SURFACE_MIX = { blend: 5, cellBlend: 2, lods: 4, patchSize: 6, patchShade: 0.12, patchWarm: 0.06, patchFade: [60, 260] } as const;
 
 /** Atlas slot of the first surface matter states cover things with (render/stateLooks.ts STATE_SURFACES), after every tile's two. */
 export const STATE_SURFACE_BASE = 512;
@@ -20,10 +21,10 @@ const SLOT_ROWS = (32 + Math.ceil(STATE_SURFACES.length / 16)) * TEX;
 const DRIFT_W = 16 * TEX;
 const SLOTS = STATE_SURFACE_BASE + STATE_SURFACES.length;
 
-/** A surface's drift packed in one texel: hue (degrees * 4), sat, light (shares * 255). */
+/** A surface's drift packed in one texel: hue (degrees * 4), sat, light (shares * 255), and whether it may spin per cell. */
 function driftTexel(id: string): number[] {
   const d = { ...SURFACE_DRIFT, ...SURFACES[id]?.drift };
-  return [Math.min(255, d.hue * 4), Math.min(255, d.sat * 255), Math.min(255, d.light * 255), 255].map(Math.round);
+  return [Math.min(255, d.hue * 4), Math.min(255, d.sat * 255), Math.min(255, d.light * 255), SURFACES[id]?.spin ? 255 : 0].map(Math.round);
 }
 
 export function makeSurfaceAtlas(gl: WebGL2RenderingContext): WebGLTexture {
@@ -47,6 +48,10 @@ export function makeSurfaceAtlas(gl: WebGL2RenderingContext): WebGLTexture {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, (i % 16) * TEX, Math.floor(i / 16) * TEX, TEX, TEX, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(tex.px.buffer, tex.px.byteOffset, tex.px.byteLength));
   });
   gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, SLOT_ROWS, DRIFT_W, drift.length / 4 / DRIFT_W, gl.RGBA, gl.UNSIGNED_BYTE, drift);
+  // Detail levels: slots are TEX-aligned, so each halving stays inside its own slot down to one texel.
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, SURFACE_MIX.lods);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_NEAREST);
+  gl.generateMipmap(gl.TEXTURE_2D);
   return atlas;
 }
 
@@ -63,27 +68,38 @@ void spriteOut(vec3 albedo, int id){ oAlb = vec4(clamp(albedo, 0.0, 1.0), 0.5); 
 /** Atlas slot of a tile code's surface: code*2 (floor) or code*2+1 (wall); 16 per row, TEX pixels each. */
 export const SURFACE_SHADER = `
 uniform sampler2D uSurf;
-vec4 surfRaw(int idx, vec2 uv){ return texelFetch(uSurf, ivec2(idx % 16, idx / 16) * ${TEX} + (ivec2(floor(uv)) & ${TEX - 1}), 0); }
-vec3 surfIdx(int idx, vec2 uv){ return surfRaw(idx, uv).rgb; }
-// A placed surface at texel uv of the spot 'key' (a cell): every component (region in alpha) drifts in hue, richness and
-// lightness on its own, by up to the surface's drift, so like cells differ but read as one kind.
-vec3 surf(int mat, bool wall, vec2 uv, vec3 key){
-  int idx = mat * 2 + (wall ? 1 : 0); vec4 t = surfRaw(idx, uv);
-  vec3 d = texelFetch(uSurf, ivec2(idx % ${DRIFT_W}, ${SLOT_ROWS} + idx / ${DRIFT_W}), 0).rgb * vec3(255.0 / 4.0, 1.0, 1.0);
-  vec3 r = fract(sin(vec3(dot(key, vec3(127.1, 311.7, 74.7)) + floor(t.a * 255.0 + 0.5) * 19.19)) * vec3(43758.5453, 22578.1459, 19642.349)) - 0.5;
+// Detail level for the surfaces this pixel draws: 0 = full 16x16, each level up halves (mips of the atlas), so far
+// surfaces show their average instead of shimmering. A pass sets it once per pixel from its texel footprint.
+int surfLod = 0;
+void surfLodFrom(vec2 texelsPerPixel){ surfLod = clamp(int(floor(log2(max(max(texelsPerPixel.x, texelsPerPixel.y), 1.0)) + 0.4)), 0, ${SURFACE_MIX.lods}); }
+uvec3 surfPcg(uvec3 v){ v = v * 1664525u + 1013904223u; v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y; v ^= v >> 16u;
+  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y; return v; }
+/** Three steady randoms 0..1 for an integer spot (no sin, so far from the origin they never band). */
+vec3 surfRand(ivec3 k){ return vec3(surfPcg(uvec3(k)) >> 8u) / 16777216.0; }
+vec4 surfAt(int idx, ivec2 p, int lod){ int n = ${TEX} >> lod; return texelFetch(uSurf, ivec2(idx % 16, idx / 16) * n + ((p >> lod) & (n - 1)), lod); }
+vec3 surfIdx(int idx, vec2 uv){ return surfAt(idx, ivec2(floor(uv)), surfLod).rgb; }
+// A placed surface at texel uv of the spot 'key' (a cell). A surface that may spin is turned and mirrored per cell; every
+// component (region in alpha) drifts in hue, richness and lightness on its own, by up to the surface's drift, so like
+// cells differ but read as one kind.
+vec3 surf(int mat, bool wall, vec2 uv, ivec3 key){
+  int idx = mat * 2 + (wall ? 1 : 0);
+  vec4 d = texelFetch(uSurf, ivec2(idx % ${DRIFT_W}, ${SLOT_ROWS} + idx / ${DRIFT_W}), 0) * vec4(255.0 / 4.0, 1.0, 1.0, 1.0);
+  ivec2 p = ivec2(floor(uv)) & ${TEX - 1};
+  if (d.a > 0.5) { uint b = surfPcg(uvec3(key + 7)).x; if ((b & 4u) != 0u) p.x = ${TEX - 1} - p.x; for (uint q = 0u; q < (b & 3u); q++) p = ivec2(${TEX - 1} - p.y, p.x); }
+  vec4 t = surfAt(idx, p, surfLod); float region = surfLod > 0 ? 0.0 : floor(surfAt(idx, p, 0).a * 255.0 + 0.5);
+  vec3 r = surfRand(ivec3(key.xy, key.z * 64 + int(region))) - 0.5;
   float a = radians(r.x * 2.0 * d.x); vec3 k = vec3(0.57735), c = t.rgb * cos(a) + cross(k, t.rgb) * sin(a) + k * dot(k, t.rgb) * (1.0 - cos(a));
   c = mix(vec3(dot(c, vec3(0.299, 0.587, 0.114))), c, 1.0 + r.y * 2.0 * d.y);
   return c * (1.0 + r.z * 2.0 * d.z);
 }
-float surfHash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 // The one edge rule (ground tiles and 3D cells): at fraction f of a cell that is 'texels' texels across on each axis, how much this
-// texel leans to its x and y neighbour. Half and half on the edge, ${SURFACE_MIX.blend} texels to either side, centres stay pure.
-vec2 edgeLean(vec2 f, vec2 texels){ return max(vec2(0.0), 0.5 - 0.5 * min(f, 1.0 - f) * texels / ${SURFACE_MIX.blend.toFixed(1)}); }
-float surfNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(surfHash(i), surfHash(i + vec2(1.0, 0.0)), f.x), mix(surfHash(i + vec2(0.0, 1.0)), surfHash(i + 1.0), f.x), f.y); }
+// texel leans to its x and y neighbour. Half and half on the edge, 'width' texels to either side (SURFACE_MIX), centres stay pure.
+vec2 edgeLean(vec2 f, vec2 texels, float width){ return max(vec2(0.0), 0.5 - 0.5 * min(f, 1.0 - f) * texels / width); }
+float surfNoise(vec2 p, int salt){ ivec2 i = ivec2(floor(p)); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(surfRand(ivec3(i, salt)).x, surfRand(ivec3(i + ivec2(1, 0), salt)).x, f.x), mix(surfRand(ivec3(i + ivec2(0, 1), salt)).x, surfRand(ivec3(i + 1, salt)).x, f.x), f.y); }
 // Soft patches across the world (lighter/darker, warmer/cooler) so one surface never repeats the same; fades out far away.
 vec3 surfPatches(vec3 col, vec2 p, float dist){
   float k = 1.0 - smoothstep(${SURFACE_MIX.patchFade[0].toFixed(1)}, ${SURFACE_MIX.patchFade[1].toFixed(1)}, dist); p /= ${SURFACE_MIX.patchSize.toFixed(1)};
-  float s = surfNoise(p) * 0.65 + surfNoise(p * 2.7 + 17.0) * 0.35, w = surfNoise(p * 0.6 + 41.0);
+  float s = surfNoise(p, 1) * 0.65 + surfNoise(p * 2.7, 2) * 0.35, w = surfNoise(p * 0.6, 3);
   return col * (1.0 + (s - 0.5) * ${(2 * SURFACE_MIX.patchShade).toFixed(3)} * k) * (1.0 + (w - 0.5) * ${(2 * SURFACE_MIX.patchWarm).toFixed(3)} * k * vec3(1.0, 0.3, -1.0));
 }`;
