@@ -74,8 +74,11 @@ export interface ArtPart {
   parent?: string;
   /** The joint it swings about (hip, shoulder, neck). Defaults to `at`. */
   pivot?: Vec3;
-  /** Swings while walking: degrees each way, and where in the stride (0..1) it is furthest forward. */
-  stride?: { swing: number; phase: number };
+  /**
+   * Swings while walking: degrees each way, and where in the stride (0..1) it is furthest forward.
+   * `lift` (metres) raises it while it swings forward, so a step shows from the front and back too.
+   */
+  stride?: { swing: number; phase: number; lift?: number };
   /** Extra swing (degrees) at the moment of an attack: a lunging head, a raised arm. */
   strike?: number;
   /** Swing (degrees) while resting: a wagging tail, a breathing chest. */
@@ -120,6 +123,8 @@ export interface GaitDef {
   bounce: number;
   /** Bounds along in one arc per stride (toads, rabbits) instead of a rise per footfall. */
   hop?: boolean;
+  /** Rocks side to side (degrees) onto each planted foot: a walk read from the front or back. */
+  sway?: number;
 }
 
 export interface ArtDef {

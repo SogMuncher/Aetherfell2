@@ -74,7 +74,9 @@ export function poseSolids(asm: Assembled, pose: Pose, frame: number): Solid[] {
     if (pose === 'walk' && p.stride) swing += p.stride.swing * Math.sin((t + jt.phase) * Math.PI * 2);
     if (pose === 'idle' && p.idle) swing += p.idle * Math.sin((t + jt.phase) * Math.PI * 2);
     if (p.strike) swing += p.strike * strikeK;
-    const own = about(tiltM(swing), jt.pivot);
+    let own = about(tiltM(swing), jt.pivot);
+    const lift = pose === 'walk' ? (p.stride?.lift ?? 0) * Math.max(0, Math.cos((t + jt.phase) * Math.PI * 2)) : 0;
+    if (lift) own = compose({ a: IDENT, b: [0, lift, 0] }, own);
     const x = jt.parent >= 0 && depth < 16 ? compose(place(jt.parent, depth + 1), own) : own;
     placed[j] = x;
     return x;
@@ -83,6 +85,7 @@ export function poseSolids(asm: Assembled, pose: Pose, frame: number): Solid[] {
   if (pose === 'walk' && g) {
     const rise = g.hop ? g.bounce * Math.max(0, Math.sin(t * Math.PI * 2)) : g.bounce * (0.5 - 0.5 * Math.cos(t * Math.PI * 4));
     body = { a: IDENT, b: [0, rise, 0] };
+    if (g.sway && !g.hop) body = compose(body, about(rollM(g.sway * Math.sin(t * Math.PI * 2)), [0, 0, 0]));
   } else if (pose === 'attack' && def.attack) {
     const k = LUNGE_K[frame] ?? 0;
     body = compose({ a: IDENT, b: [def.attack.lunge * k, 0, 0] }, about(tiltM(def.attack.lean * k), [0, 0, 0]));

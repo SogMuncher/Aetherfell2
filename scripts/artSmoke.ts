@@ -55,6 +55,23 @@ check('content (palettes, prop forms, dress colours) validates', validateContent
     check('wolves share a picture but not their colours', shared && differ && !!walk.regions, `same picture ${shared}, own colours ${differ}`);
     check('things with a gait animate their joints', moves);
   } else check('wolf art exists', false);
+  // A walk shows from the front and back too (feet lift, body sways), not only side on: the outline changes.
+  for (const [id, least] of [['villager', 40], ['deer', 22]] as const) {
+    const d = CONTENT.art[id];
+    if (!d) continue;
+    const bank = new ArtBank(assemble(id, d, 0), 1);
+    for (const dir of [2, 6]) {
+      const a = bank.sprite('walk', 0, dir).px;
+      let most = 0;
+      for (let f = 1; f < 8; f++) {
+        const b = bank.sprite('walk', f, dir).px;
+        let n = 0;
+        for (let i = 0; i < a.length; i++) if ((a[i] ?? 0) >>> 24 !== 0 !== ((b[i] ?? 0) >>> 24 !== 0)) n++;
+        most = Math.max(most, n);
+      }
+      check(`a walking ${id} visibly steps seen ${dir === 2 ? 'from the front' : 'from behind'}`, most >= least, `outline changes by ${most} px`);
+    }
+  }
 }
 
 // 3. Palettes drift a little, never wildly, and stay stable per seed.
