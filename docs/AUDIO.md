@@ -14,6 +14,12 @@
 - Reactive layer (all data): `modulators.ts` (each signal nudges tempo/energy/brightness), `cues.ts` (stingers,
   style `enter`/`leave` cues, event cues; `@role` voices = the current style's instrument, `climb` = combos rise),
   `reactions.ts` (event -> cue), `cuePlayer.ts` (lands cues on the next step/eighth/beat/bar in key).
+- Reaction language: non-`stinger` cues use only `REACTION_KIT` (the style's own roles + bells), never drums/noise, so
+  they never clash with sfx; events with strong sfx (spells, traps, breakage, thunder) get no reaction. One reaction at
+  a time (the next waits its turn on the grid); the band's layer in that role steps aside; each playing is varied
+  (shift, octave, rhythm, bell swap), combos keep their variant and climb.
+- `chaos.ts` (data): every chance is capped below 1 (`MusicRng.chance`), so any note, layer or reaction can go missing;
+  per bar a rogue instrument, a tempo lurch or a short bar may happen.
 - Console: `aetherfellMusic.status()`, `.cue('parry')`.
 
 ## Add / change

@@ -9,7 +9,7 @@ import type { Channel } from './mixer';
 import type { GameView } from './signals';
 import { MoodTracker } from './signals';
 import { STYLES, bestStyle, styleScore } from './styles';
-import type { LayerDef, MeterId, StyleId } from './styles';
+import type { LayerDef, MusicStatus, StyleId } from './styles';
 import type { Section } from './composer';
 import { compose, nextKind, worldTheme } from './composer';
 import { MusicRng } from './theory';
@@ -18,23 +18,11 @@ import type { BarPlan, Beat } from './band';
 import { CuePlayer } from './cuePlayer';
 import type { GridClock } from './cuePlayer';
 import { reactionFor } from './reactions';
+import { CHAOS, ROGUES } from './chaos';
 import { dials } from './modulators';
 
 const LOOKAHEAD = 0.3;
 const SAMPLE_EVERY = 0.5;
-
-export interface MusicStatus {
-  style: StyleId;
-  styleName: string;
-  section: string;
-  key: string;
-  mode: string;
-  tempo: number;
-  meter: MeterId;
-  energy: number;
-  voices: number;
-  lastCue: string;
-}
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
@@ -55,6 +43,8 @@ export class MusicEngine {
   private bpm = 90;
   private tempoDial = 1;
   private glide = 0.06;
+  /** This bar's length in steps (now and then a bar stumbles short). */
+  private barSteps = 16;
   private style: StyleId = 'wander';
   private styleBars = 0;
   private styleSince = 0;
@@ -80,7 +70,7 @@ export class MusicEngine {
     this.theme = worldTheme(seed);
     this.band = new Band(this.synth, this.rng);
     const fx: Channel = { input: this.mixer.fx, target: 1, echo: this.mixer.fx };
-    this.cues = new CuePlayer(this.band, fx, this.mood);
+    this.cues = new CuePlayer(this.band, fx, this.mood, this.rng);
   }
 
   /** A new world gets its own theme. */
@@ -136,7 +126,7 @@ export class MusicEngine {
     const sec = this.section;
     const plan = this.plan;
     if (!sec || !plan) return null;
-    return { sec, plan, bar: this.bar, step: this.step, channel: (i, l) => this.channelFor(i, l) };
+    return { sec, plan, bar: this.bar, step: this.step, channel: (i, l) => this.channelFor(i, l), quiet: (r, t) => this.cues.quiet(r, t) };
   }
 
   /** Call every frame. `view` is null when there is no local player yet. */
@@ -210,7 +200,7 @@ export class MusicEngine {
     if (beat) this.band.step(beat, swung, stepDur);
     this.step++;
     this.nextStepAt += stepDur;
-    if (this.step >= cur.meter.steps) {
+    if (this.step >= Math.min(this.barSteps, cur.meter.steps)) {
       this.step = 0;
       this.bar++;
       this.styleBars++;
@@ -272,7 +262,7 @@ export class MusicEngine {
     const active = def.layers.map((l) => {
       if (sec.kind === 'rest') return !restSilent && l.enter <= 0 && (l.role === 'pad' || l.role === 'drone' || l.role === 'texture');
       if (sec.kind === 'break' && (l.role === 'perc' || l.role === 'bass' || l.role === 'stab')) return false;
-      return energy >= l.enter && (l.leave === undefined || energy < l.leave);
+      return energy >= l.enter && (l.leave === undefined || energy < l.leave) && !this.rng.chance(CHAOS.layerRests);
     });
     def.layers.forEach((l, i) => {
       const ch = this.channelFor(i, l);
@@ -295,6 +285,12 @@ export class MusicEngine {
       if (l.role === 'pad' && (startsChord || this.bar === 0)) this.band.pad(beat, i, l, chord, t, chord.bars * barDur, energy);
       if (l.role === 'drone' && this.bar % 4 === 0) this.band.drone(beat, i, l, t, Math.min(4, sec.bars - this.bar) * barDur, energy);
     });
+    // A little chaos: a stray instrument, a tempo lurch, a bar that comes up short.
+    const stepDur = 15 / this.bpm;
+    const l0 = def.layers[0];
+    if (l0 && this.rng.chance(CHAOS.rogue)) this.band.rogue(beat, this.rng.pick(ROGUES), this.channelFor(0, l0), t, stepDur);
+    if (this.rng.chance(CHAOS.tempo)) this.bpm *= 1 + this.rng.range(-CHAOS.tempoBy, CHAOS.tempoBy);
+    this.barSteps = sec.meter.steps - (this.rng.chance(CHAOS.shortBar) ? 1 + this.rng.int(2) : 0);
   }
 
   private channelFor(i: number, l: LayerDef): Channel {

@@ -35,7 +35,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matterFireSmoke.ts` (85) MATTER and fire: a timber wall burns like brush, thatch catches from burning grass, fire climbs, and fire
 - `matterKit.ts` (52) Shared helpers for the matter checks: a calm world, flat ground, stepping, PASS/FAIL counting, common cells
 - `handsSmoke.ts` (67) Headless checks: creatures carry a bag (players' own kind), spill all of it when they die, and their brains
-- `musicSmoke.ts` (111) Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, combos climb,
+- `musicSmoke.ts` (136) Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, combos climb,
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
@@ -43,7 +43,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/audio/music/
 - `composer.ts` (234) The composer writes sections: a key, a tempo, a meter, a chord progression, a melody motif
-- `conductor.ts` (303) MusicEngine: picks the style that fits the mood and plays it bar by bar (C)
+- `conductor.ts` (299) MusicEngine: picks the style that fits the mood and plays it bar by bar (C)
 - `instruments.ts` (72) INSTRUMENTS table collecting the patches
 - `mixer.ts` (188) The music mixing desk: one bus per style (with its own tone filter and reverb sends), one
 - `patchesPercussion.ts` (160) drum, noise and effect patches (taiko, snare, swell, rise...)
@@ -52,18 +52,19 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `signalProbes.ts` (197) probes that read the game into mood signals, smoothing constants
 - `signals.ts` (219) MoodSignals types, event impulses, MoodTracker
 - `styleTypes.ts` (147) Meter/Layer/StyleDef types, METERS, shared rhythm cells
-- `styles.ts` (42) collects the style tables into STYLES / StyleId
+- `styles.ts` (56) collects the style tables into STYLES / StyleId
 - `stylesDanger.ts` (163) Moods of danger and loss: tension … lament.
 - `stylesDay.ts` (184) Moods of daylight, travel and rest: wander … aurora.
 - `stylesPlaces.ts` (123) Moods of settlements and seasons: village … hearth.
 - `synth.ts` (136) Synth: oscillators, noise, FM voices; Note and Patch types
-- `theory.ts` (181) Music theory helpers: scales and modes, chords stacked inside a mode, voice leading, Euclidean
-- `band.ts` (257) The band: turns one step of the current section into notes for every active layer (read by the conductor).
-- `cuePlayer.ts` (126) Plays cues on the music's grid: next step/eighth/beat/bar, in the current key, chord and band.
+- `theory.ts` (182) Music theory helpers: scales and modes, chords stacked inside a mode, voice leading, Euclidean
+- `band.ts` (271) The band: turns one step of the current section into notes for every active layer (read by the conductor).
+- `cuePlayer.ts` (179) Plays cues on the music's grid: next step/eighth/beat/bar, in the current key, chord and band.
 - `cues.ts` (161) Cues as data: stingers, style changes and on-beat reactions, each a few notes in the current key and band.
 - `modulators.ts` (49) Generic mood -> music dials: every signal may nudge tempo, energy and brightness (data, read by the conductor)
 - `patchesExtra.ts` (125) More instruments: wooden mallets, hammered strings, reeds, low brass, organ, gong and small hand percussion.
-- `reactions.ts` (48) Which game events the music answers on the beat, and with which cue (one rule per event type).
+- `reactions.ts` (42) Which game events the music answers on the beat, and with which cue (one rule per event type).
+- `chaos.ts` (38) A little chaos in the music, as data: nothing ever plays for sure, and now and then a bar strays.
 
 ## src/audio/sfx/
 - `materials.ts` (128) What stuff sounds like when it is struck, dropped, broken or walked on, as one small recipe per
