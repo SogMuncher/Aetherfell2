@@ -33,11 +33,13 @@ export const GEAR: GearTables = {
     axe: { name: 'axe', slot: 'hand', families: ['metal'], weapon: { damage: 13, kind: 'cut', reach: 1.9, speed: 1.3, push: 1.2, swings: ['left', 'right', 'overhead'], charge: 0.5 }, weight: 2.7, value: 10, durability: 90, parts: ['haft', 'axeBit'], plate: 1 },
     hammer: { name: 'war hammer', slot: 'hand', families: ['metal'], weapon: { damage: 15.6, kind: 'blunt', reach: 2, speed: 1.5, push: 2.4, swings: ['left', 'right', 'overhead'], charge: 0.7 }, weight: 4.6, value: 21, durability: 130, parts: ['haft', 'hammerHead'], plate: 1 },
     spear: { name: 'spear', slot: 'hand', families: ['metal'], weapon: { damage: 9.4, kind: 'pierce', reach: 2.9, speed: 0.9, push: 0.8, swings: ['thrust', 'overhead'], charge: 0.3 }, weight: 1.9, value: 12, durability: 82, parts: ['haft', 'spearHead'], plate: 1 },
+    staff: { name: 'staff', slot: 'hand', families: ['wood'], weapon: { damage: 7.5, kind: 'blunt', reach: 1.8, swings: ['left', 'right', 'overhead'], charge: 0.2 }, weight: 1.6, value: 3, durability: 50, parts: ['haft'], plate: 0 },
   },
   materials: {
     linen: { name: 'linen', family: 'cloth', material: 'cloth', tint: 0xe2d6b8, power: 0.5, weight: 0.6, durability: 0.6, value: 0.6, resist: { fire: 1.25 }, rarity: 4, plate: 0, surface: 'cloth' },
     wool: { name: 'wool', family: 'cloth', material: 'cloth', tint: 0x8d8068, power: 0.7, weight: 1, durability: 0.8, value: 0.9, resist: { cold: 0.7, fire: 1.2 }, rarity: 4, plate: 0, surface: 'cloth' },
     leather: { name: 'leather', family: 'hide', material: 'fur', tint: 0x8a5a32, power: 1, weight: 1, durability: 1.2, value: 1.2, resist: {}, rarity: 4, plate: 0.15, surface: 'skin' },
+    oak: { name: 'oak', family: 'wood', material: 'wood', tint: 0x7a5a38, power: 0.8, weight: 0.8, durability: 1, value: 0.5, resist: { fire: 1.3 }, rarity: 3, plate: 0, surface: 'wood' },
     bronze: { name: 'bronze', family: 'metal', material: 'metal', tint: 0xb88a4a, power: 1.3, weight: 1.2, durability: 1.4, value: 2, resist: { fire: 0.9 }, rarity: 2, plate: 1, surface: 'metal' },
     iron: { name: 'iron', family: 'metal', material: 'metal', tint: 0x9aa0a8, power: 1.6, weight: 1.3, durability: 1.7, value: 2.6, resist: { fire: 0.9 }, rarity: 2, plate: 1, surface: 'metal' },
     steel: { name: 'steel', family: 'metal', material: 'metal', tint: 0xc4ccd8, power: 2, weight: 1.2, durability: 2.2, value: 4.5, resist: { fire: 0.85, cold: 1.05 }, rarity: 0.7, plate: 1, surface: 'metal' },

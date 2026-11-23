@@ -39,4 +39,4 @@ Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with 
 - New building: `structures` recipe. New shape: append to `shapes.ts` (never renumber).
 
 ## Checks
-`scripts/volumeSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`.
+`scripts/volumeSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`.

@@ -1,54 +1,11 @@
-// MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
-// thatch catches from burning grass, rain wets what it reaches and a roof keeps it off, blows break
-// walls, a bolt does not fly through a house, and what happened to a wall is saved and sent to friends.
-import { Simulation, createState } from '../src/sim';
+// MATTER: ground tiles and cells of the 3D layer obey the same rules. Rain wets what it reaches and a roof keeps it
+// off, frost and oil, blows break walls, a bolt does not fly through a house, saves and sends. (Fire: matterFireSmoke.ts.)
+import { Simulation } from '../src/sim';
 import { CONTENT, validateContent } from '../src/content';
-import { shapeId } from '../src/content/shapes';
-import { tileCode } from '../src/content/tiles';
 import { VolumeStore } from '../src/sim/world/volume';
-import type { Entity, InputSnapshot, SimEvent } from '../src/types';
-import { GROUND_Z, Tile, brickKey, emptyInput, shapeByte, spotKey, unpackSpot } from '../src/types';
-
-let failed = 0;
-function check(name: string, ok: boolean, detail = ''): void {
-  if (!ok) failed++;
-  console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`);
-}
-const CUBE = shapeByte(shapeId('cube'), 0);
-const WOOD = tileCode('woodWall');
-const STONE = tileCode('stoneWall');
-const THATCH = tileCode('thatch');
-
-function world(seed = 4242): { sim: Simulation; me: Entity } {
-  const sim = new Simulation(createState(seed));
-  sim.enqueue({ type: 'join', playerId: 'local', name: 'Tester' });
-  sim.step();
-  const id = sim.state.players['local'];
-  const me = id !== undefined ? sim.state.entities.get(id) : undefined;
-  if (!me) throw new Error('no player');
-  const w = sim.state.weather;
-  w.rain = w.rainTarget = w.wetness = 0;
-  w.wind = { x: 0, y: 0 };
-  w.windTarget = { x: 0, y: 0 };
-  w.nextShift = 1e9;
-  return { sim, me };
-}
-function flatten(sim: Simulation, x: number, y: number, r: number, kind: number): void {
-  for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) sim.tiles.setKind(x + i, y + j, kind);
-  for (const e of [...sim.state.entities.values()]) if (!e.player && Math.hypot(e.pos.x - x, e.pos.y - y) < 60) sim.state.entities.delete(e.id);
-  // Fires far from every player sleep, so keep the tester near the scene.
-  for (const e of sim.state.entities.values()) if (e.player && Math.hypot(e.pos.x - x, e.pos.y - y) > 60) { e.pos.x = x + 30; e.pos.y = y + 30; }
-}
-function run(sim: Simulation, ticks: number, input?: (i: number) => Partial<InputSnapshot>): SimEvent[] {
-  const seen: SimEvent[] = [];
-  for (let i = 0; i < ticks; i++) {
-    sim.enqueue({ type: 'input', playerId: 'local', input: { ...emptyInput(i, 0), ...(input ? input(i) : {}) } });
-    for (const e of sim.step()) seen.push(e);
-  }
-  return seen;
-}
-const gz = (sim: Simulation, x: number, y: number): number => Math.floor(sim.tiles.ground(x + 0.5, y + 0.5));
-const types = (ev: SimEvent[]): string[] => ev.map((e) => e.type);
+import type { SimEvent } from '../src/types';
+import { GROUND_Z, Tile, brickKey, spotKey, unpackSpot } from '../src/types';
+import { CUBE, STONE, THATCH, WOOD, check, failures, flatten, gz, run, types, world } from './matterKit';
 
 check('content still validates', validateContent(CONTENT).length === 0, validateContent(CONTENT).join('; '));
 
@@ -72,60 +29,6 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   check('spot keys round-trip', k.x === -37 && k.y === 12001 && k.z === 54);
   const g = unpackSpot(spotKey(5, -9, GROUND_Z));
   check('ground spots round-trip', g.x === 5 && g.y === -9 && g.z === GROUND_Z);
-}
-
-// ---- Fire in a timber wall, and from grass to thatch to wall ------------------------------------
-{
-  const { sim } = world();
-  const X = 6100;
-  const Y = 6100;
-  flatten(sim, X, Y, 14, Tile.Flagstone);
-  const z = gz(sim, X, Y);
-  // A little lean-to: timber posts with a thatched roof, next to dry brush.
-  for (let y = 0; y < 3; y++) {
-    sim.state.volume.set(X + 4, Y + y, z, CUBE, WOOD);
-    sim.state.volume.set(X + 4, Y + y, z + 1, CUBE, WOOD);
-    sim.state.volume.set(X + 4, Y + y, z + 2, CUBE, THATCH);
-    sim.tiles.setKind(X + 3, Y + y, Tile.Brush);
-    sim.tiles.setKind(X + 2, Y + y, Tile.Brush);
-  }
-  // Spread is chancy, so light the whole brush strip: the check is about thatch and timber catching, not about luck.
-  for (let y = 0; y < 3; y++) sim.state.queues.effects.push({ target: { kind: 'tile', x: X + 2, y: Y + y }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
-  let peak = 0;
-  let ignited = 0;
-  let burntOut = 0;
-  for (let t = 0; t < 20 * 60; t++) {
-    for (const e of sim.step()) {
-      if (e.type === 'ignited' && e.z !== undefined && e.z !== GROUND_Z) ignited++;
-      if (e.type === 'burntOut' && e.z !== undefined && e.z !== GROUND_Z) burntOut++;
-    }
-    peak = Math.max(peak, sim.state.volume.burningCells.size);
-  }
-  check('burning grass sets the thatch and timber alight', peak > 0 && ignited > 0, `peak ${peak} cells, ${ignited} ignitions`);
-  check('and they burn away, leaving ash on the ground', burntOut > 0 && sim.state.volume.shapeAt(X + 4, Y + 1, z + 2) === 0, `${burntOut} cells burnt out`);
-  check('the cells that burned are gone from the volume (not left as ghosts)', ![...sim.state.volume.burningCells].some((k) => sim.state.volume.shapeAt(unpackSpot(k).x, unpackSpot(k).y, unpackSpot(k).z) === 0));
-  let ash = 0;
-  for (let y = 0; y < 3; y++) if (sim.tiles.kind(X + 4, Y + y) === tileCode('ash')) ash++;
-  check('a wall that stood on the ground leaves ash where it stood', ash > 0, `${ash} ash tiles`);
-}
-
-// ---- Fire climbs: a burning floor lights the wall above, not the other way round as easily ----------
-{
-  const { sim } = world();
-  const X = 6210;
-  const Y = 6210;
-  flatten(sim, X, Y, 8, Tile.Flagstone);
-  const z = gz(sim, X, Y);
-  for (let k = 0; k < 4; k++) sim.state.volume.set(X, Y, z + k, CUBE, THATCH);
-  sim.state.queues.effects.push({ target: { kind: 'cell', x: X, y: Y, z }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
-  let topFirst = 0;
-  let bottomLast = 0;
-  for (let t = 0; t < 20 * 40; t++) {
-    sim.step();
-    if (!topFirst && sim.matter.get('fire', X, Y, z + 2) > 0) topFirst = t;
-    if (!bottomLast && sim.matter.get('fire', X, Y, z + 3) > 0) bottomLast = t;
-  }
-  check('fire climbs a column of thatch', topFirst > 0 && bottomLast > 0, `reached z+2 at tick ${topFirst}, z+3 at ${bottomLast}`);
 }
 
 // ---- Rain, and a roof against it ----------------------------------------------------------------
@@ -159,17 +62,6 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   const before = sim.matter.get('wet', X, Y, z + 3);
   run(sim, 20 * 20);
   check('what is wet dries again', sim.matter.get('wet', X, Y, z + 3) < before, `${before} → ${sim.matter.get('wet', X, Y, z + 3)}`);
-}
-
-// ---- However much burns, fire still catches -------------------------------------------------------
-{
-  const { sim } = world();
-  for (let i = 0; i < 1200; i++) sim.tiles.setKind(7000 + (i % 40), 7000 + Math.floor(i / 40), Tile.Brush);
-  for (let i = 0; i < 1200; i++) sim.matter.set('fire', 7000 + (i % 40), 7000 + Math.floor(i / 40), GROUND_Z, 100);
-  flatten(sim, 7200, 7200, 3, Tile.Brush);
-  sim.state.queues.effects.push({ target: { kind: 'tile', x: 7200.5, y: 7200.5 }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
-  sim.step();
-  check('a torch still lights brush while a huge blaze burns elsewhere', sim.matter.get('fire', 7200, 7200, GROUND_Z) > 0);
 }
 
 // ---- Frost and oil work on walls too -------------------------------------------------------------
@@ -349,5 +241,5 @@ check('content still validates', validateContent(CONTENT).length === 0, validate
   check('and the warmth fades back to the surroundings', sim.matter.get('temp', X + 1, Y + 2, GROUND_Z) === 0 && !sim.state.temp.has(spotKey(X + 1, Y + 2, GROUND_Z)));
 }
 
-console.log(failed === 0 ? 'matter checks passed' : `${failed} matter checks FAILED`);
-if (failed > 0) throw new Error('matter checks failed');
+console.log(failures() === 0 ? 'matter checks passed' : `${failures()} matter checks FAILED`);
+if (failures() > 0) throw new Error('matter checks failed');

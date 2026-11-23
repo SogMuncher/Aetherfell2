@@ -1,64 +1,13 @@
-// Headless checks for armour: generated pieces, the paperdoll requests, protection and wear,
-// creatures wearing and dropping armour. Prints PASS/FAIL per check.
-import { Simulation, createState } from '../src/sim';
+// Headless checks for gear: generated pieces, the paperdoll requests, protection and wear, weapons, breaking, G throw.
+// (Creatures found with gear: outfitSmoke.ts.) Prints PASS/FAIL per check.
+import type { Simulation } from '../src/sim';
 import { CONTENT, gearItem, itemDef, parseGear, rollGear, validateContent, weaponStats } from '../src/content';
 import { ITEM_FORMS } from '../src/render/entities/itemArt';
-import type { Entity, InputSnapshot, MatterAccess, Rng } from '../src/types';
+import type { MatterAccess } from '../src/types';
 import { shapeId } from '../src/content/shapes';
 import { tileCode } from '../src/content/tiles';
 import { GROUND_Z, HAND_SLOT, Tile, addItem, countItem, emptyInput, shapeByte } from '../src/types';
-
-/** A small seeded random source for the checks (the sim has its own). */
-function makeRng(seed: number): Rng {
-  let s = seed | 0;
-  const next = (): number => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), s | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  return { next, range: (a, b) => a + (b - a) * next(), int: (n) => Math.floor(next() * n), chance: (p) => next() < p, pick: (a) => a[Math.floor(next() * a.length)] as never };
-}
-
-function spawner(sim: Simulation): { spawn: (t: string, x: number, y: number, i?: object) => Entity } {
-  return (sim as unknown as { ctx: { spawn: (t: string, x: number, y: number, i?: object) => Entity } }).ctx;
-}
-/** Flat, clear ground to stand on, with the traveller placed at its middle. */
-function arena(sim: Simulation, me: Entity, x = 18000, y = 18000, r = 40): void {
-  for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) sim.tiles.setKind(x + i, y + j, Tile.Flagstone as 0);
-  for (const e of [...sim.state.entities.values()]) if (!e.player && Math.hypot(e.pos.x - x, e.pos.y - y) < r + 20) sim.state.entities.delete(e.id);
-  me.pos.x = me.prev.x = x + 0.5;
-  me.pos.y = me.prev.y = y + 0.5;
-  me.z = me.prevZ = sim.tiles.ground(x, y);
-  me.vel.x = me.vel.y = me.vz = 0;
-}
-
-let failed = 0;
-function check(name: string, ok: boolean, detail = ''): void {
-  if (!ok) failed++;
-  console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`);
-}
-
-function world(): { sim: Simulation; me: Entity } {
-  const sim = new Simulation(createState(4242));
-  sim.enqueue({ type: 'join', playerId: 'local', name: 'Tester' });
-  sim.step();
-  const id = sim.state.players['local'];
-  const me = id !== undefined ? sim.state.entities.get(id) : undefined;
-  if (!me) throw new Error('no player');
-  arena(sim, me);
-  return { sim, me };
-}
-let seq = 0;
-function run(sim: Simulation, ticks: number, input?: Partial<InputSnapshot>): void {
-  for (let i = 0; i < ticks; i++) {
-    sim.enqueue({ type: 'input', playerId: 'local', input: { ...emptyInput(++seq, 0), ...(input ?? {}) } });
-    sim.step();
-  }
-}
-function hit(sim: Simulation, target: Entity, amount: number, kind: 'cut' | 'blunt' | 'fire' | 'cold' = 'cut', swing: 'left' | 'right' | 'thrust' | 'overhead' | null = null): void {
-  sim.state.queues.effects.push({ target: { kind: 'entity', id: target.id }, effects: [{ type: 'damage', amount, kind }], source: null, from: null, swing });
-}
+import { check, failures, hit, makeRng, nextSeq, run, spawner, world } from './smokeKit';
 
 // The tables are sound and every id means what it says.
 {
@@ -178,52 +127,6 @@ function hit(sim: Simulation, target: Entity, amount: number, kind: 'cut' | 'blu
   check('material changes how fire is taken', f.me.maxHp - f.me.hp > g.me.maxHp - g.me.hp, `${f.me.maxHp - f.me.hp} in linen vs ${g.me.maxHp - g.me.hp} in iron`);
 }
 
-// Creatures wear armour through the same rule, and may drop it.
-{
-  const { sim, me } = world();
-  let dressed = 0;
-  let total = 0;
-  let sample: Entity | null = null;
-  for (let i = 0; i < 40; i++) {
-    const r = spawner(sim).spawn('raider', me.pos.x + 20 + i, me.pos.y + 20, { z: me.z, prevZ: me.z });
-    total++;
-    if (r.worn && Object.keys(r.worn).length) {
-      dressed++;
-      sample = sample ?? r;
-    }
-  }
-  check('raiders are found in armour', dressed > total * 0.6, `${dressed}/${total}`);
-  check('what they wear is real armour on the right parts', !!sample && Object.entries(sample.worn ?? {}).every(([region, id]) => itemDef(CONTENT, id)?.armour?.region === region));
-  const wolf = spawner(sim).spawn('wolf', me.pos.x + 30, me.pos.y, { z: me.z, prevZ: me.z });
-  check('animals wear nothing', !wolf.worn);
-  const villager = spawner(sim).spawn('villager', me.pos.x + 31, me.pos.y, { z: me.z, prevZ: me.z });
-  void villager;
-  // Armoured raider takes less than a bare one from the same blow, on average.
-  const bareRaiders: Entity[] = [];
-  const armouredRaiders: Entity[] = [];
-  for (let i = 0; i < 30; i++) {
-    const a = spawner(sim).spawn('raider', me.pos.x + 60, me.pos.y + i * 2, { z: me.z, prevZ: me.z, worn: {} });
-    const b = spawner(sim).spawn('raider', me.pos.x + 70, me.pos.y + i * 2, { z: me.z, prevZ: me.z, worn: { head: 'gear:helm:steel:common', torso: 'gear:cuirass:steel:common', arms: 'gear:bracers:steel:common', legs: 'gear:greaves:steel:common' } });
-    bareRaiders.push(a);
-    armouredRaiders.push(b);
-    hit(sim, a, 16);
-    hit(sim, b, 16);
-  }
-  sim.step();
-  const sum = (l: Entity[]): number => l.reduce((n, r) => n + (r.maxHp - r.hp), 0);
-  check('armour protects creatures by the same rule', sum(armouredRaiders) < sum(bareRaiders) * 0.8, `${sum(bareRaiders)} bare vs ${sum(armouredRaiders)} armoured`);
-  // A dead raider drops some of what it wore.
-  let drops = 0;
-  for (let i = 0; i < 20; i++) {
-    const r = spawner(sim).spawn('raider', me.pos.x + 90, me.pos.y + i * 2, { z: me.z, prevZ: me.z, worn: { torso: 'gear:cuirass:iron:common' } });
-    r.hp = 1;
-    hit(sim, r, 50);
-  }
-  sim.step();
-  for (const e of sim.state.entities.values()) if (e.item?.id === 'gear:cuirass:iron:common') drops++;
-  check('what a fallen creature wore can be found on it', drops > 3 && drops < 20, `${drops}/20`);
-}
-
 // Weapons are gear too: material, quality and enchantment change them the same way.
 {
   const plain = itemDef(CONTENT, 'gear:sword:iron:common');
@@ -307,12 +210,12 @@ function hit(sim: Simulation, target: Entity, amount: number, kind: 'cut' | 'blu
   run(sim, 1, { throwHeld: true, pitch: 0.1, yaw: 0 });
   let broke = false;
   for (let i = 0; i < 80 && !broke; i++) {
-    sim.enqueue({ type: 'input', playerId: 'local', input: emptyInput(++seq, 0) });
+    sim.enqueue({ type: 'input', playerId: 'local', input: emptyInput(nextSeq(), 0) });
     broke = sim.step().some((e) => e.type === 'itemBroke' && e.item === 'frostFlask');
   }
   const left = sim.state.entities.get(id);
   check('a thrown flask breaks where it strikes', broke && !left, `left: ${left?.item?.id} z ${left?.z.toFixed(2)} by ${left?.thrownBy}`);
 }
 
-if (failed) throw new Error(`${failed} gear check(s) failed`);
+if (failures()) throw new Error(`${failures()} gear check(s) failed`);
 console.log('all armour checks passed');

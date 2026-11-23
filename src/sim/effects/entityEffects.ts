@@ -257,7 +257,7 @@ export function destroy(ctx: SimContext, e: Entity, src: Entity | null): void {
   if ((e.status.burning ?? 0) > 0) area(1.2, [{ type: 'heat', amount: 1 }]);
   const drops = od?.loot ? rollLoot(content, od.loot, ctx.rng) : [];
   if (def.container && e.container && !e.container.opened) drops.push(...rollLoot(content, def.container.loot, ctx.rng));
-  // Whatever it wore may be found on it.
-  if (e.worn) for (const id of Object.values(e.worn)) if (ctx.rng.chance(content.gear.rules.dropChance)) drops.push({ id, count: 1 });
+  // Whatever it wore or held may be found on it.
+  for (const id of [...Object.values(e.worn ?? {}), ...(e.actor?.weapon ? [e.actor.weapon] : [])]) if (ctx.rng.chance(content.gear.rules.dropChance)) drops.push({ id, count: 1 });
   if (drops.length) ctx.dropItems(e.pos.x, e.pos.y, e.z + 0.5, drops);
 }

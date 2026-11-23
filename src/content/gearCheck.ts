@@ -37,8 +37,10 @@ export function gearProblems(c: Content): string[] {
   for (const [id, l] of Object.entries(c.loot)) for (const e of l.entries) if (e.gear) rolls.push([`loot '${id}'`, e.gear]);
   for (const [id, th] of Object.entries(c.things)) {
     for (const r of th.wears ?? []) if (!t.regions[r]) out.push(`thing '${id}': unknown body part '${r}'`);
-    if (th.outfit && !th.wears?.length) out.push(`thing '${id}': has an outfit but wears nothing`);
-    for (const o of th.outfit ?? []) rolls.push([`thing '${id}' outfit`, o.roll]);
+    for (const o of th.outfit ?? []) {
+      rolls.push([`thing '${id}' outfit`, o.roll]);
+      if (o.roll.region === HAND_SLOT ? !th.actor : o.roll.region && !th.wears?.includes(o.roll.region)) out.push(`thing '${id}': outfit puts '${o.roll.region}' where it has none`);
+    }
   }
   // Where gear shows on a body (render/entities/gearArt.ts): top-level fixed parts, known slots.
   for (const [id, d] of Object.entries(c.art)) for (const p of d.parts) if (p.wear && (!slotOk(p.wear) || !p.at)) out.push(`art '${id}': gear slot '${p.wear}' must be a known slot on a fixed part`);
