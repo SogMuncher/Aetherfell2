@@ -4,6 +4,7 @@ import type { Solid } from './artGrow';
 import type { Sprite } from './sprites';
 import { apply } from './bodyMath';
 import { pack, rhash } from '../color';
+import { type CardSource, outline, stampCards } from './paintFinish';
 
 
 export interface Prepared {
@@ -191,7 +192,7 @@ export function surfaceK(surface: Surface, lit: number, ux: number, uy: number, 
  * Ray-casts solids into a sprite seen from view angle `psi` (radians around the body; 0 = side-on
  * with its head to the viewer's right). `hand` is +1 or -1 to match the world's screen handedness.
  */
-export function paintSolids(solids: readonly Solid[], ppm: number, psi: number, hand: number, radius: number, top: number): Sprite {
+export function paintSolids(solids: readonly Solid[], ppm: number, psi: number, hand: number, radius: number, top: number, cards?: CardSource): Sprite {
   const w = Math.max(2, Math.ceil(radius * 2 * ppm) + 2);
   const h = Math.max(2, Math.ceil(top * ppm) + 1);
   // View axes in the creature's [forward, up, side] space.
@@ -206,6 +207,8 @@ export function paintSolids(solids: readonly Solid[], ppm: number, psi: number, 
   L[0] /= ll;
   L[1] /= ll;
   L[2] /= ll;
+  const flat = solids.filter((s) => s.card);
+  if (flat.length) solids = solids.filter((s) => !s.card);
   const prep: Prepared[] = solids.map((s) => {
     const back = 20;
     // Middle of the solid and a sphere around it (a cone's middle is halfway up its length).
@@ -285,40 +288,6 @@ export function paintSolids(solids: readonly Solid[], ppm: number, psi: number, 
     }
   }
   outline(px, depth, w, h, shade);
+  if (flat.length && cards) stampCards(flat, cards, { px, depth, regions, w, h, ppm, R, F });
   return regions && shade ? { w, h, px, worldW: w / ppm, worldH: h / ppm, regions, shade } : { w, h, px, worldW: w / ppm, worldH: h / ppm };
-}
-
-/** Darkens the silhouette edge and places where a near part overlaps a far one, for readability. */
-export function outline(px: Uint32Array, depth: Float32Array, w: number, h: number, shade?: Uint8Array): void {
-  const dark = new Uint8Array(w * h);
-  for (let j = 0; j < h; j++) {
-    for (let i = 0; i < w; i++) {
-      const o = j * w + i;
-      if (px[o] === 0) continue;
-      const d = depth[o] ?? 0;
-      let edge = 0;
-      const look = (ii: number, jj: number): void => {
-        if (ii < 0 || jj < 0 || ii >= w || jj >= h) {
-          if (jj < h) edge = Math.max(edge, 1);
-          return;
-        }
-        const q = jj * w + ii;
-        if (px[q] === 0) edge = Math.max(edge, 1);
-        else if ((depth[q] ?? 0) < d - 0.12) edge = Math.max(edge, 2);
-      };
-      look(i - 1, j);
-      look(i + 1, j);
-      look(i, j - 1);
-      look(i, j + 1);
-      dark[o] = edge;
-    }
-  }
-  for (let o = 0; o < w * h; o++) {
-    const e = dark[o] ?? 0;
-    if (!e) continue;
-    const c = px[o] ?? 0;
-    const k = e === 1 ? 0.62 : 0.75;
-    px[o] = pack((c & 255) * k, ((c >>> 8) & 255) * k, ((c >>> 16) & 255) * k);
-    if (shade) shade[o] = Math.round((shade[o] ?? 0) * k);
-  }
 }

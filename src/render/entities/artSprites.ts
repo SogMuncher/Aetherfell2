@@ -6,6 +6,7 @@ import { sideFrom, type Projection } from '../raycaster/camera';
 import { ArtBank, VIEW_DIRS, artVariants, assemble, poseFrames, variantSeed, type Pose } from './assembler';
 import { artColours, artFeatures } from './artGrow';
 import { outfitted } from './gearArt';
+import { itemCard } from './itemCard';
 import type { Sprite } from './sprites';
 
 interface Tracked {
@@ -33,8 +34,9 @@ export class ArtSprites {
   private tracked = new Map<number, Tracked>();
   private lastPrune = 0;
 
-  pick(e: Entity, id: ArtId, bare: ArtDef, p: Projection, time: number): { sprite: Sprite; scale: number; colours: Uint32Array } {
-    const hand = -p.RY * p.FX + p.RX * p.FY < 0 ? -1 : 1;
+  /** Its picture seen by camera `p`, or turned to side `p.dir` (a portrait, like the paperdoll's). */
+  pick(e: Entity, id: ArtId, bare: ArtDef, p: Projection | { dir: number }, time: number): { sprite: Sprite; scale: number; colours: Uint32Array } {
+    const hand = 'dir' in p || -p.RY * p.FX + p.RX * p.FY >= 0 ? 1 : -1;
     // What it wears and holds is drawn on it (gearArt.ts); the individual underneath stays the same.
     const outfit = outfitted(id, bare, e);
     const def = outfit?.def ?? bare;
@@ -62,7 +64,7 @@ export class ArtSprites {
     if (!bank) {
       // Pictures are shared by every individual of the same shape; colours come per individual.
       if (this.banks.size > 800) this.banks.clear();
-      bank = new ArtBank(assemble(id, def, tr.variant, dress), hand);
+      bank = new ArtBank(assemble(id, def, tr.variant, dress), hand, itemCard);
       this.banks.set(bkey, bank);
     }
     const dt = Math.min(0.1, Math.max(0, time - tr.last));
@@ -89,7 +91,8 @@ export class ArtSprites {
 
     // Which side of it the camera sees.
     let dir = 0;
-    if (bank.nviews > 1) {
+    if ('dir' in p) dir = p.dir;
+    else if (bank.nviews > 1) {
       const a = moving ? Math.atan2(e.vel.y, e.vel.x) : e.angle + tr.spin;
       const { rx, ry } = sideFrom(p, e.pos.x, e.pos.y);
       const rf = rx * Math.cos(a) + ry * Math.sin(a);
