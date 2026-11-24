@@ -30,7 +30,7 @@ traits, never ids. No theme packs, no per-feature special cases. Free to change 
 - Fewest turns: put independent calls in one message, chain shell steps with `&&`, plan all edits then make them together.
 - Short output: `grep -n`, `sed -n 'a,bp'`, `| tail -20`. Never print whole files, logs or diffs. Don't re-read to verify.
 - One ask per thread; an unrelated ask is a new thread (a long thread re-reads all its history every turn).
-- After the PR, answer CI events only when they need a fix; auto-merge does the rest.
+- After the PR: no `subscribe_pr_activity`, no polling checks. Auto-merge does the rest; post the report and end the thread.
 
 ## Hard code rules
 Strict TS, no `any`. Flow `input -> sim (20 Hz fixed, Commands) -> render (read-only)`; audio/net react to events.
@@ -57,6 +57,6 @@ One script also works: `npm run check gearSmoke`. Packages install themselves on
 1. `npm run check <area>` green -> `git add -A && git commit -m "<what changed>" && git push -u origin <branch>`.
 2. GitHub MCP: `create_pull_request` (base `main`; body = the two attribution lines + 2-4 plain lines), then
    `issue_write` update assignees `[SogMuncher]` (skip the review request: PRs count as Sock's, GitHub refuses it),
-   `enable_pr_auto_merge` (SQUASH), `subscribe_pr_activity`. Fix only what CI reports.
+   `enable_pr_auto_merge` (SQUASH), then post the final report and end. Never watch CI; if creating the PR auto-subscribed you, call `unsubscribe_pr_activity` at once; the coordinator reports the merge.
 
 Sock: plain experience-first language, no jargon. Sock has no Node.js and plays the single-file `play.html`.
