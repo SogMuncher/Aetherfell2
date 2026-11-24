@@ -15,6 +15,8 @@
  *   top its far end (a cone's tip, the top of a ball or box). Grown parts move with the joint they
  *   grow from.
  */
+import type { SwingDir } from './input';
+
 export type ArtId = string;
 
 export type Vec3 = readonly [number, number, number];
@@ -82,10 +84,14 @@ export interface ArtPart {
   /**
    * Swings while walking: degrees each way, and where in the stride (0..1) it is furthest forward.
    * `lift` (metres) raises it while it swings forward, so a step shows from the front and back too.
+   * `fold`: it only bends one way, folding back by `swing` when furthest forward (a knee, an elbow).
    */
-  stride?: { swing: number; phase: number; lift?: number };
-  /** Extra swing (degrees) at the moment of an attack: a lunging head, a raised arm. */
-  strike?: number;
+  stride?: { swing: number; phase: number; lift?: number; fold?: boolean };
+  /**
+   * Its role in body moves (content/moves.ts): 'arm' (the limb that strikes or throws), 'fore' (its
+   * far half), 'off' and 'offFore' (the other arm), 'torso', 'head', 'neck' (a beast that bites).
+   */
+  act?: string;
   /** Swing (degrees) while resting: a wagging tail, a breathing chest. */
   idle?: number;
 
@@ -151,10 +157,32 @@ export interface ArtDef {
   vary?: number;
   /** It walks: animated walk/rest/attack poses, and it faces where it goes. */
   gait?: GaitDef;
-  /** The whole body leans forward (degrees) and lunges (metres) as it strikes. */
+  /** The whole body leans forward (degrees) and lunges (metres) as it strikes; each move says how much of it. */
   attack?: { lean: number; lunge: number };
+  /** Each shape is stretched by its own pick: `tall` up, `wide` forward and sideways (lanky, stocky, hulking). */
+  build?: { tall: Span; wide: Span };
   /** The whole thing tips its top forward by this many degrees: a sword lying corner to corner in its picture. */
   tilt?: number;
+}
+
+/** A joint's turn in degrees: [tilt, yaw, roll] as on ArtPart. */
+export type Turn = readonly [number, number, number];
+
+/** Every body move: the four swings and the throw. */
+export type MoveId = SwingDir | 'throw';
+
+/**
+ * A body move. Each joint with an `act` role passes through three key turns: wound up (and held
+ * while charging), the release (the blow lands, the item leaves the hand) and the follow-through.
+ * The sim's own timing picks the moment (charge, swing.strikeAt, swing.recover), so the picture
+ * lands with the blow at any weapon speed. Roles a body does not have are skipped.
+ */
+export interface MoveDef {
+  roles: Readonly<Record<string, { windup: Turn; strike: Turn; follow: Turn }>>;
+  /** Share of the body's `attack` lean and lunge at wind-up, release and follow-through. */
+  body: readonly [number, number, number];
+  /** Seconds it plays when the sim has no timing for it (a throw leaves the hand at once). */
+  time?: number;
 }
 
 /**

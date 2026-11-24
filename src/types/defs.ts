@@ -6,7 +6,7 @@ import type { FactionDef, RoleDef } from './defs/social';
 import type { GearTables } from './gear';
 import type { HudTheme, RulesDef } from './defs/rules';
 import type { ItemDef } from './defs/items';
-import type { ArtDef, ArtId } from './art';
+import type { ArtDef, ArtId, MoveDef, MoveId } from './art';
 import type { MaterialDef, RealmDef, ThingDef } from './defs/things';
 import type { PaletteDef, PaletteId } from './palettes';
 import type { ShownState, StateLookDef } from './matter';
@@ -77,4 +77,6 @@ export interface Content {
   effects: Readonly<Record<string, BurstDef>>;
   /** How the weapon in your hand moves, is lit and reacts to blows in the first-person view (content/viewmodel.ts). */
   viewmodel: ViewmodelDef;
+  /** How bodies move their joints through each swing and the throw, seen from outside (content/moves.ts). */
+  moves: Readonly<Record<MoveId, MoveDef>>;
 }

@@ -72,6 +72,8 @@ export class Renderer {
     this.particles.onEvent(e, state);
     this.viewModel.onEvent(e, state, localId);
     if (e.type === 'thunder') this.flash = 1;
+    const by = e.type === 'thrown' ? state.entities.get(e.entity)?.thrownBy : null;
+    if (by != null) this.sprites.thrown(by);
     if (e.type === 'hit') {
       this.hitFlash.set(e.target, 0.6);
       if (e.target === localId && e.damage > 0) {

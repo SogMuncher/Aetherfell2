@@ -6,7 +6,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## scripts/
 - `buildPlay.mjs` (24) `npm run build`: typecheck + one-file play.html (CI also runs it; see docs/PIPELINE.md)
-- `artSmoke.ts` (162) check: every picture is built from parts, none hand-drawn
+- `artSmoke.ts` (179) check: every picture is built from parts, none hand-drawn
 - `cheatsSmoke.ts` (182) Headless checks for the settings list and the debug cheats (which travel as sim commands).
 - `coopSmoke.ts` (357) check: host/guest inputs, snapshots, prediction, shared record
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
@@ -91,10 +91,10 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemDefs.ts` (107) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (102) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
-- `index.ts` (84) collects every table into CONTENT, re-exports helpers, runs validation
+- `index.ts` (86) collects every table into CONTENT, re-exports helpers, runs validation
 - `items.ts` (103) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
 - `living.ts` (128) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
-- `looks.ts` (284) creature looks as solid parts (D)
+- `looks.ts` (175) creature looks as solid parts (D)
 - `loot.ts` (110) Drop tables: each entry rolls on its own.
 - `materials.ts` (29) How stuff reacts physically. Every tile and thing made of a material behaves the same way.
 - `palettes.ts` (62) Palettes: the colours that fill the colour regions of every picture (creatures, trees, rocks,
@@ -118,12 +118,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `validate.ts` (268) validateContent: every reference must point at something that exists
 - `viewmodel.ts` (36) held-item hand poses (viewmodel thread)
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
-- `artCheck.ts` (38) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
+- `artCheck.ts` (41) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
 - `smallForms.ts` (253) Bushes, rocks, plants and small heaps (haystacks, woodpiles, wells, rubble) grown from parts, like trees (form
 - `itemGearArt.ts` (124) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
 - `itemGoodsArt.ts` (125) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
 - `creatures.ts` (153) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
 - `handling.ts` (87) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
+- `bodyPlans.ts` (172) Body plans as reusable parts (two legs, four legs, hopper, antlers): segmented limbs on joints, roles for body
+- `moves.ts` (78) Body moves seen from outside: how arms, torso, head (or a beast's neck) turn through each swing direction and
 
 ## src/input/
 - `input.ts` (177) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -148,20 +150,20 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `stateLooks.ts` (68) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
-- `renderer.ts` (171) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `renderer.ts` (173) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
 
 ## src/render/entities/
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
 - `bodyPaint.ts` (293) ray-intersect solids into colour-region pixels
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
-- `spriteRenderer.ts` (135) gathers billboards (trees, creatures, props, items) for the GPU
+- `spriteRenderer.ts` (140) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (270) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
-- `artGrow.ts` (254) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
-- `artSprites.ts` (109) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
-- `assembler.ts` (229) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
+- `artGrow.ts` (264) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
+- `artSprites.ts` (137) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
+- `assembler.ts` (246) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
 - `itemLook.ts` (93) What an item looks like, worked out from its definition: base shape, colours, size, gear parts (no item ids)
 - `gearArt.ts` (96) Worn armour and the held item laid onto any creature's art recipe: shells over the parts each slot covers, the
 - `viewFx.ts` (109) Motes over the held item: flames at a burning head, sparks, drops and puffs, advanced and painted each frame.
@@ -320,7 +322,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/types/
 - `cheats.ts` (71) Debug cheats: shapes only. The list of cheats is data (src/content/cheats.ts), the menu builds
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
-- `defs.ts` (80) Content type + re-exports of defs/*
+- `defs.ts` (82) Content type + re-exports of defs/*
 - `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
 - `entities.ts` (231) Entity and its components
 - `events.ts` (64) Things that happened during a tick. Audio, render effects, UI and the network react to these.
@@ -340,7 +342,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `volume.ts` (135) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (202) surface, biome, water and world-generation defs
-- `art.ts` (175) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
+- `art.ts` (203) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
 
 ## src/types/defs/
 - `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population

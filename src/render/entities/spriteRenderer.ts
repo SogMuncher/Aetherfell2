@@ -67,6 +67,11 @@ export class SpriteRenderer {
     this.list.push(b);
   }
 
+  /** Someone threw an item: their body plays the throw. */
+  thrown(id: number): void {
+    this.art.thrown(id);
+  }
+
   /** Everything to draw this frame (trees, props, creatures, items) as billboards; the GPU path draws them itself. */
   collect(p: Projection, state: SimState, tiles: ReadonlyTiles, localId: number | null, alpha: number, time: number, hitFlash: Map<number, number>): readonly Billboard[] {
     for (const b of this.list) this.pool.push(b);

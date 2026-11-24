@@ -27,6 +27,7 @@ import { MATTER_STATES } from './matterStates';
 import { THINGS } from './things';
 import { TILES, TILE_IDS } from './tiles';
 import { VIEWMODEL } from './viewmodel';
+import { MOVES } from './moves';
 import { WORLD } from './world';
 import { validateContent } from './validate';
 
@@ -78,6 +79,7 @@ export const CONTENT: Content = {
   hud: HUD,
   effects: EFFECTS,
   viewmodel: VIEWMODEL,
+  moves: MOVES,
 };
 
 const problems = validateContent(CONTENT);

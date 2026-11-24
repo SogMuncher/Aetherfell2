@@ -9,6 +9,7 @@ import { outfitted } from '../src/render/entities/gearArt';
 import { itemCard } from '../src/render/entities/itemCard';
 import type { ArtDef, Entity } from '../src/types';
 import { SpriteRenderer } from '../src/render/entities/spriteRenderer';
+import { moveFrame } from '../src/render/entities/artSprites';
 import { project, type Camera } from '../src/render/raycaster/camera';
 import { spawner, world } from './smokeKit';
 
@@ -107,7 +108,7 @@ check('content (palettes, prop forms, dress colours) validates', validateContent
   const side = bank.sprite('idle', 0, 0);
   artPaintBudget(-1);
   const walking = bank.sprite('walk', 3, 0);
-  const front = bank.sprite('attack', 1, 6);
+  const front = bank.sprite('overhead', 1, 6);
   artPaintBudget(1000);
   check('out of time, a stand-in picture faces the same way', walking === side && front !== side);
 }
@@ -156,6 +157,22 @@ check('content (palettes, prop forms, dress colours) validates', validateContent
     sim.state.entities.delete(w.id);
     check(`a walking ${kind} shows many pictures while turning a full circle (stride frames from every side)`, pics.size >= 24, `${pics.size} pictures`);
   }
+}
+
+// Body moves: every swing direction and the throw is its own picture, and the picture follows the sim's timing.
+{
+  const bank = new ArtBank(assemble('raider', CONTENT.art['raider'] as ArtDef, 0), 1);
+  artPaintBudget(1000);
+  const sig = (s: { px: Uint32Array; w: number }): string => `${s.w}:${s.px.reduce((n, c, i) => (n + ((c >>> 24) > 0 ? i * 7 : 0)) % 1000003, 0)}`;
+  const looks = (['overhead', 'thrust', 'left', 'right', 'throw'] as const).map((m) => sig(bank.sprite(m, 1, 2)));
+  check('each swing direction and the throw winds up its own way', new Set(looks).size === looks.length && !looks.includes(sig(bank.sprite('idle', 0, 2))));
+  const actor = (a: object): Entity => ({ actor: { swing: null, charge: null, ...a } }) as unknown as Entity;
+  const sw = (t: number) => moveFrame(actor({ swing: { dir: 'left', t, strikeAt: 8, recover: 20, struck: false, power: 0 } }), undefined, 0);
+  const ch = moveFrame(actor({ charge: { dir: 'overhead', t: 30, hold: 0, full: true } }), undefined, 0);
+  check('the body winds up while charging and holds it, lands its blow on the tick it strikes, then follows through', ch?.[0] === 'overhead' && ch[1] === 1 && sw(0)?.[1] === 1 && sw(8)?.[1] === 3 && sw(19)?.[1] === 5);
+  const th = moveFrame(actor({}), 10, 10.03);
+  check('a throw plays from the moment the item leaves the hand, then ends', th?.[0] === 'throw' && th[1] === 3 && moveFrame(actor({}), 10, 12) === null);
+  check('every move role a body uses is known to the moves table', validateContent(CONTENT).every((p) => !p.includes('move')));
 }
 
 if (failed) throw new Error(`${failed} art check(s) failed`);
