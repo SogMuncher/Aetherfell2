@@ -6,7 +6,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## scripts/
 - `buildPlay.mjs` (24) `npm run build`: typecheck + one-file play.html (CI also runs it; see docs/PIPELINE.md)
-- `artSmoke.ts` (175) check: every picture is built from parts, none hand-drawn
+- `artSmoke.ts` (179) check: every picture is built from parts, none hand-drawn
 - `cheatsSmoke.ts` (182) Headless checks for the settings list and the debug cheats (which travel as sim commands).
 - `coopSmoke.ts` (357) check: host/guest inputs, snapshots, prediction, shared record
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
@@ -155,19 +155,21 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/render/entities/
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
-- `bodyPaint.ts` (324) ray-intersect solids into colour-region pixels
+- `bodyPaint.ts` (293) ray-intersect solids into colour-region pixels
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
 - `spriteRenderer.ts` (140) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (270) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
-- `artGrow.ts` (262) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
-- `artSprites.ts` (134) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
-- `assembler.ts` (243) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
+- `artGrow.ts` (264) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
+- `artSprites.ts` (137) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
+- `assembler.ts` (246) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
 - `itemLook.ts` (93) What an item looks like, worked out from its definition: base shape, colours, size, gear parts (no item ids)
-- `gearArt.ts` (129) Worn armour and the held item laid onto any creature's art recipe: shells over the parts each slot covers, the
+- `gearArt.ts` (96) Worn armour and the held item laid onto any creature's art recipe: shells over the parts each slot covers, the
 - `viewFx.ts` (109) Motes over the held item: flames at a burning head, sparks, drops and puffs, advanced and painted each frame.
 - `viewPose.ts` (129) Held-item motion: poses as a hand position + blade direction, swing paths along arcs, and smooth settling betw
+- `itemCard.ts` (46) An item's bag picture as a card a body holds: where its grip is and which way it points on the picture
+- `paintFinish.ts` (108) Last touches on a painted body picture: dark outlines, and flat item pictures (held items) stamped facing the
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (200) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
@@ -205,11 +207,12 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/render/ui/
 - `bag.ts` (486) BagWindow: draggable inventory window (C)
 - `bagParts.ts` (149) bag constants, icon urls, item description, layout store
-- `paperdoll.ts` (293) C key: armour slots and the hand slot, drag to take off
+- `paperdoll.ts` (254) C key: armour slots and the hand slot, drag to take off
 - `paperdollStats.ts` (52) the paperdoll's side panel: health, protection, hands, skills
 - `settingsMenu.ts` (258) Esc/O menu built from settings data + cheat tab
 - `style.ts` (132) HUD CSS from content/hud.ts
 - `ui.ts` (658) GameUI: HUD, dialogue, journal, map, runebook (C)
+- `paperdollFigure.ts` (81) The paperdoll's figure: your own body sprite in what you wear and hold, turned with the mouse wheel
 
 ## src/render/vfx/
 - `particleKinds.ts` (90) particle kinds, physics, mote look tables
@@ -339,7 +342,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `volume.ts` (135) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (202) surface, biome, water and world-generation defs
-- `art.ts` (198) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
+- `art.ts` (203) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
 
 ## src/types/defs/
 - `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population

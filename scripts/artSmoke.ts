@@ -6,6 +6,7 @@ import { ArtBank, artPaintBudget, assemble } from '../src/render/entities/assemb
 import { artColours } from '../src/render/entities/artGrow';
 import { swatch } from '../src/render/palette';
 import { outfitted } from '../src/render/entities/gearArt';
+import { itemCard } from '../src/render/entities/itemCard';
 import type { ArtDef, Entity } from '../src/types';
 import { SpriteRenderer } from '../src/render/entities/spriteRenderer';
 import { moveFrame } from '../src/render/entities/artSprites';
@@ -125,7 +126,10 @@ check('content (palettes, prop forms, dress colours) validates', validateContent
   check('iron and leather share a silhouette, not a colour or texture', same && added(iron)[0]?.color !== added(hide)[0]?.color && added(iron)[0]?.surface === 'metal' && added(hide)[0]?.surface !== 'metal');
   const armed = dressed({}, 'gear:sword:steel:common');
   const hand = bare.parts.find((p) => p.wear === 'hand');
-  check('a held item is drawn in the hand and swings with its arm', added(armed).length >= 3 && added(armed).every((p) => p.parent === hand?.parent));
+  const card = added(armed);
+  check('a held item is its bag picture on one card in the hand, swinging with its arm', card.length === 1 && card[0]?.card === 'gear:sword:steel:common' && card[0]?.parent === hand?.parent);
+  const pix = (d: ArtDef): number => new ArtBank(assemble('raider', d, 0), 1, itemCard).sprite('idle', 0, 2).px.filter((c) => c).length;
+  check('the held picture is stamped onto the body picture', pix(armed) > pix(bare), `${pix(armed)} vs ${pix(bare)} pixels`);
   const plain = outfitted('raider', bare, { id: 4, actor: { weapon: null } } as unknown as Entity);
   check('nothing worn or held leaves the body as it is', plain === null);
 }

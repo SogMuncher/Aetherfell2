@@ -9,8 +9,8 @@ import { itemRecipe, itemWorldSize } from './itemArt';
  * gear slot covers them. A worn piece becomes a shell over each marked part of its region: the same
  * shape grown and moved by the region's `fit` (content/gear.ts), in the piece's own colour and
  * texture (its material: leather, iron, linen). So every helm on every head shares one silhouette
- * and a new armour needs only data. The held item is its own picture's pieces (itemArt.ts), scaled
- * to its world size and set in the part marked 'hand', so it swings with the arm.
+ * and a new armour needs only data. The held item is its bag picture (itemArt.ts) on a flat card
+ * gripped at the part marked 'hand' (bodyPaint stamps it facing the viewer), so it swings with the arm.
  */
 
 export interface Outfitted {
@@ -47,47 +47,14 @@ function shell(p: ArtPart, fit: { grow: Vec3; shift: Vec3 }, color: string, surf
   return { shape: p.shape, at, size, color, surface, tilt: p.tilt, yaw: p.yaw, roll: p.roll, mirror: p.mirror, feature: p.feature, ...(parent ? { parent } : {}) };
 }
 
-/** The held item's pieces, gripped at hand part `h`, pointing forward and up. */
-function heldParts(h: ArtPart, def: ItemDef): ArtPart[] {
-  if (!h.at) return [];
-  const { art, dress, colours } = itemRecipe(def);
-  const has = new Set(dress.features ?? []);
-  const slot = new Map(Object.keys(art.colors).map((k, i) => [k, i + 1]));
-  const st = dress.stretch ?? [1, 1, 1];
-  const parts = art.parts.filter((p) => p.at && (!p.feature || (p.feature.startsWith('!') ? !has.has(p.feature.slice(1)) : has.has(p.feature))));
-  // Its length from foot to tip, in the recipe's own units.
-  let lo = Infinity;
-  let hi = -Infinity;
-  for (const p of parts) {
-    const y = (p.at?.[1] ?? 0) * st[1];
-    const r = mid(p.size[1]) * st[1];
-    lo = Math.min(lo, p.shape === 'cone' ? y : y - r);
-    hi = Math.max(hi, y + r);
-  }
-  if (!(hi > lo)) return [];
+/** The held item at hand part `h`: one flat card of its bag picture, gripped there, pointing forward and up. */
+function heldCard(h: ArtPart, id: string): ArtPart | null {
+  if (!h.at) return null;
   const hold = CONTENT.gear.hand.hold;
-  const k = (itemWorldSize(def) * hold.length) / (hi - lo);
-  const grip = lo + (hi - lo) * hold.grip;
-  const t = (hold.tilt * Math.PI) / 180;
+  // A ball round the grip as big as the item reaches, so the picture's canvas has room for it.
+  const r = itemWorldSize(itemDef(CONTENT, id)) * hold.length * Math.max(hold.grip, 1 - hold.grip);
   const parent = h.parent ?? h.id;
-  return parts.map((p) => {
-    const at = p.at as Vec3;
-    const f = at[0] * st[0] * k;
-    const u = (at[1] * st[1] - grip) * k;
-    const c = p.color.startsWith('#') ? p.color : hexOf(colours[slot.get(p.color) ?? 0] ?? 0xff00ff);
-    const size: Vec3 = [mid(p.size[0]) * st[0] * k, mid(p.size[1]) * st[1] * k, mid(p.size[2]) * st[2] * k];
-    return {
-      shape: p.shape,
-      at: [h.at![0] + f * Math.cos(t) + u * Math.sin(t), h.at![1] - f * Math.sin(t) + u * Math.cos(t), h.at![2] + at[2] * st[2] * k],
-      size,
-      color: c,
-      surface: dress.surfaces?.[p.color] ?? p.surface,
-      tilt: (p.tilt ?? 0) + hold.tilt,
-      yaw: p.yaw,
-      roll: p.roll,
-      ...(parent ? { parent } : {}),
-    };
-  });
+  return { shape: 'ball', at: h.at, size: [r, r, r], color: '#000000', tilt: hold.tilt, card: id, ...(parent ? { parent } : {}) };
 }
 
 /** Strips the wear count off an item id: the same piece looks the same however worn. */
@@ -119,9 +86,9 @@ export function outfitted(id: ArtId, def: ArtDef, e: Entity): Outfitted | null {
     }
     hides.push(...(fit.hides ?? []));
   }
-  const hd = held ? fresh(held) : undefined;
   const hand = def.parts.find((p) => p.wear === HAND_SLOT);
-  if (hd && hand) extra.push(...heldParts(hand, hd));
+  const card = held && hand ? heldCard(hand, base(held)) : null;
+  if (card) extra.push(card);
   if (built.size > 400) built.clear();
   o = { id: key, def: extra.length ? { ...def, parts: [...def.parts, ...extra] } : def, hides };
   built.set(key, o);

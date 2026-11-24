@@ -27,6 +27,8 @@ export interface Solid {
   surface: Surface;
   /** The joint it moves with (index into Built.joints), or -1. */
   joint: number;
+  /** An item drawn here as its flat picture (ArtPart.card), not ray-cast. */
+  card?: string;
 }
 
 /** A fixed part that can swing: a leg, a head, a tail. */
@@ -161,7 +163,7 @@ export function buildArt(def: ArtDef, seed: number, dress?: DressDef): Built {
       const c: [number, number, number] = [at[0], at[1], at[2] * side];
       const size = sizeOf(p);
       const lc = colorOf(p.color, p.shade ?? 0);
-      solids.push({ shape: p.shape, c, a, size, color: lc.color, region: lc.region, tone: lc.tone, surface: dress?.surfaces?.[p.color] ?? p.surface ?? 'smooth', joint });
+      solids.push({ shape: p.shape, c, a, size, color: lc.color, region: lc.region, tone: lc.tone, surface: dress?.surfaces?.[p.color] ?? p.surface ?? 'smooth', joint, ...(p.card ? { card: p.card } : {}) });
       const link = linkOf(p.shape, c, a, size, joint);
       for (const child of p.children ?? []) grow(child, [link], depth + 1);
     }
