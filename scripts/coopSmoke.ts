@@ -6,6 +6,7 @@ import { CONTENT, thingDef } from '../src/content';
 import { REGION_SIZE, siteInRegion } from '../src/sim/world/sites';
 import { SharedLogTracker, applySharedLog, cleanFriendId, cleanInput, isGuestMessage, snapshotFor } from '../src/net/messages';
 import { GuestView } from '../src/net/prediction';
+import type { InputQueues } from '../src/sim/inputQueue';
 import type { EntitySnapshot } from '../src/types';
 import type { Entity, InputSnapshot } from '../src/types';
 import { CHUNK_SIZE, Tile, emptyInput, packKey } from '../src/types';
@@ -86,8 +87,35 @@ function tick(sim: Simulation, friend: Partial<InputSnapshot>[] = []): void {
   tick(sim, burst);
   for (let i = 0; i < 12; i++) tick(sim);
   check('a burst of inputs keeps every press', count(f, 'manaTonic') === before - 7, `left ${count(f, 'manaTonic')}`);
-  const waiting = (sim as unknown as { inputs: Map<string, InputSnapshot[]> }).inputs.get('friend')?.length ?? 0;
+  const waiting = (sim as unknown as { inputs: InputQueues }).inputs.waiting('friend');
   check('a burst of inputs is caught up on', waiting === 0, `${waiting} still waiting`);
+}
+
+// A friend walking while their inputs arrive unevenly (none one tick, two the next): wherever the host
+// says they are, it is where their own inputs alone would have put them, so their screen is not pulled back.
+{
+  const walk = (i: number): Partial<InputSnapshot> => ({ seq: 100 + i, forward: 1, strafe: i % 40 < 20 ? 0 : 1, yaw: 0.3 });
+  const steady = party(31);
+  const at: { x: number; y: number }[] = [];
+  for (let i = 0; i < 80; i++) {
+    tick(steady, [walk(i)]);
+    const e = player(steady, 'friend');
+    at[100 + i] = { x: e.pos.x, y: e.pos.y };
+  }
+  const bumpy = party(31);
+  const arrive = [1, 0, 2, 1, 1, 0, 0, 3, 1, 0, 2, 1];
+  let next = 0;
+  let worst = 0;
+  for (let t = 0; next < 80; t++) {
+    const n = arrive[t % arrive.length] ?? 1;
+    const batch: Partial<InputSnapshot>[] = [];
+    for (let k = 0; k < n && next < 80; k++) batch.push(walk(next++));
+    tick(bumpy, batch);
+    const e = player(bumpy, 'friend');
+    const want = at[e.player?.input.seq ?? 0];
+    if (want) worst = Math.max(worst, Math.hypot(e.pos.x - want.x, e.pos.y - want.y));
+  }
+  check('uneven arrival of a friend\'s inputs does not pull them back', worst < 0.3, `${worst.toFixed(2)} m off at worst`);
 }
 
 // Bad messages from a friend never crash the host.

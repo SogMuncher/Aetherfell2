@@ -2,7 +2,7 @@ import { CONTENT, setAirMoisture } from '../content';
 import { breakItem } from './breakage';
 import { type Command, type Entity, type InputSnapshot, type ItemStack, type SimContext, type SimEvent, type SimState, type SimSystem, type SpawnInit, TICK_DT, type ThingId, type WorldSampler, emptyInput, emptyQueues, unpackKey } from '../types';
 import { LatticeSampler, generateLatticeChunk } from './world/underworld';
-import { MAX_QUEUED_INPUTS, MAX_WAITING_INPUTS, canFold, foldInputs, hasPress, holdInput } from './inputQueue';
+import { InputQueues } from './inputQueue';
 import { Matter, Terrain, VolumeStore, WorldTiles, createWorldSystem, unloadFarChunks } from './world';
 import { SpatialHash, physicsSystem } from './physics';
 import { aiSystem } from './ai';
@@ -57,13 +57,7 @@ export class Simulation {
   private events: SimEvent[] = [];
   private systems: SimSystem[] = [];
   private ctx: SimContext;
-  /**
-   * Inputs waiting to be played, per player, oldest first. A friend's inputs arrive over the network
-   * in bursts and gaps; each tick plays exactly one, so a press is never repeated or lost.
-   */
-  private inputs = new Map<string, InputSnapshot[]>();
-  /** Input numbers already taken in, per player (recent ones only). */
-  private seen = new Map<string, Set<number>>();
+  private inputs = new InputQueues();
 
   constructor(state: SimState) {
     this.state = state;
@@ -317,8 +311,7 @@ export class Simulation {
             }
             state.entities.delete(id);
             delete state.players[c.playerId];
-            this.inputs.delete(c.playerId);
-            this.seen.delete(c.playerId);
+            this.inputs.forget(c.playerId);
             this.events.push({ type: 'playerLeft', playerId: c.playerId });
           }
           break;
@@ -328,28 +321,7 @@ export class Simulation {
           if (id === undefined) break;
           const p = state.entities.get(id)?.player;
           if (!p) break;
-          const queue = this.inputs.get(c.playerId) ?? [];
-          this.inputs.set(c.playerId, queue);
-          const seq = c.input.seq;
-          if (seq <= 0) {
-            queue.push(c.input);
-            break;
-          }
-          // Inputs come by two roads (a fast one that may lose or reorder them, and a sure one for
-          // presses), so the same one can arrive twice or late. Each is played once, in order.
-          const seen = this.seen.get(c.playerId) ?? new Set<number>();
-          this.seen.set(c.playerId, seen);
-          if (seen.has(seq)) break;
-          seen.add(seq);
-          if (seen.size > 256) for (const s of seen) if (s < seq - 200) seen.delete(s);
-          if (seq <= p.input.seq) {
-            // Too late to be played in its place: its movement is old news, but a press still counts.
-            if (hasPress(c.input)) queue.unshift({ ...foldInputs(c.input, holdInput(queue[0] ?? p.input)), seq: p.input.seq });
-            break;
-          }
-          let at = queue.length;
-          while (at > 0 && (queue[at - 1]?.seq ?? 0) > seq) at--;
-          queue.splice(at, 0, c.input);
+          this.inputs.add(c.playerId, c.input, p.input);
           break;
         }
         case 'cheat': {
@@ -363,26 +335,12 @@ export class Simulation {
     }
   }
 
-  /**
-   * Each player plays one waiting input per tick. With nothing new, they keep walking and looking the
-   * way they were but nothing is pressed again. If inputs pile up (the friend's clock runs a little
-   * fast), the oldest are folded together so they catch up without dropping a press.
-   */
+  /** Each player plays one waiting input per tick (see InputQueues.play). */
   private playInputs(): void {
     const { state } = this;
     for (const [pid, id] of Object.entries(state.players)) {
       const p = state.entities.get(id)?.player;
-      if (!p) continue;
-      const queue = this.inputs.get(pid);
-      if (queue && queue.length > MAX_QUEUED_INPUTS) queue.splice(0, queue.length - MAX_QUEUED_INPUTS);
-      let next = queue?.shift();
-      while (queue && next && queue.length > MAX_WAITING_INPUTS) {
-        const after = queue[0];
-        if (!after || !canFold(next, after)) break;
-        queue.shift();
-        next = foldInputs(next, after);
-      }
-      p.input = next ?? holdInput(p.input);
+      if (p) p.input = this.inputs.play(pid, p.input);
     }
   }
 
@@ -404,7 +362,6 @@ export class Simulation {
     }
     state.players = {};
     this.inputs.clear();
-    this.seen.clear();
   }
 
   /**

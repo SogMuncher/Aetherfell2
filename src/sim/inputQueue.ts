@@ -1,3 +1,4 @@
+// Each player's waiting inputs: taken in from two network roads, played one per tick, never repeated or lost.
 import type { InputSnapshot } from '../types';
 
 
@@ -42,4 +43,99 @@ export function foldInputs(a: InputSnapshot, b: InputSnapshot): InputSnapshot {
     wear: b.wear ?? a.wear,
     choice: b.choice ?? a.choice,
   };
+}
+
+/**
+ * Inputs waiting to be played, per player, oldest first. A friend's inputs arrive over the network
+ * in bursts and gaps; each tick plays exactly one, so a press is never repeated or lost.
+ */
+export class InputQueues {
+  private queues = new Map<string, InputSnapshot[]>();
+  /** Input numbers already taken in, per player (recent ones only). */
+  private seen = new Map<string, Set<number>>();
+  /** Ticks in a row a player was kept walking with no input from them (see `play`). */
+  private gaps = new Map<string, number>();
+  /** The newest input that really came from each player (played or not): its held keys are the freshest we know. */
+  private latest = new Map<string, InputSnapshot>();
+
+  /** How many inputs from this player wait to be played. */
+  waiting(playerId: string): number {
+    return this.queues.get(playerId)?.length ?? 0;
+  }
+
+  forget(playerId: string): void {
+    this.queues.delete(playerId);
+    this.seen.delete(playerId);
+    this.gaps.delete(playerId);
+    this.latest.delete(playerId);
+  }
+
+  clear(): void {
+    this.queues.clear();
+    this.seen.clear();
+    this.gaps.clear();
+    this.latest.clear();
+  }
+
+  /** Takes in one input; `current` is the one the player is playing now. */
+  add(playerId: string, input: InputSnapshot, current: InputSnapshot): void {
+    const queue = this.queues.get(playerId) ?? [];
+    this.queues.set(playerId, queue);
+    const seq = input.seq;
+    if (seq <= 0) {
+      queue.push(input);
+      return;
+    }
+    // Inputs come by two roads (a fast one that may lose or reorder them, and a sure one for
+    // presses), so the same one can arrive twice or late. Each is played once, in order.
+    const seen = this.seen.get(playerId) ?? new Set<number>();
+    this.seen.set(playerId, seen);
+    if (seen.has(seq)) return;
+    seen.add(seq);
+    if (seq > (this.latest.get(playerId)?.seq ?? 0)) this.latest.set(playerId, input);
+    if (seen.size > 256) for (const s of seen) if (s < seq - 200) seen.delete(s);
+    if (seq <= current.seq) {
+      // Too late to be played in its place: its movement is old news, but a press still counts.
+      if (hasPress(input)) queue.unshift({ ...foldInputs(input, holdInput(queue[0] ?? current)), seq: current.seq });
+      return;
+    }
+    let at = queue.length;
+    while (at > 0 && (queue[at - 1]?.seq ?? 0) > seq) at--;
+    queue.splice(at, 0, input);
+  }
+
+  /**
+   * The input a player plays this tick. With nothing new, they keep walking and looking the way they
+   * were but nothing is pressed again. That held step stands in for the input that is late (it is
+   * numbered as that one, so when it arrives only its presses still count): the host then moves a
+   * friend exactly one step per input, as the friend foresaw, instead of an extra step now and a
+   * lost one later. Only for a few ticks: after that the numbering goes back to the last real input, so a
+   * friend who went quiet is not run ahead and their next inputs all play. If inputs pile
+   * up (the friend's clock runs a little fast), the oldest are folded together so they catch up.
+   */
+  play(playerId: string, current: InputSnapshot): InputSnapshot {
+    const queue = this.queues.get(playerId);
+    if (queue && queue.length > MAX_QUEUED_INPUTS) {
+      // Far behind: old movement goes, but nothing they pressed is lost.
+      const dropped = queue.splice(0, queue.length - MAX_QUEUED_INPUTS);
+      queue.unshift(...dropped.filter(hasPress));
+    }
+    let next = queue?.shift();
+    while (queue && next && queue.length > MAX_WAITING_INPUTS) {
+      const after = queue[0];
+      if (!after || !canFold(next, after)) break;
+      queue.shift();
+      next = foldInputs(next, after);
+    }
+    if (next) {
+      this.gaps.set(playerId, 0);
+      return next;
+    }
+    const gap = (this.gaps.get(playerId) ?? 0) + 1;
+    this.gaps.set(playerId, gap);
+    const real = this.latest.get(playerId);
+    if (current.seq <= 0 || !real) return holdInput(current);
+    const held = holdInput(real.seq >= current.seq ? real : current);
+    return { ...held, seq: gap <= MAX_WAITING_INPUTS ? Math.max(current.seq, real.seq) + 1 : real.seq };
+  }
 }

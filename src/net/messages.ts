@@ -3,6 +3,7 @@
  * without a browser (scripts/coopSmoke.ts). Everything that comes from another computer is
  * `unknown` until it has been checked here.
  */
+import { deflateSync, inflateSync, strFromU8, strToU8 } from 'fflate';
 import type { CheatValue, Entity, EntitySnapshot, GuestMessage, HostMessage, InputSnapshot, SharedLog, SimState, ThrowAim, WearRequest } from '../types';
 
 export function isGuestMessage(v: unknown): v is GuestMessage {
@@ -169,4 +170,24 @@ export function snapshotFor(state: SimState, playerId: string, radius: number): 
     if (dx * dx + dy * dy <= r2) entities.push(e);
   }
   return { tick: state.tick, entities, weather: state.weather, players: state.players };
+}
+
+/**
+ * The fast road's wire format: the message as JSON, squeezed with deflate. Several times cheaper for
+ * the host to make than PeerJS's own packer (which cost more than running the world itself, for every
+ * friend, ten times a second) and small enough to go out as a few packets, so one lost packet rarely
+ * loses an update. Only plain data travels this way (the save goes by the sure road).
+ */
+export function packFast(msg: HostMessage | GuestMessage): Uint8Array {
+  return deflateSync(strToU8(JSON.stringify(msg)), { level: 1 });
+}
+
+/** Undoes packFast; anything that is not a packed message comes back as null (then checked like any message). */
+export function unpackFast(raw: unknown): unknown {
+  try {
+    const bytes = raw instanceof Uint8Array ? raw : raw instanceof ArrayBuffer ? new Uint8Array(raw) : null;
+    return bytes ? (JSON.parse(strFromU8(inflateSync(bytes))) as unknown) : null;
+  } catch {
+    return null;
+  }
 }
