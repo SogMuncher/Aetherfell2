@@ -1,27 +1,14 @@
 import type { DamageKind, Entity, ReadonlyTiles, SimEvent, SimState, WeaponStats } from '../types';
-import { unpackKey, unpackSpot } from '../types';
 import { TILES } from '../content/tiles';
-import { CONTENT, isNight, itemDef, rainAt, thingDef, spellFor, weaponStats } from '../content';
+import { CONTENT, itemDef, thingDef, spellFor, weaponStats } from '../content';
 import { AudioEngine } from './engine';
+import { Ambience } from './ambience';
 import { MusicEngine, STYLE_IDS } from './music';
 import type { MusicStatus, StyleId } from './music';
 import { Recent, burstSpell, castSpell, effectBurst, fatigue, individual, jit, murmur, rnd, runeMotif, speak, speciesVoice, statusOn, step, strike, swing } from './sfx';
 import type { Utterance, VoiceProfile } from './sfx';
 
-interface Layer {
-  filter: BiquadFilterNode;
-  gain: GainNode;
-}
-
 const NOTE_NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-
-/** A nearby creature that might call out (howl at night, bleat by day). */
-interface Caller {
-  x: number;
-  y: number;
-  id: number;
-  voice: VoiceProfile;
-}
 
 /**
  * Sound for the whole game. Reacts to sim events (steps, swings, spells, doors, fire) with sounds
@@ -35,16 +22,10 @@ interface Caller {
  */
 export class GameAudio {
   private e: AudioEngine | null = null;
-  private layers: Record<'wind' | 'gust' | 'rain' | 'fire' | 'water' | 'leaves', Layer> | null = null;
+  private ambience: Ambience | null = null;
   private listener = { x: 0, y: 0, angle: 0, z: 0 };
-  private nextBird = 2;
-  private nextCricket = 1;
   private music: MusicEngine | null = null;
   private musicSeed = -1;
-  private nextCrackle = 0;
-  private surroundings = { fire: 0, water: 0, trees: 0, danger: 0 };
-  private callers: Caller[] = [];
-  private nextCall = 12;
   private tiles: ReadonlyTiles | null = null;
   private keyRoot = 0;
   private recent = new Recent();
@@ -73,14 +54,7 @@ export class GameAudio {
     e.master.gain.value = this.volume * 0.8 * this.presence;
     e.sfx.gain.value = this.mix.effects;
     e.amb.gain.value = 0.9 * this.mix.ambience;
-    this.layers = {
-      wind: e.layer('lowpass', 420, 0.6, e.amb),
-      gust: e.layer('bandpass', 800, 1.1, e.amb),
-      rain: e.layer('highpass', 1600, 0.4, e.amb),
-      fire: e.layer('bandpass', 1100, 0.7, e.amb),
-      water: e.layer('lowpass', 520, 0.5, e.amb),
-      leaves: e.layer('bandpass', 3200, 0.8, e.amb),
-    };
+    this.ambience = new Ambience(e, (x, y, d) => this.at(x, y, d), (o) => this.voiceOf(o));
     try {
       const musicOut = e.ctx.createGain();
       musicOut.gain.value = 0.75;
@@ -524,6 +498,8 @@ export class GameAudio {
         break;
       }
       case 'thunder': {
+        // Thunder belongs to the sky: nobody hears it deep below.
+        if (CONTENT.realms[state.realm]?.sky === false) break;
         const w = this.where(ev.x, ev.y);
         const delay = Math.min(3, w.d / 340);
         // A crack, then a roll that rumbles on for a while; far strikes lose their crack.
@@ -542,8 +518,8 @@ export class GameAudio {
   /** Called every frame: steer the ambient bed and schedule birds, crickets, howls and music. */
   update(state: SimState, tiles: ReadonlyTiles, me: Entity | null, dt: number): void {
     const e = this.e;
-    const L = this.layers;
-    if (!e || !L) return;
+    const amb = this.ambience;
+    if (!e || !amb) return;
     this.tiles = tiles;
     if (this.music) {
       try {
@@ -559,111 +535,13 @@ export class GameAudio {
     }
     if (!me) return;
     this.listener = { x: me.pos.x, y: me.pos.y, angle: me.angle, z: me.z };
-    const w = state.weather;
-    const now = e.now;
     this.sampleTimer -= dt;
     if (this.sampleTimer <= 0) {
       this.sampleTimer = 0.5;
-      this.survey(state, tiles, me);
       // Chimes and rune figures follow the key the score is in.
       const key = this.music ? NOTE_NAMES.indexOf(this.music.status().key) : -1;
       if (key >= 0) this.keyRoot = key;
     }
-    const s = this.surroundings;
-    const wind = Math.hypot(w.wind.x, w.wind.y);
-    const altitude = Math.max(0, Math.min(1, me.z / 160));
-    const set = (l: Layer, v: number, f?: number): void => {
-      l.gain.gain.setTargetAtTime(Math.min(0.3, Math.max(0, v)), now, 0.5);
-      if (f) l.filter.frequency.setTargetAtTime(f, now, 0.6);
-    };
-    set(L.wind, 0.025 + wind * 0.008 + altitude * 0.06, 260 + wind * 50 + altitude * 300);
-    const gusting = 0.5 + 0.5 * Math.sin(now * 0.7) * Math.sin(now * 0.23 + 1);
-    set(L.gust, (wind > 3 ? (wind - 3) * 0.006 : 0) * gusting + altitude * 0.03 * gusting, 500 + gusting * 900);
-    // Rain falls only under storm cells: what you hear is the rain where you stand.
-    // Under a roof the storm is muffled to a patter.
-    const rain = rainAt(CONTENT.sky, w, me.pos.x, me.pos.y) * (state.volume.openSky(me.pos.x, me.pos.y, me.z + 1) ? 1 : 0.35);
-    set(L.rain, rain * 0.16, 1400 + rain * 1200);
-    set(L.fire, s.fire * 0.16, 900 + s.fire * 600);
-    set(L.water, s.water * 0.1);
-    set(L.leaves, s.trees * (0.01 + wind * 0.004));
-
-    const day = !isNight(CONTENT.rules.day, w.time);
-    if (s.fire > 0.05 && now > this.nextCrackle) {
-      this.nextCrackle = now + rnd(0.06, 0.2) / Math.max(0.2, s.fire);
-      e.burst(e.amb, now, 0.02, 0.08 * Math.min(s.fire, CONTENT.rules.fire.audio.crackle), 'highpass', rnd(2000, 5000), { q: 1 });
-    }
-    if (day && w.rain < 0.3 && s.trees > 0.05 && now > this.nextBird) {
-      this.nextBird = now + rnd(1.5, 6) / (0.4 + s.trees);
-      this.birdCall();
-    }
-    if (!day && w.rain < 0.2 && now > this.nextCricket) {
-      this.nextCricket = now + rnd(0.3, 1.2);
-      const f = rnd(4200, 5200);
-      const pan = e.spatial(rnd(-1, 1), rnd(4, 18));
-      if (pan) for (let i = 0; i < 3; i++) e.tone(pan, 'sine', f, now + i * 0.05, 0.035, 0.02, { attack: 0.004 });
-    }
-    // Creatures out there call now and then in their own voices: hunters by night, shy things by day.
-    if (now > this.nextCall) {
-      const awake = this.callers.filter((c) => (c.voice.calls === 'night' ? !day : c.voice.calls === 'day' ? day : false));
-      const c = awake[Math.floor(Math.random() * awake.length)];
-      this.nextCall = now + (c ? rnd(14, 40) / Math.sqrt(awake.length) : rnd(5, 10));
-      const out = c ? this.at(c.x, c.y, 110) : null;
-      if (c && out) speak(e, out, now, c.voice, 'call', c.voice.gesture === 'howl' ? 2.2 : 1.4);
-    }
-  }
-
-  private survey(state: SimState, tiles: ReadonlyTiles, me: Entity): void {
-    let fire = 0;
-    for (const k of state.burning) {
-      const { x, y } = unpackKey(k);
-      const d = Math.hypot(x - me.pos.x, y - me.pos.y);
-      if (d < 25) fire += 1 / (1 + d * 0.4);
-    }
-    for (const k of state.volume.burningCells) {
-      const c = unpackSpot(k);
-      const d = Math.hypot(c.x - me.pos.x, c.y - me.pos.y);
-      if (d < 25) fire += 1 / (1 + d * 0.4);
-    }
-    let water = 0;
-    let trees = 0;
-    for (let a = 0; a < 12; a++) {
-      for (const r of [4, 10, 18]) {
-        const x = me.pos.x + Math.cos(a * 0.52) * r;
-        const y = me.pos.y + Math.sin(a * 0.52) * r;
-        if (tiles.ground(x, y) < tiles.waterLevel(x, y)) water += 1 / r;
-        const info = TILES[tiles.kind(x, y)];
-        trees += info.leafy ?? 0;
-      }
-    }
-    let danger = 0;
-    const callers: Caller[] = [];
-    for (const o of state.entities.values()) {
-      if (o.dead || !o.ai || o.id === me.id) continue;
-      const d = Math.hypot(o.pos.x - me.pos.x, o.pos.y - me.pos.y);
-      if (o.ai.mode === 'chase' && d < 30) danger++;
-      // Calls come from creatures at a distance; ones in your face growl and cry instead.
-      if (d < 12 || d > 100 || o.ai.mode === 'chase' || o.ai.mode === 'flee') continue;
-      const v = this.voiceOf(o);
-      if (v && v.calls !== 'never') callers.push({ x: o.pos.x, y: o.pos.y, id: o.id, voice: v });
-    }
-    this.callers = callers;
-    this.surroundings = { fire: Math.min(1, fire * 0.3), water: Math.min(1, water), trees: Math.min(1, trees / 12), danger };
-  }
-
-  private birdCall(): void {
-    const e = this.e;
-    if (!e) return;
-    const out = e.spatial(rnd(-1, 1), rnd(6, 30));
-    if (!out) return;
-    const kind = Math.floor(Math.random() * 3);
-    const t = e.now;
-    const base = rnd(2200, 3600);
-    if (kind === 0) {
-      for (let i = 0; i < 3; i++) e.tone(out, 'sine', base, t + i * 0.12, 0.08, 0.03, { from: base * 1.3, glide: 0.06 });
-    } else if (kind === 1) {
-      e.tone(out, 'sine', base * 0.8, t, 0.35, 0.025, { from: base * 1.2, glide: 0.3, vibrato: 0.06, vibratoRate: 30 });
-    } else {
-      for (let i = 0; i < 5; i++) e.tone(out, 'triangle', base * (1 + (i % 2) * 0.15), t + i * 0.07, 0.05, 0.02);
-    }
+    amb.update(state, tiles, me, dt);
   }
 }

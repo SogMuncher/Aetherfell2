@@ -158,3 +158,41 @@ export const rise: Patch = (s, out, n) => {
   s.osc('sawtooth', n.freq, n.t, n.t + n.dur + 0.3, lp, -8);
   s.osc('sawtooth', n.freq, n.t, n.t + n.dur + 0.3, lp, 8, false);
 };
+
+/** Ritual drum: a huge, slow skin, felt more than heard. */
+export const ritualDrum: Patch = (s, out, n) => {
+  const g = s.gain(out);
+  const end = s.adsr(g.gain, n.t, 0.01, n.vel * 0.55, 0.004, 0.9, 0.0001, 0.3);
+  const o = s.osc('sine', 70, n.t, end, g);
+  o.frequency.exponentialRampToValueAtTime(34, n.t + 0.5);
+  const ng = s.gain(out);
+  s.adsr(ng.gain, n.t, 0.01, n.vel * 0.12, 0.002, 0.2, 0.0001, 0.1);
+  s.noiseSrc(n.t, n.t + 0.4, s.filter('lowpass', 400, 0.8, ng));
+};
+
+/** Low tom: a dry, close hand drum that keeps a quiet pulse. */
+export const lowTom: Patch = (s, out, n) => {
+  const g = s.gain(out);
+  const end = s.adsr(g.gain, n.t, 0.01, n.vel * 0.3, 0.002, 0.28, 0.0001, 0.08);
+  const o = s.osc('triangle', n.freq > 40 ? n.freq : 120, n.t, end, g);
+  o.frequency.exponentialRampToValueAtTime(n.freq > 40 ? n.freq * 0.6 : 72, n.t + 0.2);
+};
+
+/** Bones: a dry clack and rattle. */
+export const bones: Patch = (s, out, n) => {
+  for (const [dt, v] of [[0, 1], [0.03, 0.5], [0.055, 0.3]] as const) {
+    const g = s.gain(out);
+    s.adsr(g.gain, n.t + dt, 0.01, n.vel * 0.1 * v, 0.001, 0.03, 0.0001, 0.02);
+    s.noiseSrc(n.t + dt, n.t + dt + 0.06, s.filter('bandpass', 1800 + Math.random() * 900, 5, g));
+  }
+};
+
+/** Chains: a cold metallic shiver of small links. */
+export const chains: Patch = (s, out, n) => {
+  for (let k = 0; k < 5; k++) {
+    const t = n.t + k * 0.025 + Math.random() * 0.02;
+    const g = s.gain(out);
+    const end = s.adsr(g.gain, t, 0.01, n.vel * 0.025, 0.001, 0.12, 0.0001, 0.05);
+    s.osc('square', 2400 + Math.random() * 2600, t, end, s.filter('highpass', 3000, 2, g), 0, k === 0);
+  }
+};

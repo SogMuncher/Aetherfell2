@@ -34,5 +34,11 @@ export const VARIETY = {
   vel: 0.15,
 };
 
+/**
+ * Tension: every reaction adds some, and it fades smoothly (halving every `halfLife` seconds). While it is up the
+ * reactions rise by that many scale steps, so a flurry of any reactions climbs and then settles back down.
+ */
+export const TENSION = { add: 1, max: 7, halfLife: 1.6 };
+
 /** Stray instruments that may break into any style for a moment. */
-export const ROGUES: readonly InstrumentId[] = ['ocarina', 'fiddle', 'reed', 'dulcimer', 'marimba', 'panpipe', 'lute', 'flute', 'pizzicato'];
+export const ROGUES: readonly InstrumentId[] = ['duduk', 'hurdyGurdy', 'reed', 'dulcimer', 'boneFlute', 'wraith', 'lyre', 'musicBox', 'pizzicato'];
