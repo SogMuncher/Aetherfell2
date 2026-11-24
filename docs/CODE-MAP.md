@@ -8,7 +8,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `buildPlay.mjs` (24) `npm run build`: typecheck + one-file play.html (CI also runs it; see docs/PIPELINE.md)
 - `artSmoke.ts` (179) check: every picture is built from parts, none hand-drawn
 - `cheatsSmoke.ts` (182) Headless checks for the settings list and the debug cheats (which travel as sim commands).
-- `coopSmoke.ts` (357) check: host/guest inputs, snapshots, prediction, shared record
+- `coopSmoke.ts` (385) check: host/guest inputs, snapshots, prediction, shared record
 - `dataSmoke.ts` (140) Data-friendliness checks: one day clock, tile numbers from the ledger, effects and
 - `fireBench.ts` (30) Benchmark (manual): lights a big brush field, prints burning count, burn-out time and tick cost.
 - `fireSmoke.ts` (21) Headless check that a grass/brush fire spreads with wind and stops in rain.
@@ -137,8 +137,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `main.ts` (347) the only wiring: input -> sim (or guest replica) -> net/audio/render
 
 ## src/net/
-- `messages.ts` (172) validate and shape every co-op message
-- `net.ts` (271) PeerJS transport: host/guest connections, snapshots
+- `messages.ts` (193) validate and shape every co-op message
+- `net.ts` (275) PeerJS transport: host/guest connections, snapshots
 - `prediction.ts` (76) guest-side view and input replay
 
 ## src/render/
@@ -244,8 +244,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/
 - `breakage.ts` (18) ctx.breakItem: an item's onBreak burst + what it breaks into
-- `inputQueue.ts` (45) queueing/folding of guest inputs
-- `simLoop.ts` (489) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
+- `inputQueue.ts` (141) queueing/folding of guest inputs
+- `simLoop.ts` (446) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
 - `simState.ts` (96) rng, createState, newPlayer
 - `templates.ts` (65) Builds an entity from its definition. Only instance data lives on the entity.
 

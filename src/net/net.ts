@@ -1,7 +1,7 @@
 import Peer from 'peerjs';
 import type { DataConnection, PeerOptions } from 'peerjs';
 import type { CheatValue, Command, EntitySnapshot, GuestMessage, HostMessage, InputSnapshot, NetStatus, SharedLog, SimEvent, SimState } from '../types';
-import { SharedLogTracker, cleanCheatValue, cleanFriendId, cleanInput, inputHasPress, isGuestMessage, isHostMessage, snapshotFor } from './messages';
+import { SharedLogTracker, cleanCheatValue, cleanFriendId, cleanInput, inputHasPress, isGuestMessage, isHostMessage, packFast, snapshotFor, unpackFast } from './messages';
 
 const PREFIX = 'aetherfell2-';
 
@@ -56,7 +56,7 @@ function friendId(): string {
 interface Guest {
   /** The sure road: ordered and reliable. Joining, presses, events, the shared record. */
   sure: DataConnection;
-  /** The fast road: unordered and may drop messages. Movement and snapshots, so one late packet never holds the rest up. */
+  /** The fast road: unordered and may drop messages. Movement and snapshots, so one late packet never holds the rest up. Packed by `packFast`. */
   fast: DataConnection | null;
   playerId: string;
   heard: number;
@@ -107,7 +107,8 @@ export class NetSession {
         if (g) g.fast = conn;
         else this.earlyFast.set(conn.peer, conn);
       }
-      conn.on('data', (raw) => {
+      conn.on('data', (data) => {
+        const raw = conn.label === 'fast' ? unpackFast(data) : data;
         if (!isGuestMessage(raw)) return;
         const g = this.guests.get(conn.peer);
         if (g) g.heard = performance.now();
@@ -187,18 +188,19 @@ export class NetSession {
       this.tiles.clear();
     }
     if (now.length) {
-      const msg: HostMessage = { t: 'events', events: now };
+      // Packed once for everyone (a big fire's tile changes shrink several times over).
+      const msg = packFast({ t: 'events', events: now });
       for (const g of this.guests.values()) if (g.sure.open) void g.sure.send(msg);
     }
     if (!snapTick) return;
     for (const g of this.guests.values()) {
       const msg: HostMessage = { t: 'snap', snap: snapshotFor(state, g.playerId, INTEREST) };
-      const road = g.fast?.open ? g.fast : g.sure;
-      if (road.open) void road.send(msg);
+      if (g.fast?.open) void g.fast.send(packFast(msg));
+      else if (g.sure.open) void g.sure.send(msg);
     }
     const log = this.shared.next(state);
     if (log) {
-      const m: HostMessage = { t: 'shared', log };
+      const m = packFast({ t: 'shared', log });
       for (const g of this.guests.values()) if (g.sure.open) void g.sure.send(m);
     }
   }
@@ -212,7 +214,9 @@ export class NetSession {
       this.status.message = `network: ${err.type}`;
     });
     peer.on('open', () => {
-      const onData = (raw: unknown): void => {
+      const onData = (data: unknown): void => {
+        // Everything but the welcome (which carries the save) comes packed by packFast.
+        const raw = data instanceof Uint8Array || data instanceof ArrayBuffer ? unpackFast(data) : data;
         if (!isHostMessage(raw)) return;
         if (raw.t === 'welcome') h.welcome(raw.playerId, raw.save instanceof Uint8Array ? raw.save : new Uint8Array(raw.save as ArrayBuffer));
         else if (raw.t === 'snap') h.snapshot(raw.snap);
@@ -233,7 +237,7 @@ export class NetSession {
           void conn.send(ping);
         }, PING_MS);
         // The fast road, opened once the sure one is up.
-        const fast = peer.connect(PREFIX + code, { reliable: false, label: 'fast' });
+        const fast = peer.connect(PREFIX + code, { reliable: false, label: 'fast', serialization: 'raw' });
         this.hostFast = fast;
         fast.on('data', onData);
         fast.on('close', () => {
@@ -265,7 +269,7 @@ export class NetSession {
   sendInput(input: InputSnapshot): void {
     if (!this.host?.open) return;
     const msg: GuestMessage = { t: 'input', input };
-    const road = !inputHasPress(input) && this.hostFast?.open ? this.hostFast : this.host;
-    void road.send(msg);
+    if (!inputHasPress(input) && this.hostFast?.open) void this.hostFast.send(packFast(msg));
+    else void this.host.send(msg);
   }
 }
