@@ -169,7 +169,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `viewFx.ts` (109) Motes over the held item: flames at a burning head, sparks, drops and puffs, advanced and painted each frame.
 - `viewPose.ts` (129) Held-item motion: poses as a hand position + blade direction, swing paths along arcs, and smooth settling betw
 - `itemCard.ts` (46) An item's bag picture as a card a body holds: where its grip is and which way it points on the picture
-- `paintFinish.ts` (108) Last touches on a painted body picture: dark outlines, and flat item pictures (held items) stamped facing the
+- `paintFinish.ts` (112) Last touches on a painted body picture: dark outlines, and flat item pictures (held items) stamped facing the
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (200) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
