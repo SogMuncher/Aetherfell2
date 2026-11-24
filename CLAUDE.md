@@ -26,6 +26,12 @@ traits, never ids. No theme packs, no per-feature special cases. Free to change 
 9. Finish with a short plain-language report (what you can now do in the game), not jargon.
 10. A new feature that exposes a design flaw: fix the shared system properly, don't patch around it.
 
+## Cheap habits (cache reads are the biggest cost: every tool call re-reads the whole thread)
+- Fewest turns: put independent calls in one message, chain shell steps with `&&`, plan all edits then make them together.
+- Short output: `grep -n`, `sed -n 'a,bp'`, `| tail -20`. Never print whole files, logs or diffs. Don't re-read to verify.
+- One ask per thread; an unrelated ask is a new thread (a long thread re-reads all its history every turn).
+- After the PR, answer CI events only when they need a fix; auto-merge does the rest.
+
 ## Hard code rules
 Strict TS, no `any`. Flow `input -> sim (20 Hz fixed, Commands) -> render (read-only)`; audio/net react to events.
 `sim/*` folders never import each other (only `simLoop.ts` wires them). One entry `src/main.ts`. Determinism: `ctx.rng`,
@@ -41,11 +47,11 @@ never `Math.random()`/clock in sim. `SimState` is plain data. All art/audio gene
 | 3D layer, buildings, realms, underworld | `docs/REALMS.md` | `realms` |
 | effects, melee, magic, armour | `docs/COMBAT.md` | `combat` |
 | player, skills, creatures, social, saves, cheats | `docs/RPG.md` | `rpg` |
-| drawing: terrain, sprites, particles | `docs/RENDER.md` | `render` |
+| drawing (sky/clouds: `RENDER-SKY.md`, sprites/held item: `RENDER-SPRITES.md`, GPU passes: `GPU-RENDER.md`) | `docs/RENDER.md` | `render` |
 | HUD, windows, input, settings | `docs/UI.md` | `ui` (tsc only) |
 | sound and music | `docs/AUDIO.md` | `audio` |
 | co-op networking | `docs/MULTIPLAYER.md` | `multiplayer` |
-One script also works: `npm run check gearSmoke`. Packages install themselves at session start.
+One script also works: `npm run check gearSmoke`. Packages install themselves on the first check.
 
 ## Ship it (same every thread, no exploring)
 1. `npm run check <area>` green -> `git add -A && git commit -m "<what changed>" && git push -u origin <branch>`.
