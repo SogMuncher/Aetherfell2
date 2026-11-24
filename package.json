@@ -12,7 +12,7 @@
     "build:vite": "vite build",
     "check:data": "node scripts/check.mjs dataSmoke --no-tsc",
     "check:boot": "vite build && node scripts/bootSmoke.mjs",
-    "check": "node scripts/codemap.mjs && node scripts/check.mjs",
+    "check": "(test -d node_modules || npm ci --silent) && node scripts/codemap.mjs && node scripts/check.mjs",
     "codemap": "node scripts/codemap.mjs --big"
   },
   "dependencies": {
