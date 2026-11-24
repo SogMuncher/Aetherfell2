@@ -38,6 +38,8 @@ export interface Section {
   motif: MotifNote[];
   /** Drum hit maps per layer index. */
   drums: Map<number, boolean[]>;
+  /** A rest with no music at all, only the world's own sounds. */
+  silent: boolean;
 }
 
 /** A world's own short anthem, derived from its seed so friends in the same world share it. */
@@ -213,11 +215,12 @@ export function compose(r: MusicRng, o: ComposeOpts): Section {
   if (o.kind === 'lift') tempo = Math.min(def.tempo[1] + 6, tempo + 4);
   const meterId = o.meter ?? (sameStyle && prev && r.chance(0.6) ? prev.meterId : r.pick(def.meters));
   const meter = METERS[meterId];
-  const bars = o.kind === 'intro' ? (tempo < 72 || meter.steps > 16 ? 2 : 4) : o.kind === 'rest' ? r.pick([4, 6, 8]) : r.pick(def.sectionBars);
+  const silent = o.kind === 'rest' && r.chance(def.silence);
+  const bars = o.kind === 'intro' ? (tempo < 72 || meter.steps > 16 ? 2 : 4) : o.kind === 'rest' ? r.pick(silent ? [8, 12, 16] : [4, 6, 8]) : r.pick(def.sectionBars);
   const { chordAt, starts } = buildChords(r, def, bars);
   const useTheme = def.melody.theme && r.chance(o.kind === 'lift' ? 0.7 : 0.35);
   const motif = buildMotif(r, def, meter, useTheme ? o.theme : null);
-  return { style: o.style, def, kind: o.kind, key, modeId, mode, tempo, meterId, meter, bars, chordAt, chordStarts: starts, motif, drums: buildDrums(r, def, meter) };
+  return { style: o.style, def, kind: o.kind, key, modeId, mode, tempo, meterId, meter, bars, chordAt, chordStarts: starts, motif, drums: buildDrums(r, def, meter), silent };
 }
 
 /** Next section kind inside the same style. */

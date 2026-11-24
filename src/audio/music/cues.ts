@@ -6,8 +6,11 @@ import type { SignalName } from './signals';
 /** Where on the music's grid a cue lands: right away, next sixteenth, eighth, beat or bar. */
 export type GridUnit = 'now' | 'step' | 'eighth' | 'beat' | 'bar';
 
-/** An instrument, or `@role` = whatever the current style plays in that role (so cues sound like the place). */
-export type Voice = InstrumentId | `@${LayerRole}`;
+/**
+ * An instrument, `@role` = whatever the current style plays in that role (so cues sound like the place), or
+ * `@lead` = one of the style's lead voices (StyleDef.leads), picked fresh for each reaction.
+ */
+export type Voice = InstrumentId | `@${LayerRole}` | '@lead';
 
 export interface CueNote {
   voice: Voice;
@@ -35,18 +38,17 @@ export interface CueNote {
  * roles plus one bell family. Never drums, noise or booms: those belong to the sound effects, so the two never clash.
  * Stingers (style changes, big moments) may use any voice.
  */
-export const REACTION_KIT: readonly Voice[] = ['@melody', '@stab', '@bass', '@counter', '@arp', 'bell', 'celesta', 'kalimba', 'harp', 'glass'];
+export const REACTION_KIT: readonly Voice[] = ['@lead', '@melody', '@stab', '@bass', '@counter', '@arp', 'bell', 'celesta', 'kalimba', 'harp', 'glass'];
 
 export interface CueDef {
   grid: GridUnit;
   /** A stinger, free of the reaction language (style changes, discoveries, your death). */
   stinger?: boolean;
   notes: readonly CueNote[];
+  /** Other ways to say the same thing; each playing picks one of `notes` or these. */
+  forms?: readonly (readonly CueNote[])[];
   /** Seconds before this cue may sound again. */
   cooldown?: number;
-  /** Repeats within `streak` seconds climb this many scale degrees each (a combo rises). */
-  climb?: number;
-  streak?: number;
   /** Opens by quoting the world's own theme. */
   theme?: { voice: Voice; or?: InstrumentId; oct: number; count: number; vel: number };
   /** Nudges the mood afterwards. */
@@ -63,35 +65,52 @@ const chordOf = (voice: Voice, semis: readonly number[], vel: number): CueNote[]
 export const CUES = {
   // --- Fight reactions (spells, traps and breakage already have strong sound effects, so the music leaves them be) ---
   strike: {
-    grid: 'eighth', cooldown: 0.12, climb: 1, streak: 2.5,
+    grid: 'eighth', cooldown: 0.12,
     notes: [
-      { voice: '@stab', or: 'horn', chord: true, oct: 64, len: 1.5, vel: 0.55 },
-      { voice: '@melody', or: 'horn', deg: 4, oct: 72, len: 1, vel: 0.45, at: 1 },
+      { voice: '@lead', or: 'strings', deg: 0, oct: 67, len: 1, vel: 0.55 },
+      { voice: '@lead', or: 'strings', deg: 4, oct: 67, len: 2, vel: 0.5, at: 1 },
+    ],
+    forms: [
+      [{ voice: '@lead', or: 'strings', deg: 2, oct: 67, len: 3, vel: 0.55 }],
+      [{ voice: '@lead', or: 'strings', deg: 4, oct: 69, len: 1, vel: 0.5 }, { voice: '@lead', or: 'strings', deg: 3, oct: 69, len: 2, vel: 0.45, at: 1 }],
+      [{ voice: '@stab', or: 'warHorn', chord: true, oct: 60, len: 1.5, vel: 0.45 }, { voice: '@lead', or: 'strings', deg: 4, oct: 69, len: 2, vel: 0.5, at: 1.5 }],
+      [{ voice: '@lead', or: 'strings', deg: 0, oct: 64, len: 0.5, vel: 0.45 }, { voice: '@lead', or: 'strings', deg: 1, oct: 64, len: 0.5, vel: 0.45, at: 0.5 }, { voice: '@lead', or: 'strings', deg: 2, oct: 64, len: 2, vel: 0.55, at: 1 }],
     ],
   },
   strikeHeavy: {
     grid: 'beat', cooldown: 0.4,
     notes: [
-      { voice: '@bass', or: 'cello', deg: 0, oct: 40, len: 3, vel: 0.75 },
-      { voice: '@stab', or: 'horn', chord: true, oct: 62, len: 3, vel: 0.7 },
-      { voice: '@melody', or: 'horn', deg: 7, oct: 72, len: 2, vel: 0.55, at: 2 },
+      { voice: '@bass', or: 'bowedBass', deg: 0, oct: 40, len: 3, vel: 0.75 },
+      { voice: '@lead', or: 'warHorn', deg: 0, oct: 60, len: 4, vel: 0.7 },
+      { voice: '@lead', or: 'warHorn', deg: 4, oct: 60, len: 3, vel: 0.6, at: 2 },
+    ],
+    forms: [
+      [{ voice: '@stab', or: 'warHorn', chord: true, oct: 58, len: 4, vel: 0.65 }, { voice: '@lead', or: 'warHorn', deg: 7, oct: 67, len: 3, vel: 0.55, at: 2 }],
+      [{ voice: '@bass', or: 'bowedBass', deg: 0, oct: 38, len: 6, vel: 0.8 }, { voice: '@lead', or: 'warHorn', deg: 1, oct: 62, len: 2, vel: 0.6 }, { voice: '@lead', or: 'warHorn', deg: 0, oct: 62, len: 4, vel: 0.6, at: 2 }],
     ],
   },
   kill: {
     grid: 'beat', cooldown: 0.5,
     notes: [
-      { voice: '@stab', or: 'horn', chord: true, oct: 64, len: 4, vel: 0.65 },
-      ...run('@melody', 4, 74, 1, 0.6),
-      { voice: '@melody', or: 'horn', deg: 7, oct: 76, at: 4, len: 6, vel: 0.65 },
-      { voice: 'bell', deg: 0, oct: 79, at: 4, len: 8, vel: 0.4 },
+      { voice: '@stab', or: 'warHorn', chord: true, oct: 60, len: 6, vel: 0.6 },
+      { voice: '@lead', or: 'warHorn', deg: 4, oct: 67, len: 2, vel: 0.6, at: 0 },
+      { voice: '@lead', or: 'warHorn', deg: 7, oct: 67, at: 2, len: 6, vel: 0.65 },
+    ],
+    forms: [
+      [...run('@lead', 3, 67, 1, 0.55), { voice: '@lead', or: 'warHorn', deg: 4, oct: 67, at: 3, len: 6, vel: 0.6 }, { voice: 'bell', deg: 0, oct: 72, at: 3, len: 8, vel: 0.35 }],
+      [{ voice: '@bass', or: 'bowedBass', deg: 0, oct: 40, len: 8, vel: 0.7 }, { voice: '@lead', or: 'warHorn', deg: 0, oct: 64, len: 8, vel: 0.6 }, { voice: '@lead', or: 'warHorn', deg: 4, oct: 64, len: 6, vel: 0.5, at: 2 }],
     ],
   },
   hurt: {
     grid: 'step', cooldown: 0.35,
     notes: [
-      { voice: '@bass', or: 'cello', deg: 0, oct: 40, len: 3, vel: 0.8 },
-      { voice: '@melody', or: 'cello', deg: 1, oct: 64, len: 1, vel: 0.5, at: 1 },
-      { voice: '@melody', or: 'cello', deg: 0, oct: 64, len: 3, vel: 0.45, at: 2 },
+      { voice: '@bass', or: 'bowedBass', deg: 0, oct: 40, len: 3, vel: 0.8 },
+      { voice: '@lead', or: 'strings', deg: 1, oct: 64, len: 1, vel: 0.5, at: 1 },
+      { voice: '@lead', or: 'strings', deg: 0, oct: 64, len: 3, vel: 0.45, at: 2 },
+    ],
+    forms: [
+      [{ voice: '@lead', or: 'strings', deg: 4, oct: 67, len: 2, vel: 0.5 }, { voice: '@lead', or: 'strings', deg: 3, oct: 67, len: 4, vel: 0.45, at: 2 }],
+      [{ voice: '@bass', or: 'bowedBass', deg: -1, oct: 38, len: 4, vel: 0.75 }, { voice: 'glass', deg: 1, oct: 76, len: 4, vel: 0.35, at: 1 }],
     ],
   },
   block: {
@@ -100,17 +119,24 @@ export const CUES = {
       { voice: 'kalimba', deg: 0, oct: 72, len: 1, vel: 0.5 },
       { voice: 'kalimba', deg: 4, oct: 72, len: 2, vel: 0.45, at: 1 },
     ],
-  },
-  parry: {
-    grid: 'step', cooldown: 0.25, climb: 2, streak: 4,
-    notes: [
-      { voice: 'bell', deg: 4, oct: 79, len: 6, vel: 0.7 },
-      { voice: 'glass', deg: 0, oct: 84, len: 8, vel: 0.5 },
-      { voice: '@melody', or: 'horn', deg: 0, oct: 72, len: 1, vel: 0.65, at: 0.5 },
-      { voice: '@melody', or: 'horn', deg: 4, oct: 72, len: 4, vel: 0.75, at: 1.5 },
+    forms: [
+      [{ voice: '@lead', or: 'strings', deg: 4, oct: 69, len: 1, vel: 0.45 }, { voice: '@lead', or: 'strings', deg: 4, oct: 69, len: 1, vel: 0.4, at: 1.5 }],
+      [{ voice: 'harp', deg: 0, oct: 67, len: 1, vel: 0.45 }, { voice: 'harp', deg: 2, oct: 67, len: 1, vel: 0.45, at: 0.5 }, { voice: 'harp', deg: 4, oct: 67, len: 2, vel: 0.45, at: 1 }],
     ],
   },
-  charged: { grid: 'step', cooldown: 0.5, notes: [{ voice: 'glass', deg: 4, oct: 84, len: 4, vel: 0.5 }, { voice: 'celesta', deg: 7, oct: 84, len: 2, vel: 0.4, at: 1 }] },
+  parry: {
+    grid: 'step', cooldown: 0.25,
+    notes: [
+      { voice: 'bell', deg: 4, oct: 79, len: 6, vel: 0.6 },
+      { voice: '@lead', or: 'warHorn', deg: 0, oct: 67, len: 1, vel: 0.65, at: 0.5 },
+      { voice: '@lead', or: 'warHorn', deg: 4, oct: 67, len: 4, vel: 0.75, at: 1.5 },
+    ],
+    forms: [
+      [{ voice: 'glass', deg: 0, oct: 84, len: 8, vel: 0.5 }, { voice: '@lead', or: 'warHorn', deg: 4, oct: 69, len: 6, vel: 0.7 }],
+      [{ voice: '@lead', or: 'warHorn', deg: 2, oct: 67, len: 1, vel: 0.6 }, { voice: '@lead', or: 'warHorn', deg: 4, oct: 67, len: 1, vel: 0.65, at: 1 }, { voice: '@lead', or: 'warHorn', deg: 7, oct: 67, len: 4, vel: 0.7, at: 2 }],
+    ],
+  },
+  charged: { grid: 'step', cooldown: 0.5, notes: [{ voice: 'glass', deg: 4, oct: 84, len: 4, vel: 0.5 }, { voice: 'celesta', deg: 7, oct: 84, len: 2, vel: 0.4, at: 1 }], forms: [[{ voice: '@lead', or: 'strings', deg: 4, oct: 72, len: 6, vel: 0.45 }]] },
   fallen: {
     grid: 'now', cooldown: 5, stinger: true,
     notes: [{ voice: 'gong', vel: 0.8 }, { voice: 'choir', chord: true, oct: 55, len: 24, vel: 0.5 }, { voice: 'cello', key: true, oct: 36, len: 24, vel: 0.7 }],
@@ -118,7 +144,7 @@ export const CUES = {
   // --- Moving and doing ------------------------------------------------------------------------
   landHard: { grid: 'step', cooldown: 0.6, notes: [{ voice: '@bass', or: 'cello', deg: 0, oct: 40, len: 2, vel: 0.7 }, { voice: '@bass', or: 'cello', deg: -3, oct: 40, len: 2, vel: 0.55, at: 1 }] },
   glide: { grid: 'eighth', cooldown: 2, notes: run('harp', 6, 72, 0.5, 0.4) },
-  pickup: { grid: 'eighth', cooldown: 0.2, climb: 1, streak: 3, notes: [{ voice: 'kalimba', deg: 4, oct: 79, len: 1, vel: 0.5 }, { voice: 'kalimba', deg: 7, oct: 79, len: 3, vel: 0.5, at: 1 }] },
+  pickup: { grid: 'eighth', cooldown: 0.2, notes: [{ voice: 'kalimba', deg: 4, oct: 79, len: 1, vel: 0.5 }, { voice: 'kalimba', deg: 7, oct: 79, len: 3, vel: 0.5, at: 1 }] },
   open: { grid: 'eighth', cooldown: 1, notes: run('harp', 5, 67, 0.5, 0.45) },
   unlock: { grid: 'beat', cooldown: 1, notes: [{ voice: 'bell', deg: 0, oct: 72, len: 4, vel: 0.5 }, { voice: 'bell', deg: 4, oct: 72, len: 6, vel: 0.5, at: 2 }] },
   jammed: { grid: 'eighth', cooldown: 0.8, notes: [{ voice: 'kalimba', deg: 1, oct: 64, len: 1, vel: 0.5 }, { voice: 'kalimba', deg: 0, oct: 64, len: 2, vel: 0.45, at: 1 }] },
@@ -149,7 +175,7 @@ export const CUES = {
   },
   victory: {
     grid: 'now', stinger: true,
-    notes: [...chordOf('horn', [0, 7, 12, 16, 19], 0.7), { voice: 'timpani', vel: 0.8 }, { voice: 'crash', vel: 0.4 }],
+    notes: [...chordOf('horn', [0, 7, 12, 14, 19], 0.6), { voice: 'timpani', vel: 0.8 }, { voice: 'crash', vel: 0.4 }],
   },
   depths: { grid: 'now', stinger: true, notes: [{ voice: 'boom', oct: 36, vel: 0.5 }, { voice: 'bell', key: true, oct: 36, at: 1, len: 24, vel: 0.8 }] },
   sweep: { grid: 'now', stinger: true, notes: [{ voice: 'swell', vel: 0.6 }, ...run('harp', 10, 62, 0.4, 0.55, true)] },

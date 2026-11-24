@@ -102,6 +102,8 @@ export interface StyleDef {
   swing: number;
   /** Chance a section is a breathing rest (near-silence). */
   rest: number;
+  /** Chance a rest falls fully silent for a long stretch (only ambience), instead of a soft pad. */
+  silence: number;
   sectionBars: readonly number[];
   melody: {
     /** Rhythm cells: note lengths in sixteenths. */
@@ -126,6 +128,8 @@ export interface StyleDef {
     /** Lowpass on the whole style in Hz (dark styles are muffled). */
     tone: number;
   };
+  /** Voices reactions answer in (`@lead` in cues.ts), one picked per reaction; they cut through the band. */
+  leads?: readonly InstrumentId[];
   /** Cue played when the music changes into this style (cues.ts); wins over the old style's `leave`. */
   enter?: string;
   /** Cue played when the music leaves this style for one without an `enter` cue. */
@@ -143,5 +147,7 @@ export const FLOW_CELLS = [[4, 4, 4, 4], [6, 2, 4, 4], [4, 2, 2, 4, 4], [8, 4, 4
 export const DANCE_CELLS = [[2, 2, 2, 2, 4], [4, 2, 2, 4], [6, 2, 4], [2, 2, 2, 6], [4, 4, 4]] as const;
 export const BATTLE_CELLS = [[2, 2, 4, 8], [4, 2, 2, 8], [3, 3, 2, 8], [2, 2, 2, 2, 8], [6, 2, 8], [4, 4, 8]] as const;
 export const SLOW_CELLS = [[8, 8], [12, 4], [16], [6, 10], [4, 12]] as const;
+/** Long held notes with wide gaps: sparse wandering lines. */
+export const SPARSE_CELLS = [[16], [12, 4], [8, 8], [24], [4, 20], [16, 8]] as const;
 
 export const c = (v: number): number => (v > 1 ? 1 : v > 0 ? v : 0);

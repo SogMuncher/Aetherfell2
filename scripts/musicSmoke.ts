@@ -1,4 +1,4 @@
-// Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, combos climb,
+// Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, tension climbs,
 // the mood dials move tempo/brightness, and every style, cue and meter names things that exist.
 import { check, failures } from './smokeKit';
 import { CUE_TABLE, REACTION_KIT } from '../src/audio/music/cues';
@@ -10,6 +10,7 @@ import { dials } from '../src/audio/music/modulators';
 import { INSTRUMENTS } from '../src/audio/music/instruments';
 import type { InstrumentId } from '../src/audio/music/instruments';
 import { METERS, STYLES, STYLE_IDS } from '../src/audio/music/styles';
+import { AMBIENT_SOUNDS } from '../src/audio/ambientSounds';
 import { MoodTracker, emptySignals } from '../src/audio/music/signals';
 import { compose } from '../src/audio/music/composer';
 import { MusicRng } from '../src/audio/music/theory';
@@ -44,7 +45,7 @@ check('unknown events are ignored', reactionFor({ type: 'journal', text: 'x' }, 
 const problems: string[] = [];
 const voiceOk = (v: Voice): boolean => (v.startsWith('@') ? true : v in INSTRUMENTS);
 for (const [id, cue] of Object.entries(CUE_TABLE)) {
-  for (const n of cue.notes) {
+  for (const n of [...cue.notes, ...(cue.forms ?? []).flat()]) {
     if (!voiceOk(n.voice)) problems.push(`${id}: ${n.voice}`);
     if (n.or && !(n.or in INSTRUMENTS)) problems.push(`${id}: ${n.or}`);
   }
@@ -54,13 +55,14 @@ for (const id of STYLE_IDS) {
   const d = STYLES[id];
   for (const c of [d.enter, d.leave]) if (c && !CUE_TABLE[c]) problems.push(`${id}: cue ${c}`);
   for (const l of d.layers) if (!(l.instrument in INSTRUMENTS)) problems.push(`${id}: ${l.instrument}`);
+  for (const l of d.leads ?? []) if (!(l in INSTRUMENTS)) problems.push(`${id}: lead ${l}`);
   for (const m of d.meters) if (!METERS[m]) problems.push(`${id}: meter ${m}`);
 }
 for (const [id, m] of Object.entries(METERS)) if ([...m.beats, ...m.accents].some((b) => b >= m.steps)) problems.push(`meter ${id}`);
 check('cues, styles and meters name real instruments/cues', problems.length === 0, problems.join('; '));
 const reacted = Object.keys(REACTIONS).length;
 check('many kinds of event get a musical answer', reacted >= 15, `${reacted}`);
-const offKit = Object.entries(CUE_TABLE).filter(([, c]) => !c.stinger && c.notes.some((n) => !REACTION_KIT.includes(n.voice))).map(([id]) => id);
+const offKit = Object.entries(CUE_TABLE).filter(([, c]) => !c.stinger && [...c.notes, ...(c.forms ?? []).flat()].some((n) => !REACTION_KIT.includes(n.voice))).map(([id]) => id);
 check('reactions speak one language: the band plus bells, never drums or noise', offKit.length === 0, offKit.join(', '));
 check('casting a spell leaves the music alone (it has its own sound)', reactionFor({ type: 'spellCast', entity: 1 } as unknown as SimEvent, 1, near) === null);
 const capped = new MusicRng(3);
@@ -68,7 +70,8 @@ let misses = 0;
 for (let k = 0; k < 4000; k++) if (!capped.chance(1)) misses++;
 check('nothing in the music is ever certain', misses > 10 && misses < 200, `${misses}`);
 const used = new Set<string>(STYLE_IDS.flatMap((id) => STYLES[id].layers.map((l) => l.instrument)));
-for (const c of Object.values(CUE_TABLE)) for (const n of c.notes) used.add(n.voice);
+for (const c of Object.values(CUE_TABLE)) for (const n of [...c.notes, ...(c.forms ?? []).flat()]) used.add(n.voice);
+for (const id of STYLE_IDS) for (const l of STYLES[id].leads ?? []) used.add(l);
 const unused = (Object.keys(INSTRUMENTS) as InstrumentId[]).filter((i) => !used.has(i));
 check('every instrument is played somewhere', unused.length === 0, unused.join(', '));
 
@@ -99,17 +102,28 @@ player.play('parry', beat, clock, []);
 check('a parry sounds right away', notes.length > 0 && Math.min(...notes.map((n) => n.t)) >= 10 && Math.min(...notes.map((n) => n.t)) < 10.2);
 const tones = notes.filter((n) => INSTRUMENTS[n.inst as InstrumentId].kind === 'tone');
 check('its notes are in the key', tones.length > 0 && tones.every((n) => scale.has(((n.midi % 12) + 12) % 12)));
-check('the parry uses the battle band (its horn melody)', notes.some((n) => n.inst === 'horn'));
+check('the parry answers in one of the battle leads', notes.some((n) => (STYLES.battle.leads ?? []).includes(n.inst as InstrumentId)));
+check('the battle base leaves the lead to the reactions (no melody or horn of its own)', STYLES.battle.layers.every((l) => l.role !== 'melody' && (l.role !== 'stab' || l.enter > 1)));
 check('the same cue cools down', !player.play('parry', beat, clock, []));
+// A player whose random picks all land on 'as written', so only the tension moves the pitch.
+const tenser = new CuePlayer(fakeBand, { input: null, target: 1, echo: null } as unknown as Channel, mood, new (class extends MusicRng {
+  override next(): number {
+    return 0.05;
+  }
+})(1));
 const top = (id: string, now: number): number => {
   notes.length = 0;
-  player.play(id, beat, { ...clock, now }, []);
+  tenser.play(id, beat, { ...clock, now }, []);
   return notes[notes.length - 1]?.midi ?? 0; // the melody note that tops the answer
 };
-const first = top('strike', 20);
-const second = top('strike', 20.5);
+const first = top('strike', 20.6);
+const second = top('block', 20.8);
 const third = top('strike', 21);
-check('a combo of hits climbs higher', second > first && third > second, `${first} ${second} ${third}`);
+const peak = tenser.tensionAt(21);
+check('any reactions close together raise the tension and climb higher', third > first && peak > 1.5, `${first} ${second} ${third} ${peak}`);
+check('tension fades smoothly instead of snapping back', tenser.tensionAt(22.5) > 0.3 && tenser.tensionAt(22.5) < peak && tenser.tensionAt(40) < 0.05);
+notes.length = 0;
+player.play('strike', beat, { ...clock, now: 21 }, []);
 check('the band steps aside while a reaction plays its part', player.quiet('melody', Math.max(...notes.map((n) => n.t))));
 notes.length = 0;
 player.play('block', beat, { ...clock, now: 21.01 }, []);
@@ -132,5 +146,12 @@ for (let k = 0; k < 20; k++) mood.update(0.5);
 notes.length = 0;
 fresh.play('relief', beat, { ...clock, now: 30 }, []);
 check('a fight that ends in victory gets the brass fanfare, not the quiet relief', !reliefHorn && notes.some((n) => n.inst === 'horn'));
+
+// --- Ambience: surface and deep never mix -------------------------------------------------------
+const crossed = Object.entries(AMBIENT_SOUNDS).filter(([, a]) => a.where === 'deep' && (a.time !== undefined || a.needs?.trees !== undefined || a.needs?.wind !== undefined)).map(([id]) => id);
+check('deep sounds never need sky things (day, night, trees, wind)', crossed.length === 0, crossed.join(', '));
+const kinds = Object.values(AMBIENT_SOUNDS);
+check('plenty of ambient sounds up top and below', kinds.filter((a) => a.where === 'sky').length >= 10 && kinds.filter((a) => a.where === 'deep').length >= 10);
+check('wandering styles can fall fully quiet for a while', STYLE_IDS.filter((id) => STYLES[id].silence >= 0.5).length >= 5);
 
 if (failures()) throw new Error(`${failures()} music check(s) failed`);

@@ -1,8 +1,9 @@
 // The instrument table: every patch with the traits the band and the cues read (never instrument ids).
 import type { Patch } from './synth';
-import { anvil, boom, cluster, crash, drip, frameDrum, heartbeat, rise, scrape, shaker, snare, swell, taiko, timpani, whisper } from './patchesPercussion';
+import { anvil, bones, boom, chains, lowTom, ritualDrum, cluster, crash, drip, frameDrum, heartbeat, rise, scrape, shaker, snare, swell, taiko, timpani, whisper } from './patchesPercussion';
 import { bell, celesta, glass, harp, kalimba, lute, pluckBass } from './patchesTuned';
 import { cello, choir, drone, fiddle, flute, horn, ocarina, spiccato, strings, warmPad } from './patchesSustained';
+import { boneFlute, bowedBass, darkPad, duduk, hurdyGurdy, lyre, monks, musicBox, warHorn, wraith } from './patchesDark';
 import { bowl, clap, dulcimer, gong, marimba, organ, panpipe, pizzicato, reed, tambourine, tuba, woodblock } from './patchesExtra';
 
 /**
@@ -49,6 +50,20 @@ export const INSTRUMENTS = {
   warmPad: tone(warmPad),
   bowl: tone(bowl),
   cluster: tone(cluster),
+  hurdyGurdy: tone(hurdyGurdy),
+  duduk: tone(duduk),
+  boneFlute: tone(boneFlute),
+  wraith: tone(wraith),
+  monks: tone(monks),
+  musicBox: tone(musicBox),
+  lyre: tone(lyre),
+  warHorn: tone(warHorn),
+  bowedBass: tone(bowedBass),
+  darkPad: tone(darkPad),
+  ritualDrum: drum(ritualDrum, true),
+  lowTom: drum(lowTom),
+  bones: drum(bones),
+  chains: drum(chains),
   taiko: drum(taiko, true),
   timpani: { patch: timpani, kind: 'tuned', roll: true },
   frameDrum: drum(frameDrum),

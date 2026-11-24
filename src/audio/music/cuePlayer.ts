@@ -1,4 +1,4 @@
-// Plays cues on the music's grid, in key and band: one reaction at a time, varied each time, taking its roles' place.
+// Plays cues on the music's grid, in key and band: one reaction at a time, varied, rising with tension, in its roles' place.
 import type { Meter } from './styles';
 import type { Channel } from './mixer';
 import type { MoodTracker } from './signals';
@@ -11,7 +11,7 @@ import type { CueDef, CueNote, GridUnit, Voice } from './cues';
 import type { LayerRole } from './styleTypes';
 import { chordPitchClasses, degreeToSemis, voiceLead } from './theory';
 import type { MusicRng } from './theory';
-import { CHAOS, VARIETY } from './chaos';
+import { CHAOS, TENSION, VARIETY } from './chaos';
 
 /** How this one playing of a cue differs from the written one. */
 interface Variant {
@@ -20,8 +20,10 @@ interface Variant {
   stretch: number;
   swap: InstrumentId | null;
   vel: number;
+  /** The style lead `@lead` plays this time. */
+  lead: InstrumentId | null;
 }
-const PLAIN: Variant = { shift: 0, oct: 0, stretch: 1, swap: null, vel: 1 };
+const PLAIN: Variant = { shift: 0, oct: 0, stretch: 1, swap: null, vel: 1, lead: null };
 const BELLS = REACTION_KIT.filter((v) => !v.startsWith('@')) as InstrumentId[];
 
 /** The music's clock: step `step` starts at `next` seconds, each step lasts `stepDur`. */
@@ -53,7 +55,8 @@ export function gridTime(unit: GridUnit, c: GridClock): number {
 
 export class CuePlayer {
   private last = new Map<string, number>();
-  private streak = new Map<string, { n: number; at: number; v: Variant }>();
+  /** Tension from recent reactions (any of them), and when it was last set; it fades smoothly from there. */
+  private tension = { v: 0, at: 0 };
   /** Until when the last reaction is still sounding (the next one waits its turn on the grid). */
   private busyUntil = 0;
   /** Band roles a reaction is playing in, and until when (the band's own part steps aside). */
@@ -84,14 +87,13 @@ export class CuePlayer {
     const now = clock.now;
     if (now - (this.last.get(id) ?? -Infinity) < (cue.cooldown ?? 0)) return false;
     this.last.set(id, now);
-    // Spaced-out repeats each get a fresh variant; a combo keeps its variant and climbs from it.
-    const st = this.streak.get(id);
-    const going = cue.climb !== undefined && st !== undefined && now - st.at < (cue.streak ?? 2);
-    const n = going ? Math.min(st.n + 1, 7) : 0;
-    const v = going ? st.v : this.vary(cue);
-    if (cue.climb) this.streak.set(id, { n, at: now, v });
-    const climb = n * (cue.climb ?? 0);
     if (at === undefined && !this.rng.chance(CHAOS.reaction)) return false;
+    // Any reactions close together raise the tension, and the answer climbs with it; stingers stand apart.
+    const tense = cue.stinger ? 0 : this.tensionAt(now);
+    const climb = Math.round(tense);
+    const v = this.vary(cue, b, climb > 0);
+    if (!cue.stinger) this.tension = { v: Math.min(TENSION.max, tense + TENSION.add), at: now };
+    const notes = cue.forms?.length && !cue.stinger ? this.rng.pick([cue.notes, ...cue.forms]) : cue.notes;
     const sd = clock.stepDur;
     const t0 = at ?? gridTime(cue.grid, { ...clock, now: Math.max(now, this.busyUntil - 0.03) });
     if (t0 - now > sd * clock.meter.steps * CHAOS.reactionWait + 0.05) return false;
@@ -104,11 +106,11 @@ export class CuePlayer {
       }
     }
     let end = tt;
-    for (const m of cue.notes) {
+    for (const m of notes) {
       const t = tt + (m.at ?? 0) * v.stretch * sd;
       const stop = t + (m.len ?? 2) * sd;
       end = Math.max(end, Math.min(stop, t + 4 * sd));
-      if (!cue.stinger && m.voice.startsWith('@')) this.claim(m.voice.slice(1) as LayerRole, t, stop);
+      if (!cue.stinger && m.voice.startsWith('@')) this.claim(m.voice === '@lead' ? 'melody' : (m.voice.slice(1) as LayerRole), t, stop);
       this.note(b, m, t, sd, climb, v);
     }
     this.busyUntil = Math.max(this.busyUntil, end);
@@ -116,11 +118,19 @@ export class CuePlayer {
     return true;
   }
 
-  private vary(cue: CueDef): Variant {
+  /** Tension right now: it halves every `halfLife` seconds, never snapping to zero. */
+  tensionAt(now: number): number {
+    return this.tension.v * Math.pow(0.5, Math.max(0, now - this.tension.at) / TENSION.halfLife);
+  }
+
+  private vary(cue: CueDef, b: Beat, rising: boolean): Variant {
     if (cue.stinger) return PLAIN;
     const r = this.rng;
+    const leads = b.sec.def.leads;
     return {
-      shift: r.pick(VARIETY.shifts),
+      // While tension is up it owns the pitch, so the climb is heard; calm answers wander freely.
+      shift: rising ? 0 : r.pick(VARIETY.shifts),
+      lead: leads?.length ? r.pick(leads) : null,
       oct: r.chance(VARIETY.octave) ? r.pick([-12, 12]) : 0,
       stretch: r.chance(VARIETY.rhythm) ? r.pick(VARIETY.stretch) : 1,
       swap: r.chance(VARIETY.swap) ? r.pick(BELLS) : null,
@@ -133,9 +143,10 @@ export class CuePlayer {
     this.claims.set(role, c && c.to > from ? { from: Math.min(c.from, from), to: Math.max(c.to, to) } : { from, to });
   }
 
-  private voice(b: Beat, v: Voice, or: InstrumentId | undefined): InstrumentId | null {
+  private voice(b: Beat, v: Voice, or: InstrumentId | undefined, va: Variant): InstrumentId | null {
     if (!v.startsWith('@')) return v as InstrumentId;
-    const role = v.slice(1);
+    if (v === '@lead' && va.lead) return va.lead;
+    const role = v === '@lead' ? 'melody' : v.slice(1);
     const layers = b.sec.def.layers;
     const i = layers.findIndex((l, k) => l.role === role && b.plan.active[k] === true);
     const pick = layers[i]?.instrument ?? layers.find((l) => l.role === role)?.instrument;
@@ -144,7 +155,7 @@ export class CuePlayer {
 
   private note(b: Beat, n: CueNote, t: number, sd: number, climb: number, va: Variant): void {
     const fixed = !n.voice.startsWith('@');
-    const inst = fixed && va.swap ? va.swap : this.voice(b, n.voice, n.or);
+    const inst = fixed && va.swap ? va.swap : this.voice(b, n.voice, n.or, va);
     if (!inst) return;
     const { sec, plan } = b;
     const kind = INSTRUMENTS[inst].kind;
@@ -172,7 +183,7 @@ export class CuePlayer {
       this.band.play(inst, this.out, t, tonic + n.semi, dur, vel, 1, n.bright);
       return;
     }
-    // A combo climbs the scale from where the note sits, so it keeps rising instead of wrapping.
+    // Tension climbs the scale from where the note sits, so it keeps rising instead of wrapping.
     const up = degreeToSemis(sec.mode, deg + climb) - degreeToSemis(sec.mode, deg);
     this.band.play(inst, this.out, t, midiOf(sec, deg, oct - 6, oct + 6) + up, dur, vel, 1, n.bright);
   }

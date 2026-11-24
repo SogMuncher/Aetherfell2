@@ -258,9 +258,8 @@ export class MusicEngine {
     }
     if (sec.kind === 'lift') energy = Math.min(1, energy + 0.18);
     if (sec.kind === 'intro') energy = Math.min(energy, 0.2 + this.bar * 0.12);
-    const restSilent = sec.kind === 'rest' && this.bar === 0 ? this.rng.chance(0.4) : false;
     const active = def.layers.map((l) => {
-      if (sec.kind === 'rest') return !restSilent && l.enter <= 0 && (l.role === 'pad' || l.role === 'drone' || l.role === 'texture');
+      if (sec.kind === 'rest') return !sec.silent && l.enter <= 0 && (l.role === 'pad' || l.role === 'drone' || l.role === 'texture');
       if (sec.kind === 'break' && (l.role === 'perc' || l.role === 'bass' || l.role === 'stab')) return false;
       return energy >= l.enter && (l.leave === undefined || energy < l.leave) && !this.rng.chance(CHAOS.layerRests);
     });
