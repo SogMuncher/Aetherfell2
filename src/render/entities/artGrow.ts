@@ -37,6 +37,8 @@ export interface Joint {
   pivot: Vec3;
   /** Where in the stride it is furthest forward (0..1). */
   phase: number;
+  /** -1 for a mirrored twin (its side turns go the other way), else 1. */
+  side: number;
 }
 
 export interface Built {
@@ -151,6 +153,7 @@ export function buildArt(def: ArtDef, seed: number, dress?: DressDef): Built {
         parent: -1,
         pivot: [pivot0[0], pivot0[1], pivot0[2] * side],
         phase: (p.stride?.phase ?? 0) + (m && !def.gait?.hop ? 0.5 : 0),
+        side,
         name: p.id ? (m ? `${p.id}~` : p.id) : undefined,
         parentName: p.parent ? (m && mirrored.has(p.parent) ? `${p.parent}~` : p.parent) : undefined,
       });
@@ -238,7 +241,14 @@ export function buildArt(def: ArtDef, seed: number, dress?: DressDef): Built {
   const byName = new Map<string, number>();
   joints.forEach((j, i) => j.name && byName.set(j.name, i));
   for (const j of joints) j.parent = j.parentName ? (byName.get(j.parentName) ?? -1) : -1;
-  const st = dress?.stretch;
+  // Its build (lanky, stocky) from its own stream, then its dress's stretch on top.
+  const b = def.build;
+  const br = stream(seed + 91);
+  const bp = (s: Span): number => (typeof s === 'number' ? s : s[0] + (s[1] - s[0]) * br());
+  const tall = b ? bp(b.tall) : 1;
+  const wide = b ? bp(b.wide) : 1;
+  const ds = dress?.stretch ?? [1, 1, 1];
+  const st = b || dress?.stretch ? ([ds[0] * wide, ds[1] * tall, ds[2] * wide] as const) : undefined;
   if (st) {
     // Each solid keeps its place relative to the others; its own axes stretch by how they line up with the stretch.
     for (const s of solids) {

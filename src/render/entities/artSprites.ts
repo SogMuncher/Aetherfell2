@@ -8,6 +8,28 @@ import { artColours, artFeatures } from './artGrow';
 import { outfitted } from './gearArt';
 import type { Sprite } from './sprites';
 
+/**
+ * The move a body is in and which of its pictures (assembler MOVE_FRAMES) shows now, from the sim's
+ * own timing: winding up while charging (held once wound), the swing up to the tick the blow lands
+ * (`strikeAt`), then follow-through and settling until it can act again (`recover`). A throw has no
+ * sim timing (the item leaves at once), so it plays from the release for its move's `time`.
+ */
+export function moveFrame(e: Entity, threwAt: number | undefined, time: number): [Pose, number] | null {
+  const a = e.actor;
+  const sw = a?.swing;
+  if (sw) {
+    if (sw.t < sw.strikeAt) return [sw.dir, sw.power > 0 || sw.t >= sw.strikeAt * 0.5 ? 2 : 1];
+    const r = (sw.t - sw.strikeAt) / Math.max(1, sw.recover - sw.strikeAt);
+    return [sw.dir, r < 0.3 ? 3 : r < 0.65 ? 4 : 5];
+  }
+  const ch = a?.charge;
+  if (ch) return [ch.dir, ch.t < CONTENT.rules.combat.charge.full * 0.4 ? 0 : 1];
+  if (threwAt === undefined) return null;
+  const u = Number.isNaN(threwAt) ? 0 : (time - threwAt) / (CONTENT.moves.throw.time ?? 0.5);
+  if (u >= 1) return null;
+  return ['throw', u < 0.15 ? 3 : u < 0.55 ? 4 : 5];
+}
+
 interface Tracked {
   def: ArtDef;
   variant: number;
@@ -32,6 +54,13 @@ export class ArtSprites {
   private banks = new Map<string, ArtBank>();
   private tracked = new Map<number, Tracked>();
   private lastPrune = 0;
+  /** When each thrower let go (NaN until its next picture takes the time). */
+  private throws = new Map<number, number>();
+
+  /** Someone let an item go (the 'thrown' event): they play the throw from its release. */
+  thrown(id: number): void {
+    this.throws.set(id, NaN);
+  }
 
   pick(e: Entity, id: ArtId, bare: ArtDef, p: Projection, time: number): { sprite: Sprite; scale: number; colours: Uint32Array } {
     const hand = -p.RY * p.FX + p.RX * p.FY < 0 ? -1 : 1;
@@ -73,14 +102,10 @@ export class ArtSprites {
 
     let pose: Pose = 'idle';
     let frame = 0;
-    const sw = e.actor?.swing;
+    const act = def.gait ? moveFrame(e, this.throws.get(e.id), time) : null;
     if (e.player && e.player.downed > 0) pose = 'down';
-    else if (sw && def.gait) {
-      pose = 'attack';
-      const nf = poseFrames(def, 'attack');
-      frame = sw.t < sw.strikeAt ? Math.floor((sw.t / Math.max(1, sw.strikeAt)) * 2) : 2 + Math.floor(((sw.t - sw.strikeAt) / Math.max(1, sw.recover - sw.strikeAt)) * 2);
-      frame = Math.min(nf - 1, Math.max(0, frame));
-    } else if (moving) {
+    else if (act) [pose, frame] = act;
+    else if (moving) {
       pose = 'walk';
       frame = Math.floor(tr.phase * poseFrames(def, 'walk'));
     } else {
@@ -97,7 +122,10 @@ export class ArtSprites {
       dir = Math.round((Math.atan2(rs, rf) / (Math.PI * 2)) * VIEW_DIRS);
     }
 
+    const th = this.throws.get(e.id);
+    if (th !== undefined && Number.isNaN(th)) this.throws.set(e.id, time);
     if (time - this.lastPrune > 5) {
+      for (const [eid, t] of this.throws) if (time - t > 2) this.throws.delete(eid);
       this.lastPrune = time;
       for (const [eid, t] of this.tracked) if (time - t.last > 10) this.tracked.delete(eid);
     }

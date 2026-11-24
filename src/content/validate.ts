@@ -263,6 +263,6 @@ export function validateContent(c: Content): string[] {
     if (why) out.push(`role '${k}' dress '${slot}': ${why}`);
   }
   const dressed = Object.values(c.roles).flatMap((r) => [...(r.dress?.features ?? []), ...(r.dress?.without ?? [])]);
-  out.push(...artProblems(c.art, dressed, c.palettes));
+  out.push(...artProblems(c.art, dressed, c.palettes, c.moves));
   return out;
 }

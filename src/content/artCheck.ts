@@ -1,10 +1,11 @@
-// Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
+// Checks every art recipe (creatures, trees, props): known colour slots, parents, features and move roles, sane gait
 import { colourProblem } from './palettes';
-import type { ArtDef, ArtId, ArtPart, PaletteDef, PaletteId } from '../types';
+import type { ArtDef, ArtId, ArtPart, MoveDef, MoveId, PaletteDef, PaletteId } from '../types';
 
 /** Problems in the art table, for validateContent(). `extraFeatures` are ones a role's dress may give. */
-export function artProblems(art: Readonly<Record<ArtId, ArtDef>>, extraFeatures: readonly string[], palettes?: Readonly<Record<PaletteId, PaletteDef>>): string[] {
+export function artProblems(art: Readonly<Record<ArtId, ArtDef>>, extraFeatures: readonly string[], palettes?: Readonly<Record<PaletteId, PaletteDef>>, moves?: Readonly<Record<MoveId, MoveDef>>): string[] {
   const out: string[] = [];
+  const roles = new Set(Object.values(moves ?? {}).flatMap((m) => Object.keys(m.roles)));
   const hex = /^#[0-9a-fA-F]{6}$/;
   for (const [id, d] of Object.entries(art)) {
     const w = `art '${id}'`;
@@ -29,6 +30,8 @@ export function artProblems(art: Readonly<Record<ArtId, ArtDef>>, extraFeatures:
       if (p.parent && !ids.has(p.parent)) out.push(`${w}: unknown parent part '${p.parent}'`);
       if ((p.id || p.parent || p.pivot || p.stride || p.mirror) && !p.at) out.push(`${w}: a joint part needs a fixed spot (at)`);
       if (!hex.test(p.color) && !(p.color in d.colors)) out.push(`${w}: unknown colour slot '${p.color}'`);
+      if (p.act && moves && !roles.has(p.act)) out.push(`${w}: role '${p.act}' is in no body move (content/moves.ts)`);
+      if (p.act && !p.at) out.push(`${w}: a part with a move role needs a fixed spot (at)`);
       const f = p.feature?.replace(/^!/, '');
       if (f && !features.has(f)) out.push(`${w}: unknown feature '${f}'`);
     }

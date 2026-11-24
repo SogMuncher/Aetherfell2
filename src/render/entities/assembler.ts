@@ -1,6 +1,7 @@
 // The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, on demand
-import type { ArtDef, ArtId, DressDef } from '../../types';
-import { IDENT, type Xform, about, apply, compose, mul, rollM, tiltM } from './bodyMath';
+import type { ArtDef, ArtId, DressDef, MoveId, Turn } from '../../types';
+import { CONTENT } from '../../content';
+import { IDENT, type Xform, about, apply, compose, mul, rollM, tiltM, yawM } from './bodyMath';
 import { paintSolids } from './bodyPaint';
 import { artColours, buildArt, type Built, type Solid } from './artGrow';
 import type { Sprite } from './sprites';
@@ -9,12 +10,18 @@ import type { Sprite } from './sprites';
  * Every procedural sprite goes through here. An individual is one of a recipe's `variants` shapes
  * (with its features); colours are regions laid over the shared picture per placed thing, so a
  * wood of oaks or a pack of wolves shares a few pictures yet no two look alike. Things with a gait
- * have walk, rest, attack and knocked-down poses; everything else has one still pose.
+ * have walk, rest and knocked-down poses and every body move (content/moves.ts); everything else has one still pose.
  */
 
-export type Pose = 'idle' | 'walk' | 'attack' | 'down';
-export const POSES: readonly Pose[] = ['idle', 'walk', 'attack', 'down'];
-const POSE_FRAMES: Readonly<Record<Pose, number>> = { idle: 4, walk: 8, attack: 4, down: 1 };
+/** What a thing is doing in a picture: standing, walking, knocked down, or one of the body moves (content/moves.ts). */
+export type Pose = 'idle' | 'walk' | 'down' | MoveId;
+export const POSES: readonly Pose[] = ['idle', 'walk', 'down', 'overhead', 'thrust', 'left', 'right', 'throw'];
+/** Pictures along a move: half wound, wound up (held while charging), mid-swing, release, follow-through, settling back. */
+export const MOVE_FRAMES = 6;
+const POSE_FRAMES: Readonly<Record<'idle' | 'walk' | 'down', number>> = { idle: 4, walk: 8, down: 1 };
+/** Each move frame as [from key, to key, share]: key -1 = at rest, 0 wound up, 1 release, 2 follow-through. */
+const MOVE_STEPS: readonly (readonly [number, number, number])[] = [[-1, 0, 0.5], [0, 0, 0], [0, 1, 0.5], [1, 1, 0], [2, 2, 0], [2, -1, 0.5]];
+const isMove = (pose: Pose): pose is MoveId => pose !== 'idle' && pose !== 'walk' && pose !== 'down';
 /** Directions a thing is drawn from (0 = seen side-on, its right side to the viewer's right). */
 export const VIEW_DIRS = 8;
 const DEFAULT_PPM = 10;
@@ -39,7 +46,7 @@ export function artViews(def: ArtDef): number {
 }
 /** Frames in a pose: only things with a gait move. */
 export function poseFrames(def: ArtDef, pose: Pose): number {
-  return def.gait ? POSE_FRAMES[pose] : 1;
+  return def.gait ? (isMove(pose) ? MOVE_FRAMES : POSE_FRAMES[pose]) : 1;
 }
 /** The seed shape `variant` of recipe `id` is built from. */
 export function variantSeed(id: ArtId, variant: number): number {
@@ -53,16 +60,18 @@ export function assemble(id: ArtId, def: ArtDef, variant: number, dress?: DressD
   return { ...built, key: `${id}|${variant}|${built.features.join(',')}`, def, colours: artColours(def, seed, dress), ppm: def.ppm ?? DEFAULT_PPM };
 }
 
-/** How strongly the strike swing and the lunge apply on each attack frame (wind up, peak, follow through). */
-const STRIKE_K = [0.6, 1, 0.45, 0.15];
-const LUNGE_K = [-0.3, 0, 1, 0.4];
+const ZERO: Turn = [0, 0, 0];
+/** Key k of a move for one role (-1 = at rest). */
+const keyTurn = (keys: { windup: Turn; strike: Turn; follow: Turn } | undefined, k: number): Turn => (!keys || k < 0 ? ZERO : k === 0 ? keys.windup : k === 1 ? keys.strike : keys.follow);
+const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 /** Places every solid for frame `frame` of `pose`: joints swing about their pivots, the body bounces, lunges or lies down. */
 export function poseSolids(asm: Assembled, pose: Pose, frame: number): Solid[] {
   const def = asm.def;
   const g = def.gait;
   const t = frame / poseFrames(def, pose);
-  const strikeK = pose === 'attack' ? (STRIKE_K[frame] ?? 0) : 0;
+  const move = isMove(pose) ? CONTENT.moves[pose] : undefined;
+  const step = MOVE_STEPS[frame] ?? MOVE_STEPS[0]!;
   const placed: (Xform | undefined)[] = new Array<Xform | undefined>(asm.joints.length);
   const place = (j: number, depth: number): Xform => {
     const hit = placed[j];
@@ -71,10 +80,17 @@ export function poseSolids(asm: Assembled, pose: Pose, frame: number): Solid[] {
     if (!jt) return { a: IDENT, b: [0, 0, 0] };
     const p = jt.part;
     let swing = 0;
-    if (pose === 'walk' && p.stride) swing += p.stride.swing * Math.sin((t + jt.phase) * Math.PI * 2);
-    if (pose === 'idle' && p.idle) swing += p.idle * Math.sin((t + jt.phase) * Math.PI * 2);
-    if (p.strike) swing += p.strike * strikeK;
-    let own = about(tiltM(swing), jt.pivot);
+    const wave = Math.sin((t + jt.phase) * Math.PI * 2);
+    if (pose === 'walk' && p.stride) swing += p.stride.swing * (p.stride.fold ? Math.max(0, wave) : wave);
+    if (pose === 'idle' && p.idle) swing += p.idle * wave;
+    let turn = ZERO;
+    if (move && p.act) {
+      const keys = move.roles[p.act];
+      const a = keyTurn(keys, step[0]);
+      const b = keyTurn(keys, step[1]);
+      turn = [mix(a[0], b[0], step[2]), mix(a[1], b[1], step[2]) * jt.side, mix(a[2], b[2], step[2]) * jt.side];
+    }
+    let own = about(mul(yawM(turn[1]), mul(tiltM(swing + turn[0]), rollM(turn[2]))), jt.pivot);
     const lift = pose === 'walk' ? (p.stride?.lift ?? 0) * Math.max(0, Math.cos((t + jt.phase) * Math.PI * 2)) : 0;
     if (lift) own = compose({ a: IDENT, b: [0, lift, 0] }, own);
     const x = jt.parent >= 0 && depth < 16 ? compose(place(jt.parent, depth + 1), own) : own;
@@ -86,8 +102,9 @@ export function poseSolids(asm: Assembled, pose: Pose, frame: number): Solid[] {
     const rise = g.hop ? g.bounce * Math.max(0, Math.sin(t * Math.PI * 2)) : g.bounce * (0.5 - 0.5 * Math.cos(t * Math.PI * 4));
     body = { a: IDENT, b: [0, rise, 0] };
     if (g.sway && !g.hop) body = compose(body, about(rollM(g.sway * Math.sin(t * Math.PI * 2)), [0, 0, 0]));
-  } else if (pose === 'attack' && def.attack) {
-    const k = LUNGE_K[frame] ?? 0;
+  } else if (move && def.attack) {
+    const at = (k: number): number => (k < 0 ? 0 : (move.body[k] ?? 0));
+    const k = mix(at(step[0]), at(step[1]), step[2]);
     body = compose({ a: IDENT, b: [def.attack.lunge * k, 0, 0] }, about(tiltM(def.attack.lean * k), [0, 0, 0]));
   } else if (pose === 'down') {
     body = about(rollM(88), [0, 0, 0]);
