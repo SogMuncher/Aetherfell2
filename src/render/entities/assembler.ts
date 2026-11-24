@@ -2,6 +2,7 @@
 import type { ArtDef, ArtId, DressDef } from '../../types';
 import { IDENT, type Xform, about, apply, compose, mul, rollM, tiltM } from './bodyMath';
 import { paintSolids } from './bodyPaint';
+import type { CardSource } from './paintFinish';
 import { artColours, buildArt, type Built, type Solid } from './artGrow';
 import type { Sprite } from './sprites';
 
@@ -173,6 +174,8 @@ export class ArtBank {
   constructor(
     readonly asm: Assembled,
     private hand: number,
+    /** Pictures for flat card parts (held items). */
+    private cards?: CardSource,
   ) {
     this.nviews = artViews(asm.def);
   }
@@ -219,7 +222,7 @@ export class ArtBank {
       }
     }
     const room = this.roomOf(pose);
-    const s = paintSolids(poseSolids(this.asm, pose, f), this.asm.ppm, (d / VIEW_DIRS) * Math.PI * 2, this.hand, room.radius, room.top);
+    const s = paintSolids(poseSolids(this.asm, pose, f), this.asm.ppm, (d / VIEW_DIRS) * Math.PI * 2, this.hand, room.radius, room.top, this.cards);
     this.pics[base + d] = s;
     return s;
   }

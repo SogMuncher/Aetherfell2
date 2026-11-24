@@ -52,6 +52,11 @@ export interface ArtPart {
    * held item is drawn at the 'hand' part. Any creature with these marks shows its gear.
    */
   wear?: string;
+  /**
+   * Drawn as this item's flat picture (its bag picture, always facing the viewer) instead of a solid:
+   * gripped at this spot and pointing along the part's up axis, so it swings with its joint.
+   */
+  card?: string;
   /** Parts that grow from this one (from the last link of a chain, or a random link for `along`). */
   children?: readonly ArtPart[];
 
