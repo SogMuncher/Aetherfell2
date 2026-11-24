@@ -50,7 +50,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `mixer.ts` (188) The music mixing desk: one bus per style (with its own tone filter and reverb sends), one
 - `patchesPercussion.ts` (198) drum, noise and effect patches (taiko, snare, swell, rise...)
 - `patchesSustained.ts` (141) winds, bowed, choir and pad patches
-- `patchesTuned.ts` (68) Plucked and bell-like patches: harp, lute, celesta, bell, glass, pluck bass.
+- `patchesTuned.ts` (69) Plucked and bell-like patches: harp, lute, celesta, bell, glass, pluck bass.
 - `signalProbes.ts` (197) probes that read the game into mood signals, smoothing constants
 - `signals.ts` (219) MoodSignals types, event impulses, MoodTracker
 - `styleTypes.ts` (155) Meter/Layer/StyleDef types, METERS, shared rhythm cells
