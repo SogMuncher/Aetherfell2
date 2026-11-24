@@ -38,7 +38,7 @@ export interface CueNote {
  * roles plus one bell family. Never drums, noise or booms: those belong to the sound effects, so the two never clash.
  * Stingers (style changes, big moments) may use any voice.
  */
-export const REACTION_KIT: readonly Voice[] = ['@lead', '@melody', '@stab', '@bass', '@counter', '@arp', 'bell', 'celesta', 'kalimba', 'harp', 'glass'];
+export const REACTION_KIT: readonly Voice[] = ['@lead', '@melody', '@stab', '@bass', '@counter', '@arp', 'bell', 'celesta', 'lyre', 'harp', 'glass'];
 
 export interface CueDef {
   grid: GridUnit;
@@ -116,8 +116,8 @@ export const CUES = {
   block: {
     grid: 'step', cooldown: 0.15,
     notes: [
-      { voice: 'kalimba', deg: 0, oct: 72, len: 1, vel: 0.5 },
-      { voice: 'kalimba', deg: 4, oct: 72, len: 2, vel: 0.45, at: 1 },
+      { voice: 'lyre', deg: 0, oct: 72, len: 1, vel: 0.5 },
+      { voice: 'lyre', deg: 4, oct: 72, len: 2, vel: 0.45, at: 1 },
     ],
     forms: [
       [{ voice: '@lead', or: 'strings', deg: 4, oct: 69, len: 1, vel: 0.45 }, { voice: '@lead', or: 'strings', deg: 4, oct: 69, len: 1, vel: 0.4, at: 1.5 }],
@@ -144,10 +144,10 @@ export const CUES = {
   // --- Moving and doing ------------------------------------------------------------------------
   landHard: { grid: 'step', cooldown: 0.6, notes: [{ voice: '@bass', or: 'cello', deg: 0, oct: 40, len: 2, vel: 0.7 }, { voice: '@bass', or: 'cello', deg: -3, oct: 40, len: 2, vel: 0.55, at: 1 }] },
   glide: { grid: 'eighth', cooldown: 2, notes: run('harp', 6, 72, 0.5, 0.4) },
-  pickup: { grid: 'eighth', cooldown: 0.2, notes: [{ voice: 'kalimba', deg: 4, oct: 79, len: 1, vel: 0.5 }, { voice: 'kalimba', deg: 7, oct: 79, len: 3, vel: 0.5, at: 1 }] },
+  pickup: { grid: 'eighth', cooldown: 0.2, notes: [{ voice: 'lyre', deg: 4, oct: 67, len: 1, vel: 0.55 }, { voice: 'lyre', deg: 7, oct: 67, len: 3, vel: 0.5, at: 1 }] },
   open: { grid: 'eighth', cooldown: 1, notes: run('harp', 5, 67, 0.5, 0.45) },
   unlock: { grid: 'beat', cooldown: 1, notes: [{ voice: 'bell', deg: 0, oct: 72, len: 4, vel: 0.5 }, { voice: 'bell', deg: 4, oct: 72, len: 6, vel: 0.5, at: 2 }] },
-  jammed: { grid: 'eighth', cooldown: 0.8, notes: [{ voice: 'kalimba', deg: 1, oct: 64, len: 1, vel: 0.5 }, { voice: 'kalimba', deg: 0, oct: 64, len: 2, vel: 0.45, at: 1 }] },
+  jammed: { grid: 'eighth', cooldown: 0.8, notes: [{ voice: 'lyre', deg: 1, oct: 64, len: 1, vel: 0.5 }, { voice: 'lyre', deg: 0, oct: 64, len: 2, vel: 0.45, at: 1 }] },
   // --- The world -------------------------------------------------------------------------------
   friend: { grid: 'bar', cooldown: 5, notes: [{ voice: '@melody', or: 'horn', deg: 0, key: true, oct: 64, len: 3, vel: 0.6 }, { voice: '@melody', or: 'horn', deg: 4, key: true, oct: 64, len: 3, vel: 0.6, at: 4 }, { voice: '@melody', or: 'horn', deg: 7, key: true, oct: 64, len: 8, vel: 0.65, at: 8 }] },
   realm: { grid: 'beat', cooldown: 5, stinger: true, notes: [{ voice: 'gong', vel: 0.7 }, { voice: '@drone', or: 'drone', key: true, oct: 36, len: 32, vel: 0.6 }, { voice: 'bowl', key: true, oct: 72, len: 16, vel: 0.5 }] },

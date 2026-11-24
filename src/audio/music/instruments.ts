@@ -1,9 +1,10 @@
 // The instrument table: every patch with the traits the band and the cues read (never instrument ids).
 import type { Patch } from './synth';
 import { anvil, bones, boom, chains, lowTom, ritualDrum, cluster, crash, drip, frameDrum, heartbeat, rise, scrape, shaker, snare, swell, taiko, timpani, whisper } from './patchesPercussion';
-import { bell, celesta, glass, harp, kalimba, lute, pluckBass } from './patchesTuned';
+import { bell, celesta, glass, harp, lute, pluckBass } from './patchesTuned';
 import { cello, choir, drone, fiddle, flute, horn, ocarina, spiccato, strings, warmPad } from './patchesSustained';
 import { boneFlute, bowedBass, darkPad, duduk, hurdyGurdy, lyre, monks, musicBox, warHorn, wraith } from './patchesDark';
+import { hollowWind, lowChoir, windDrone } from './patchesDrones';
 import { bowl, clap, dulcimer, gong, marimba, organ, panpipe, pizzicato, reed, tambourine, tuba, woodblock } from './patchesExtra';
 
 /**
@@ -26,7 +27,6 @@ const fx = (patch: Patch): Instrument => ({ patch, kind: 'fx' });
 export const INSTRUMENTS = {
   harp: tone(harp),
   lute: tone(lute),
-  kalimba: tone(kalimba),
   celesta: tone(celesta),
   bell: tone(bell),
   glass: tone(glass),
@@ -60,6 +60,9 @@ export const INSTRUMENTS = {
   warHorn: tone(warHorn),
   bowedBass: tone(bowedBass),
   darkPad: tone(darkPad),
+  windDrone: tone(windDrone),
+  hollowWind: tone(hollowWind),
+  lowChoir: tone(lowChoir),
   ritualDrum: drum(ritualDrum, true),
   lowTom: drum(lowTom),
   bones: drum(bones),

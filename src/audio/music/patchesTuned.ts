@@ -1,3 +1,4 @@
+// Plucked and bell-like patches: harp, lute, celesta, bell, glass, pluck bass.
 import { type Patch, nyq } from './synth';
 
 
@@ -26,18 +27,6 @@ export const lute: Patch = (s, out, n) => {
   const lp = s.filter('lowpass', Math.min(nyq(s), n.freq * 9), 0.9, body);
   lp.frequency.setTargetAtTime(n.freq * 1.6, n.t, 0.12);
   s.osc('sawtooth', n.freq, n.t, end, lp);
-};
-
-/** Kalimba: a sine with a tiny pitch blip and a metallic overtone. */
-export const kalimba: Patch = (s, out, n) => {
-  const g = s.gain(out);
-  const end = s.adsr(g.gain, n.t, 0.01, n.vel * 0.2, 0.002, 1.1, 0.0001, 0.2);
-  const o = s.osc('sine', n.freq, n.t, end, g);
-  o.frequency.setValueAtTime(n.freq * 1.02, n.t);
-  o.frequency.exponentialRampToValueAtTime(n.freq, n.t + 0.03);
-  const g2 = s.gain(g);
-  s.adsr(g2.gain, n.t, 0.01, 0.3, 0.001, 0.12, 0.0001, 0.05);
-  s.osc('sine', n.freq * 5.4, n.t, n.t + 0.3, g2, 0, false);
 };
 
 /** Celesta / music box: high FM tines. */

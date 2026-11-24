@@ -49,7 +49,7 @@ export type LayerRole =
   | 'stab'
   /** Drums. */
   | 'perc'
-  /** A long low tone under everything. */
+  /** Long low tones that swell and fade with each chord (root, or the chord with `voices`). */
   | 'drone'
   /** Sparse atmospheric events (bells, drips, whispers). */
   | 'texture';
@@ -81,8 +81,10 @@ export interface LayerDef {
   vel?: number;
   /** Chance each scheduled note actually plays. */
   chance?: number;
-  /** Pad voices. */
+  /** Pad (and drone) voices. */
   voices?: number;
+  /** Melody: chance each note is sung in harmony, a third or sixth below it in the scale. */
+  harmony?: number;
 }
 
 export interface StyleDef {

@@ -282,7 +282,8 @@ export class MusicEngine {
     def.layers.forEach((l, i) => {
       if (!active[i]) return;
       if (l.role === 'pad' && (startsChord || this.bar === 0)) this.band.pad(beat, i, l, chord, t, chord.bars * barDur, energy);
-      if (l.role === 'drone' && this.bar % 4 === 0) this.band.drone(beat, i, l, t, Math.min(4, sec.bars - this.bar) * barDur, energy);
+      // Drones follow the chords, and each chord may or may not bring one, so they swell in and fade out.
+      if (l.role === 'drone' && (startsChord || this.bar === 0) && this.rng.chance(l.chance ?? 0.9)) this.band.drone(beat, i, l, chord, t, chord.bars * barDur, energy);
     });
     // A little chaos: a stray instrument, a tempo lurch, a bar that comes up short.
     const stepDur = 15 / this.bpm;
