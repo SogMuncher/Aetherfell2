@@ -10,6 +10,9 @@ export interface CardPic {
   grip: readonly [number, number];
   axis: readonly [number, number];
 }
+/** How far (m) a held card is drawn nearer than its grip: covers the hand and forearm, never the torso. */
+const HAND_DEPTH = 0.15;
+
 /** Finds the picture for a card part's item id. */
 export type CardSource = (id: string) => CardPic | undefined;
 
@@ -37,7 +40,8 @@ export function stampCards(cards: readonly Solid[], source: CardSource, c: Canva
     if (!pic) continue;
     const gx = (s.c[0] * R[0] + s.c[1] * R[1] + s.c[2] * R[2]) * ppm + w / 2;
     const gy = h - s.c[1] * ppm;
-    const d = s.c[0] * F[0] + s.c[1] * F[1] + s.c[2] * F[2] + 20;
+    // Grip depth pulled a hand's thickness toward the viewer, so the item shows over its own fist and forearm.
+    const d = s.c[0] * F[0] + s.c[1] * F[1] + s.c[2] * F[2] + 20 - HAND_DEPTH;
     // Where its up axis points on the picture (y down); straight at the viewer reads as up.
     let ax = (s.a[1] ?? 0) * R[0] + (s.a[4] ?? 0) * R[1] + (s.a[7] ?? 0) * R[2];
     let ay = -(s.a[4] ?? 0);

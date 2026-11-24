@@ -35,21 +35,8 @@ export const MOVES: Readonly<Record<MoveId, MoveDef>> = {
     },
     body: [-0.4, 0.75, 0.45],
   },
-  // Sweep to the left: drawn back out to the right, cut level across the front, ends out to the left.
+  // Backhand to the left (seen from outside): drawn across the body to its left, cut level out to its right.
   left: {
-    roles: {
-      arm: { windup: [-35, -55, 78], strike: [-88, 12, 8], follow: [-62, 62, -12] },
-      fore: { windup: [-45, 0, 0], strike: [-8, 0, 0], follow: [-30, 0, 0] },
-      off: { windup: [-15, 0, -28], strike: [10, 0, -12], follow: [18, 0, -6] },
-      offFore: { windup: [-30, 0, 0], strike: [-20, 0, 0], follow: [-20, 0, 0] },
-      torso: { windup: [0, -34, 0], strike: [5, 14, 0], follow: [5, 34, 0] },
-      head: { windup: [0, 14, 0], strike: [4, -6, 0], follow: [0, -12, 0] },
-      neck: { windup: [-6, -32, 0], strike: [22, 8, 0], follow: [10, 34, 0] },
-    },
-    body: [-0.15, 0.55, 0.3],
-  },
-  // Backhand to the right: drawn across the body to the left, cut level out to the right.
-  right: {
     roles: {
       arm: { windup: [-70, 62, -28], strike: [-88, -12, 28], follow: [-40, -58, 70] },
       fore: { windup: [-70, 0, 0], strike: [-8, 0, 0], follow: [-25, 0, 0] },
@@ -58,6 +45,19 @@ export const MOVES: Readonly<Record<MoveId, MoveDef>> = {
       torso: { windup: [0, 34, 0], strike: [5, -12, 0], follow: [5, -32, 0] },
       head: { windup: [0, -12, 0], strike: [4, 6, 0], follow: [0, 12, 0] },
       neck: { windup: [-6, 32, 0], strike: [22, -8, 0], follow: [10, -34, 0] },
+    },
+    body: [-0.15, 0.55, 0.3],
+  },
+  // Sweep to the right (seen from outside): drawn back out to its right, cut level across the front, ends out to its left.
+  right: {
+    roles: {
+      arm: { windup: [-35, -55, 78], strike: [-88, 12, 8], follow: [-62, 62, -12] },
+      fore: { windup: [-45, 0, 0], strike: [-8, 0, 0], follow: [-30, 0, 0] },
+      off: { windup: [-15, 0, -28], strike: [10, 0, -12], follow: [18, 0, -6] },
+      offFore: { windup: [-30, 0, 0], strike: [-20, 0, 0], follow: [-20, 0, 0] },
+      torso: { windup: [0, -34, 0], strike: [5, 14, 0], follow: [5, 34, 0] },
+      head: { windup: [0, 14, 0], strike: [4, -6, 0], follow: [0, -12, 0] },
+      neck: { windup: [-6, -32, 0], strike: [22, 8, 0], follow: [10, 34, 0] },
     },
     body: [-0.15, 0.55, 0.3],
   },
