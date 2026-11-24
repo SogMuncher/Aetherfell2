@@ -1,4 +1,4 @@
-// Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, tension climbs,
+// Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, tension climbs and fades,
 // the mood dials move tempo/brightness, and every style, cue and meter names things that exist.
 import { check, failures } from './smokeKit';
 import { CUE_TABLE, REACTION_KIT } from '../src/audio/music/cues';
@@ -121,7 +121,31 @@ const second = top('block', 20.8);
 const third = top('strike', 21);
 const peak = tenser.tensionAt(21);
 check('any reactions close together raise the tension and climb higher', third > first && peak > 1.5, `${first} ${second} ${third} ${peak}`);
-check('tension fades smoothly instead of snapping back', tenser.tensionAt(22.5) > 0.3 && tenser.tensionAt(22.5) < peak && tenser.tensionAt(40) < 0.05);
+const half = tenser.tensionAt(22.5);
+check('tension falls in a straight line back to normal within 3 s', Math.abs(half - peak / 2) < 0.01 && tenser.tensionAt(24.01) === 0, `${peak} ${half}`);
+// With real randomness (forms, chords, voices), every rising reaction still sounds above the one before it.
+const wild = new CuePlayer(fakeBand, { input: null, target: 1, echo: null } as unknown as Channel, mood, new MusicRng(11));
+const pitchOf = (id: string, now: number): number | null => {
+  notes.length = 0;
+  if (!wild.play(id, beat, { ...clock, now }, [])) return null;
+  const ts = notes.filter((n) => INSTRUMENTS[n.inst as InstrumentId].kind === 'tone');
+  return ts.reduce((a, n) => a + n.midi, 0) / Math.max(1, ts.length);
+};
+let falls = 0;
+let heard = 0;
+for (let k = 0; k < 40; k++) {
+  const start = 100 + k * 10;
+  let prev = { p: 0, lv: 0 };
+  for (let j = 0; j < 5; j++) {
+    const lv = wild.tensionAt(start + j * 0.45);
+    const p = pitchOf(['strike', 'block', 'hurt', 'parry', 'kill'][j] ?? 'strike', start + j * 0.45);
+    if (p === null) continue;
+    heard++;
+    if (j > 0 && lv > 0.5 && lv > prev.lv + 0.2 && p <= prev.p) falls++;
+    prev = { p, lv };
+  }
+}
+check('a rising flurry never steps down in pitch', falls === 0 && heard > 60, `${falls} falls in ${heard}`);
 notes.length = 0;
 player.play('strike', beat, { ...clock, now: 21 }, []);
 check('the band steps aside while a reaction plays its part', player.quiet('melody', Math.max(...notes.map((n) => n.t))));

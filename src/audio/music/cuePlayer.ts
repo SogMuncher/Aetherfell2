@@ -9,7 +9,7 @@ import { midiOf } from './band';
 import { CUE_TABLE, REACTION_KIT } from './cues';
 import type { CueDef, CueNote, GridUnit, Voice } from './cues';
 import type { LayerRole } from './styleTypes';
-import { chordPitchClasses, degreeToSemis, voiceLead } from './theory';
+import { chordPitchClasses, voiceLead } from './theory';
 import type { MusicRng } from './theory';
 import { CHAOS, TENSION, VARIETY } from './chaos';
 
@@ -25,6 +25,27 @@ interface Variant {
 }
 const PLAIN: Variant = { shift: 0, oct: 0, stretch: 1, swap: null, vel: 1, lead: null };
 const BELLS = REACTION_KIT.filter((v) => !v.startsWith('@')) as InstrumentId[];
+
+/** One note of a reaction, gathered first so the whole answer can be lifted above the last one before it sounds. */
+interface Hit {
+  inst: InstrumentId;
+  t: number;
+  midi: number;
+  dur: number;
+  vel: number;
+  bright: number | undefined;
+  /** Pitched notes move with the tension; drums and swooshes stay put. */
+  pitched: boolean;
+}
+
+/** `midi` moved `k` steps up the section's scale (off-scale notes land on the scale on the way). */
+function scaleUp(key: number, mode: readonly number[], midi: number, k: number): number {
+  const pcs = mode.map((s) => (key + s) % 12);
+  let m = midi;
+  for (let n = 0; n < k; ) if (pcs.includes(((++m % 12) + 12) % 12)) n++;
+  return m;
+}
+const meanOf = (hs: readonly Hit[], f: (h: Hit) => number): number => hs.reduce((a, h) => a + f(h), 0) / hs.length;
 
 /** The music's clock: step `step` starts at `next` seconds, each step lasts `stepDur`. */
 export interface GridClock {
@@ -57,6 +78,9 @@ export class CuePlayer {
   private last = new Map<string, number>();
   /** Tension from recent reactions (any of them), and when it was last set; it fades smoothly from there. */
   private tension = { v: 0, at: 0 };
+  /** The tension the last reaction rose from, and its average pitch: a rising answer must sound above it. */
+  private lastLevel = 0;
+  private lastPitch = -Infinity;
   /** Until when the last reaction is still sounding (the next one waits its turn on the grid). */
   private busyUntil = 0;
   /** Band roles a reaction is playing in, and until when (the band's own part steps aside). */
@@ -92,6 +116,7 @@ export class CuePlayer {
     const tense = cue.stinger ? 0 : this.tensionAt(now);
     const climb = Math.round(tense);
     const v = this.vary(cue, b, climb > 0);
+    const hits: Hit[] = [];
     if (!cue.stinger) this.tension = { v: Math.min(TENSION.max, tense + TENSION.add), at: now };
     const notes = cue.forms?.length && !cue.stinger ? this.rng.pick([cue.notes, ...cue.forms]) : cue.notes;
     const sd = clock.stepDur;
@@ -101,7 +126,7 @@ export class CuePlayer {
     if (cue.theme) {
       const th = cue.theme;
       for (const m of theme.slice(0, th.count)) {
-        this.note(b, { voice: th.voice, or: th.or, deg: m.deg, key: true, oct: th.oct, len: m.len * 0.9, vel: th.vel }, tt, sd, 0, PLAIN);
+        this.note(hits, b, { voice: th.voice, or: th.or, deg: m.deg, key: true, oct: th.oct, len: m.len * 0.9, vel: th.vel }, tt, sd, PLAIN);
         tt += m.len * sd;
       }
     }
@@ -111,16 +136,35 @@ export class CuePlayer {
       const stop = t + (m.len ?? 2) * sd;
       end = Math.max(end, Math.min(stop, t + 4 * sd));
       if (!cue.stinger && m.voice.startsWith('@')) this.claim(m.voice === '@lead' ? 'melody' : (m.voice.slice(1) as LayerRole), t, stop);
-      this.note(b, m, t, sd, climb, v);
+      this.note(hits, b, m, t, sd, v);
     }
+    if (!cue.stinger) this.lift(hits, b, climb, tense);
+    for (const h of hits) this.band.play(h.inst, this.out, h.t, h.midi, h.dur, h.vel, 1, h.bright);
     this.busyUntil = Math.max(this.busyUntil, end);
     if (cue.feed) this.mood.feed(cue.feed.signal, cue.feed.value, cue.feed.secs);
     return true;
   }
 
-  /** Tension right now: it halves every `halfLife` seconds, never snapping to zero. */
+  /** Tension right now: from wherever it was last set, it falls in a straight line to nothing over `fade` seconds. */
   tensionAt(now: number): number {
-    return this.tension.v * Math.pow(0.5, Math.max(0, now - this.tension.at) / TENSION.halfLife);
+    return this.tension.v * Math.max(0, 1 - Math.max(0, now - this.tension.at) / TENSION.fade);
+  }
+
+  /**
+   * Climbs the whole answer `climb` scale steps. While the tension is rising, the answer is lifted further until it
+   * sits above the last one on average, so no form, chord or voice can make a rising reaction sound lower.
+   */
+  private lift(hits: Hit[], b: Beat, climb: number, level: number): void {
+    const tones = hits.filter((h) => h.pitched);
+    if (tones.length === 0) return;
+    const { key, mode } = b.sec;
+    const at = (k: number): number => meanOf(tones, (h) => scaleUp(key, mode, h.midi, k));
+    let k = climb;
+    const rising = level > 0.5 && level > this.lastLevel + TENSION.rise;
+    this.lastLevel = level;
+    if (rising) while (at(k) <= this.lastPitch && at(k + 1) <= TENSION.top) k++;
+    for (const h of tones) h.midi = scaleUp(key, mode, h.midi, k);
+    this.lastPitch = at(0);
   }
 
   private vary(cue: CueDef, b: Beat, rising: boolean): Variant {
@@ -131,7 +175,7 @@ export class CuePlayer {
       // While tension is up it owns the pitch, so the climb is heard; calm answers wander freely.
       shift: rising ? 0 : r.pick(VARIETY.shifts),
       lead: leads?.length ? r.pick(leads) : null,
-      oct: r.chance(VARIETY.octave) ? r.pick([-12, 12]) : 0,
+      oct: !rising && r.chance(VARIETY.octave) ? r.pick([-12, 12]) : 0,
       stretch: r.chance(VARIETY.rhythm) ? r.pick(VARIETY.stretch) : 1,
       swap: r.chance(VARIETY.swap) ? r.pick(BELLS) : null,
       vel: 1 + r.range(-VARIETY.vel, VARIETY.vel),
@@ -153,7 +197,7 @@ export class CuePlayer {
     return pick ?? or ?? null;
   }
 
-  private note(b: Beat, n: CueNote, t: number, sd: number, climb: number, va: Variant): void {
+  private note(hits: Hit[], b: Beat, n: CueNote, t: number, sd: number, va: Variant): void {
     const fixed = !n.voice.startsWith('@');
     const inst = fixed && va.swap ? va.swap : this.voice(b, n.voice, n.or, va);
     if (!inst) return;
@@ -164,27 +208,26 @@ export class CuePlayer {
     const oct = Math.max(36, Math.min(90, (n.oct ?? 60) + va.oct));
     const root = n.key || n.semi !== undefined ? 0 : plan.chord.degree;
     const deg = root + (n.deg ?? 0) + va.shift;
+    const hit = (midi: number): void => void hits.push({ inst, t, midi, dur, vel, bright: n.bright, pitched: kind === 'tone' });
     if (kind === 'tuned') {
-      this.band.play(inst, this.out, t, midiOf(sec, deg, 38, 50), dur, vel, 1, n.bright);
+      hit(midiOf(sec, deg, 38, 50));
       return;
     }
     if (kind !== 'tone') {
-      this.band.play(inst, this.out, t, oct, dur, vel, 1, n.bright);
+      hit(oct);
       return;
     }
     if (n.chord) {
       const chord = n.key ? { ...plan.chord, degree: 0 } : plan.chord;
       const v = voiceLead(chordPitchClasses(sec.key, sec.mode, chord), null, oct - 5, oct + 9, 3);
-      for (const m of v) this.band.play(inst, this.out, t, m, dur, vel, 1, n.bright);
+      for (const m of v) hit(m);
       return;
     }
     if (n.semi !== undefined) {
       const tonic = sec.key + Math.round((oct - 5 - sec.key) / 12) * 12;
-      this.band.play(inst, this.out, t, tonic + n.semi, dur, vel, 1, n.bright);
+      hit(tonic + n.semi);
       return;
     }
-    // Tension climbs the scale from where the note sits, so it keeps rising instead of wrapping.
-    const up = degreeToSemis(sec.mode, deg + climb) - degreeToSemis(sec.mode, deg);
-    this.band.play(inst, this.out, t, midiOf(sec, deg, oct - 6, oct + 6) + up, dur, vel, 1, n.bright);
+    hit(midiOf(sec, deg, oct - 6, oct + 6));
   }
 }

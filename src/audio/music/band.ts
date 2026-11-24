@@ -96,9 +96,14 @@ export class Band {
     for (const n of voicing) this.play(l.instrument, b.channel(i, l), t, n, dur, vel, PRIORITY.pad, (l.bright ?? 0.5) * (0.7 + energy * 0.5));
   }
 
-  drone(b: Beat, i: number, l: LayerDef, t: number, dur: number, energy: number): void {
-    const root = midiOf(b.sec, 0, l.lo, l.hi);
-    this.play(l.instrument, b.channel(i, l), t, root, dur, (l.vel ?? 0.8) * (0.7 + energy * 0.3), PRIORITY.drone, l.bright);
+  /** A low held tone on the chord's root (or the chord itself, voice-led, when it has `voices`), so it moves with the chords. */
+  drone(b: Beat, i: number, l: LayerDef, chord: Chord, t: number, dur: number, energy: number): void {
+    const many = (l.voices ?? 1) > 1;
+    const notes = many
+      ? voiceLead(chordPitchClasses(b.sec.key, b.sec.mode, chord), this.voicings.get(i) ?? null, l.lo, l.hi, l.voices ?? 2)
+      : [midiOf(b.sec, chord.degree, l.lo, l.hi)];
+    if (many) this.voicings.set(i, notes);
+    for (const n of notes) this.play(l.instrument, b.channel(i, l), t, n, dur, (l.vel ?? 0.8) * (0.7 + energy * 0.3), PRIORITY.drone, l.bright);
   }
 
   step(b: Beat, t: number, stepDur: number): void {
@@ -229,7 +234,7 @@ export class Band {
     if (cadence && step >= steps / 2) {
       if (step === Math.floor(steps / 2)) {
         const deg = this.snap(plan.last ? 0 : this.rng.pick([0, 2, 4]), plan.chord);
-        this.play(l.instrument, ch, t, midiOf(sec, deg, l.lo, l.hi), stepDur * (steps / 2) * 0.95, 0.85 * lift, PRIORITY.melody, l.bright);
+        this.sing(b, l, ch, t, deg, stepDur * (steps / 2) * 0.95, 0.85 * lift);
       }
       return;
     }
@@ -238,8 +243,18 @@ export class Band {
       let deg = n.deg + shift;
       if (sec.meter.beats.includes(step)) deg = this.snap(deg, plan.chord);
       const vel = (sec.meter.accents.includes(step) ? 0.95 : 0.8) * lift;
-      this.play(l.instrument, ch, t, midiOf(sec, deg, l.lo, l.hi), stepDur * n.len * 0.92, vel, PRIORITY.melody, l.bright);
+      this.sing(b, l, ch, t, deg, stepDur * n.len * 0.92, vel);
     }
+  }
+
+  /** One melody note, and now and then a softer second voice a third or sixth below it, in the scale. */
+  private sing(b: Beat, l: LayerDef, ch: Channel, t: number, deg: number, dur: number, vel: number): void {
+    const midi = midiOf(b.sec, deg, l.lo, l.hi);
+    this.play(l.instrument, ch, t, midi, dur, vel, PRIORITY.melody, l.bright);
+    if (!l.harmony || !this.rng.chance(l.harmony)) return;
+    const under = this.rng.chance(0.7) ? 2 : 5;
+    const drop = degreeToSemis(b.sec.mode, deg) - degreeToSemis(b.sec.mode, deg - under);
+    this.play(l.instrument, ch, t, midi - drop, dur, vel * 0.6, PRIORITY.counter, l.bright);
   }
 
   private counter(b: Beat, i: number, l: LayerDef, ch: Channel, t: number, stepDur: number, lift: number): void {
