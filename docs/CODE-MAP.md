@@ -23,7 +23,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `skySmoke.ts` (297) Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
 - `torchSmoke.ts` (94) Headless checks for torches: the wall-mounted kind in buildings and halls, and the one you hold
 - `viewmodelShot.ts` (150) renders held-weapon PNGs (owned by the viewmodel thread)
-- `volumeSmoke.ts` (292) The 3D layer: shapes, the brick store, standing on stairs and ramps, bumping heads, buildings
+- `volumeSmoke.ts` (295) The 3D layer: shapes, the brick store, standing on stairs and ramps, bumping heads, buildings
 - `waterSmoke.ts` (427) check: rivers, lakes, bridges, piers, harbours
 - `waysSmoke.ts` (205) WAYS: roads, paths and trails join the places of the world, and the underworld follows them.
 - `worldSmoke.ts` (257) Headless checks for data-driven world generation and the far-away terrain: biomes come from
@@ -32,12 +32,13 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `senseSmoke.ts` (108) Checks: creatures see in 3D (height and line of sight), one "is it dark here" check, and what bodies stand in
 - `outfitSmoke.ts` (105) Headless checks: creatures are found wearing and holding real gear (their outfit), fight with what they hold
 - `smokeKit.ts` (63) Shared helpers for the headless smoke checks: seeded rng, flat arena, a joined traveller, PASS/FAIL counting
-- `matterFireSmoke.ts` (85) MATTER and fire: a timber wall burns like brush, thatch catches from burning grass, fire climbs, and fire
+- `matterFireSmoke.ts` (87) MATTER and fire: a timber wall burns like brush, thatch catches from burning grass, fire climbs, and fire
 - `matterKit.ts` (52) Shared helpers for the matter checks: a calm world, flat ground, stepping, PASS/FAIL counting, common cells
 - `handsSmoke.ts` (67) Headless checks: creatures carry a bag (players' own kind), spill all of it when they die, and their brains
 - `musicSmoke.ts` (181) Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, combos climb,
 - `craftSmoke.ts` (207) CRAFTS: the airship is cells of the 3D layer flown as one frame: decks hold you up and carry you, stations, fu
 - `fineSmoke.ts` (64) FINE CELLS: a 3D cell split into 2 x 2 x 2 half-metre cells; the shape palette, splitting, standing, saving, f
+- `doorSmoke.ts` (70) DOORS: one rule for a door tile on the ground and a door leaf in a wall of the 3D layer: open, shut, burn, fre
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
@@ -105,14 +106,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `roles.ts` (108) Villager jobs: what they add to a greeting, what they keep on the rack, the trouble they ask
 - `rules.ts` (129) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
-- `shapes.ts` (261) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
+- `shapes.ts` (268) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
 - `sites.ts` (364) named places: odds, layout, population (D)
 - `sky.ts` (38) The sky and air. Each cloud/mist layer is a sheet of drifting shapes at its own height, size and speed, and
 - `skyField.ts` (293) Where the clouds are (`airColumn`: every layer into air cells). One pure function of the sky data, the weather (cover, storminess, how far
 - `spellcraft.ts` (286) composes a spell from up to 3 runes; spell descriptions
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
-- `structures.ts` (466) building recipes for the 3D layer (D)
+- `structures.ts` (470) building recipes for the 3D layer (D)
 - `surfaces.ts` (223) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
 - `things.ts` (249) entity archetypes by trait (D)
 - `tileCodes.ts` (17) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
@@ -130,7 +131,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `moves.ts` (78) Body moves seen from outside: how arms, torso, head (or a beast's neck) turn through each swing direction and
 - `crafts.ts` (73) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
 - `shipProps.ts` (58) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
-- `shapeTable.ts` (114) The shape palette of the 3D layer as data: every shape a cell (1 m) or a fine cell (half a metre) can take
+- `shapeTable.ts` (121) The shape palette of the 3D layer as data: every shape a cell (1 m) or a fine cell (half a metre) can take
 
 ## src/input/
 - `input.ts` (185) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -232,7 +233,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/ai/
 - `aiSystem.ts` (173) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is
-- `behaviours.ts` (153) The shared library of behaviours every creature brain picks from (content/living.ts).
+- `behaviours.ts` (164) The shared library of behaviours every creature brain picks from (content/living.ts).
 - `handling.ts` (51) Brain behaviours for hands: grabbing loose items into the bag and throwing them at enemies (the player's own p
 - `senses.ts` (127) What a creature notices when it stops to think, and the small moves every behaviour shares.
 
@@ -245,7 +246,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/sim/effects/
 - `effectsSystem.ts` (81) effect queue loop
 - `entityEffects.ts` (265) effects on bodies: guard, armour, reactions, death
-- `spotEffects.ts` (123) effects on tiles/cells: ignite, strike, soak, coat
+- `spotEffects.ts` (127) effects on tiles/cells: ignite, strike, soak, coat
 - `temperature.ts` (107) temperature of tiles/cells: heat dries then burns, cold freezes wet, spots settle back
 - `touch.ts` (53) What bodies get from what they stand in or on: one data-driven pass over ground tiles and 3D cells alike
 
@@ -258,7 +259,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `foresight.ts` (43) A guest's foresight: one tick of its own traveller (and the crafts it may stand on) by the host's rules, touch
 
 ## src/sim/interaction/
-- `interactionSystem.ts` (265) The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
+- `interactionSystem.ts` (266) The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
 
 ## src/sim/magic/
 - `magicSystem.ts` (188) Casting. The prepared spell is composed from runes (content/spellcraft.ts): a delivery (bolt,
@@ -276,7 +277,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `spatialHash.ts` (41) Uniform grid of entities, rebuilt once per tick. Answers "what is near here?" cheaply.
 
 ## src/sim/player/
-- `playerSystem.ts` (242) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
+- `playerSystem.ts` (249) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
 
 ## src/sim/rpg/
 - `gearHandling.ts` (67) put on / take off armour, hold anything in the hands
@@ -290,12 +291,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `statusSystem.ts` (32) Ticks ongoing conditions: counts them down and queues their repeating effects (burning hurts
 
 ## src/sim/structures/
-- `builder.ts` (90) buildStructure entry: recipe -> cells
+- `builder.ts` (94) buildStructure entry: recipe -> cells
 
 ## src/sim/structures/builder/
-- `arch.ts` (90) arches, walls, ruin decay
-- `house.ts` (257) houses: floors, stairs, roofs, furnishing spots
-- `placer.ts` (123) Placer: snap cells into the structure grid and world
+- `arch.ts` (97) arches, walls, ruin decay
+- `house.ts` (165) houses: floors, stairs, roofs, furnishing spots
+- `placer.ts` (147) Placer: snap cells into the structure grid and world
+- `furnish.ts` (56) Furniture spots inside a house: corners, walls, the back wall, the middle, each facing away from its wall
+- `roofs.ts` (92) Roofs of the house form: gable and hip, with eaves and verges that overhang the walls by a metre
 
 ## src/sim/weather/
 - `weatherSystem.ts` (54) One in-game day lasts this many real seconds.
@@ -308,13 +311,13 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `cityWard.ts` (152) one ward: keep, landmarks, blocks
 - `crossings.ts` (201) Where water meets people. Bridges come with the ways (sim/world/roads.ts routes each way straight across the water it
 - `decks.ts` (174) Decks over water: bridges where a way crosses a river or lake, piers where a port meets the water. One shape of thing
-- `matter.ts` (224) ctx.matter: stuff at (x,y,z) for tiles and cells
+- `matter.ts` (254) ctx.matter: stuff at (x,y,z) for tiles and cells
 - `noise.ts` (59) Small, fast, seedable noise helpers. Pure functions of (seed, coords).
 - `realms.ts` (93) Who goes along when the party changes realm: the travellers and what they carry.
 - `roads.ts` (112) ways per region: waysTouching, wayHit
 - `sites.ts` (294) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
 - `terrain.ts` (223) The shape of the land: continents, rolling hills, ridged mountains, a moisture field for biomes,
-- `underworld.ts` (164) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
+- `underworld.ts` (171) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
 - `underSpot.ts` (132) `underAt`: what the underworld is at a tile (river, deck, cave, ruin street, hall, corridor, way artery, rock), read from the land
 - `underPlan.ts` (112) per-region plan of what the places above ask of the rock: caves, great halls, denser tunnels
 - `volume.ts` (275) VolumeStore: sparse 3D brick store (C)
@@ -342,12 +345,12 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `input.ts` (96) Letting go of an item from the bag over the view: where the cursor was decides the throw.
 - `items.ts` (48) Inventory helpers shared by every system that touches items.
 - `math.ts` (10) 
-- `matter.ts` (94) MATTER — one way to talk about "the stuff at a place", whatever holds it.
+- `matter.ts` (100) MATTER — one way to talk about "the stuff at a place", whatever holds it.
 - `net.ts` (53) co-op message types
 - `palettes.ts` (22) Colour as data. Pictures are never painted in fixed colours: every part of a creature, tree,
 - `sky.ts` (95) RGB, 0..255.
-- `state.ts` (135) SimState and queues
-- `structures.ts` (173) StructureDef, planned structures, house geometry
+- `state.ts` (136) SimState and queues
+- `structures.ts` (179) StructureDef, planned structures, house geometry
 - `tiles.ts` (217) tile/chunk types, TileInfo, keys
 - `vfx.ts` (86) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
 - `volume.ts` (196) 3D layer brick/volume types

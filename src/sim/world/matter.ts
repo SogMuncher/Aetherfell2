@@ -1,6 +1,7 @@
 import type { MatterAccess, MatterField, SimState, TileInfo, TileKind } from '../../types';
 import { GROUND_Z, packKey, spotKey, unpackKey } from '../../types';
 import { TILES } from '../../content/tiles';
+import { SHAPE_OPEN, SHAPE_SWING } from '../../content/shapes';
 import type { WorldTiles } from './worldTiles';
 import type { VolumeStore } from './volume';
 
@@ -24,6 +25,35 @@ export class Matter implements MatterAccess {
     if (z === GROUND_Z) return this.tiles.info(x, y);
     if (this.vol.shapeAt(x, y, z) === 0) return null;
     return TILES[this.vol.matAt(x, y, z)] ?? null;
+  }
+
+  doorOpen(x: number, y: number, z: number): boolean | null {
+    const inf = this.info(x, y, z);
+    if (!inf || inf.shape !== 'door') return null;
+    if (z === GROUND_Z) return this.tiles.door(x, y) > 128;
+    const s = this.vol.shapeAt(x, y, z) & 63;
+    return SHAPE_SWING[s] ? SHAPE_OPEN[s] === 1 : null;
+  }
+
+  leaf(x: number, y: number, z: number): number[] {
+    const out = [z];
+    if (z === GROUND_Z) return out;
+    const m = this.vol.matAt(x, y, z);
+    for (const d of [-1, 1]) for (let k = z + d; this.vol.matAt(x, y, k) === m && SHAPE_SWING[this.vol.shapeAt(x, y, k) & 63]; k += d) out.push(k);
+    return out;
+  }
+
+  setDoor(x: number, y: number, z: number, open: boolean): void {
+    if (this.doorOpen(x, y, z) === null) return;
+    if (z === GROUND_Z) {
+      this.tiles.setDoor(x, y, open ? 255 : 0);
+      return;
+    }
+    for (const k of this.leaf(x, y, z)) {
+      const b = this.vol.shapeAt(x, y, k);
+      if ((SHAPE_OPEN[b & 63] === 1) === open) continue;
+      this.vol.set(x, y, k, (SHAPE_SWING[b & 63] ?? 0) | (b & 192), this.vol.matAt(x, y, k));
+    }
   }
 
   kind(x: number, y: number, z: number): TileKind | -1 {

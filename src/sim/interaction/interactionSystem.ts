@@ -223,9 +223,10 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
       ctx.dropItems(t.pos.x, t.pos.y, t.z + 0.6, rollLoot(content, cdef.loot, rng));
       continue;
     }
-    const inf = tiles.info(u.tileX, u.tileY);
-    if (inf.shape !== 'door') continue;
-    const open = tiles.door(u.tileX, u.tileY) > 128;
+    // A door, on the ground or in a wall of the 3D layer: one rule for both.
+    const uz = u.z ?? GROUND_Z;
+    const open = ctx.matter.doorOpen(u.tileX, u.tileY, uz);
+    if (open === null) continue;
     if (open) {
       const blocker = ctx.query.near(u.tileX + 0.5, u.tileY + 0.5, 1.2).find((o) => {
         const od = thingDef(content, o.def);
@@ -237,7 +238,7 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
         continue;
       }
     }
-    tiles.setDoor(u.tileX, u.tileY, open ? 0 : 255);
+    ctx.matter.setDoor(u.tileX, u.tileY, uz, !open);
     ctx.emit({ type: 'doorToggled', x: u.tileX, y: u.tileY, open: !open });
   }
 };

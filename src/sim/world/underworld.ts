@@ -20,6 +20,7 @@ export type { Spot } from './underSpot';
  */
 
 const CUBE = shapeId('cube');
+const ARCH = shapeId('archCurve');
 
 /** What the underworld is at tile (x, y) (see underSpot.ts). */
 export function latticeSpot(seed: number, x: number, y: number): Spot {
@@ -100,6 +101,12 @@ export function roofLatticeChunk(volume: Volume, seed: number, cx: number, cy: n
       const x = x0 + i;
       const y = y0 + j;
       for (let z = floor + c; z < floor + top + (L?.shell ?? 2); z++) volume.set(x, y, z, solid, mat);
+      // Vaulting: under a roof three metres up or more, the rock curves down into a wall beside it (a round arch
+      // half springing from the wall: -x, +x, -y, +y walls take turns 0, 2, 1, 3).
+      if (c >= 3) {
+        const side = [ceil[j * W + i - 1], ceil[j * W + i + 1], ceil[(j - 1) * W + i], ceil[(j + 1) * W + i]].findIndex((n) => (n ?? 0) <= 0);
+        if (side >= 0) volume.set(x, y, floor + c - 1, shapeByte(ARCH, [0, 2, 1, 3][side] ?? 0), mat);
+      }
       const u = underAt(seed, x, y);
       if (u.deck !== null) volume.set(x, y, floor - 1, solid, u.deck);
     }

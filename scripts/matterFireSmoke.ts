@@ -31,6 +31,8 @@ for (const seed of FIRE_SEEDS) {
   }
   // Spread is chancy, so light the whole brush strip: the check is about thatch and timber catching, not about luck.
   for (let y = 0; y < 3; y++) sim.state.queues.effects.push({ target: { kind: 'tile', x: X + 2, y: Y + y }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
+  // Low timber catching from brush is luck; one post is set alight outright, so its ash is checked every time.
+  sim.state.queues.effects.push({ target: { kind: 'cell', x: X + 4, y: Y + 1, z }, effects: [{ type: 'heat', amount: 1 }], source: null, from: null });
   let peak = 0;
   let ignited = 0;
   let burntOut = 0;

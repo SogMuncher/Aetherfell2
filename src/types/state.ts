@@ -16,7 +16,8 @@ export interface SimQueues {
   /** Everything that harms, heals, heats, soaks, shoves… — applied by the effects system. */
   effects: EffectRequest[];
   /** Interactions: a player poked something at a tile/entity. Cleared at the end of the tick. */
-  use: { player: number; tileX: number; tileY: number; entity: number | null }[];
+  /** `z`: the cell height of a door of the 3D layer (left out: the ground). */
+  use: { player: number; tileX: number; tileY: number; z?: number; entity: number | null }[];
   /** Deaths with credit. Cleared at the end of the tick. */
   kills: { killer: number; def: ThingId }[];
   /** A party taking a way into another realm (the sim loop swaps the realms after the systems have run). */

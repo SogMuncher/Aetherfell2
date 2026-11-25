@@ -42,7 +42,7 @@ uvec2 cellAt(int slot, ivec3 l){
 }
 /** Shape and material of fine cell l (0..31 inside the brick) in fine slot fs (FINE_ATLAS layout in gpuStructures). */
 uvec2 fineAt(int fs, ivec3 l){
-  return texelFetch(uFine, ivec2((fs % 8) * 256 + (l.z & 7) * 32 + l.x, (fs / 8) * 128 + (l.z >> 3) * 32 + l.y), 0).rg;
+  return texelFetch(uFine, ivec2((fs % 16) * 256 + (l.z & 7) * 32 + l.x, (fs / 16) * 128 + (l.z >> 3) * 32 + l.y), 0).rg;
 }
 /** A ray through a split cell (l: the cell in its brick, lo: where the ray is in the cell, fn: the face it came in by): walks its 2 × 2 × 2 fine cells. Returns (t in cell units, normal) and the material, or t < 0 on a miss. */
 vec4 rayFine(int fs, ivec3 l, vec3 lo, vec3 d, vec3 fn, bool within, out int fm){
