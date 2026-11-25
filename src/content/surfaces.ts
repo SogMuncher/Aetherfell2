@@ -194,6 +194,24 @@ export const SURFACES: Record<string, SurfaceDef> = {
       { kind: 'speckle', salt: 41, chance: 0.12, add: [22, 20, 8] },
     ],
   },
+  // A ship's hull: long tarred strakes running fore and aft, butt joints staggered, pitch in the seams.
+  hull: {
+    base: [138, 92, 56],
+    layers: [
+      { kind: 'boards', dir: 'horizontal', size: 4, seam: [52, 34, 22], joint: { every: 16, stagger: 7 } },
+      { kind: 'grain', salt: 47, amount: [24, 16, 10] },
+      { kind: 'speckle', salt: 48, chance: 0.03, add: [-30, -24, -18] },
+    ],
+  },
+  // Sailcloth: pale canvas panels stitched together, weathered in patches.
+  canvas: {
+    base: [214, 202, 172],
+    layers: [
+      { kind: 'lines', axis: 'x', period: 8, at: [0], add: [-34, -32, -28] },
+      { kind: 'noise', salt: 49, cells: 4, amount: [12, 12, 10] },
+      { kind: 'patches', salt: 50, cells: 4, above: 0.72, colour: [176, 160, 128], keep: 0.6 },
+    ],
+  },
   // Lime-washed plaster with stains and the odd chip.
   plaster: {
     base: [200, 190, 162],

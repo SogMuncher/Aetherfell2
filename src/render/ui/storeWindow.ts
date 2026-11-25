@@ -1,25 +1,61 @@
-// The hold window: what a store keeps (a ship's hold) beside what is in your bag; click a stack to move it across
-import type { Entity, ItemId, ItemStack, SimState } from '../../types';
-import { bagOf } from '../../types';
-import { CONTENT, itemDef, thingDef } from '../../content';
-import { esc, iconUrl } from './bagParts';
+// The hold window: a store (a ship's hold) shown as a bag of its own; drag things between it and your bag
+import type { Entity, ItemId, SimState } from '../../types';
+import { CONTENT, thingDef } from '../../content';
+import type { Spot } from './bagParts';
+import { BagArea } from './bagArea';
+import type { BagWindow } from './bag';
+import { makeMovable } from './movable';
 
+/**
+ * A store is a bag that stays where it is: the same leather area, pictures and dragging as your own bag. Opening it
+ * opens your bag beside it; drag a thing from one to the other to put it in or take it out.
+ */
 export class StoreWindow {
   private readonly el: HTMLDivElement;
+  private readonly title: HTMLElement;
+  private readonly area: BagArea;
   /** The store being shown (entity id), or null while closed. */
   private entity: number | null = null;
-  private key = '';
+  /** Where things lie in each store you have opened (this screen only). */
+  private readonly layouts = new Map<number, Map<ItemId, Spot>>();
+  private readonly spots = new Map<ItemId, Spot>();
 
-  constructor(host: HTMLElement, private readonly stow: (entity: number, item: ItemId, put: boolean) => void) {
+  constructor(
+    host: HTMLElement,
+    private readonly stow: (entity: number, item: ItemId, put: boolean) => void,
+    private readonly bag: BagWindow,
+  ) {
     this.el = document.createElement('div');
-    this.el.className = 'panel store hidden';
-    this.el.style.cssText = 'left:50%;top:18%;transform:translateX(-50%);max-width:560px';
+    this.el.className = 'panel bag store hidden';
+    this.el.style.cssText = 'left:16px;right:auto;top:44px';
+    this.el.innerHTML = `<div class="bag-title"><h2></h2><button data-close title="Close">×</button></div><div class="hint">Drag things between this and your bag to stow them or take them out</div>`;
     host.appendChild(this.el);
-    this.el.addEventListener('click', (ev) => {
-      const b = (ev.target as HTMLElement).closest('button');
-      if (!b || this.entity === null) return;
-      if (b.dataset.close) this.toggle(null);
-      else if (b.dataset.item) this.stow(this.entity, b.dataset.item, b.dataset.put === '1');
+    const title = this.el.querySelector<HTMLElement>('.bag-title');
+    const h2 = this.el.querySelector<HTMLElement>('h2');
+    if (!title || !h2) throw new Error('store markup');
+    this.title = h2;
+    this.area = new BagArea(host, this.el, this.spots, {});
+    this.el.insertBefore(this.area.el, this.el.querySelector('.hint'));
+    this.el.querySelector('button[data-close]')?.addEventListener('click', () => this.toggle(null));
+    makeMovable(this.el, title, null, () => {});
+    // Out of the store into the bag, and from the bag into the store.
+    this.area.targets.push({
+      tag: (_id, x, y) => (this.bag.open && this.bag.area.contains(x, y) ? 'take' : null),
+      drop: (id, x, y) => {
+        if (this.entity === null) return;
+        this.stow(this.entity, id, false);
+        this.area.sent(id);
+        this.bag.area.landAt(id, x, y);
+      },
+    });
+    this.bag.area.targets.unshift({
+      tag: (_id, x, y) => (this.entity !== null && this.area.contains(x, y) ? 'stow' : null),
+      drop: (id, x, y) => {
+        if (this.entity === null) return;
+        this.stow(this.entity, id, true);
+        this.bag.area.sent(id);
+        this.area.landAt(id, x, y);
+      },
     });
   }
 
@@ -28,12 +64,20 @@ export class StoreWindow {
   }
 
   toggle(entity: number | null): void {
+    this.area.cancel();
+    if (this.entity !== null) this.layouts.set(this.entity, new Map(this.spots));
     this.entity = entity;
-    this.key = '';
+    this.spots.clear();
+    if (entity !== null) {
+      let lay = this.layouts.get(entity);
+      if (!lay) this.layouts.set(entity, (lay = new Map()));
+      for (const [k, v] of lay) this.spots.set(k, v);
+      this.bag.toggle(true);
+    }
     this.el.classList.toggle('hidden', entity === null);
   }
 
-  /** Redraws when either side changes; closes when you walk away from the store. */
+  /** Keeps the pictures in step with what the store holds; closes when you walk away from it. */
   update(state: SimState, me: Entity): void {
     if (this.entity === null) return;
     const t = state.entities.get(this.entity);
@@ -41,15 +85,8 @@ export class StoreWindow {
       this.toggle(null);
       return;
     }
-    const bag = bagOf(me);
-    const key = JSON.stringify([t.stored, bag]);
-    if (key === this.key) return;
-    this.key = key;
-    const name = esc(thingDef(CONTENT, t.def).name);
-    const row = (stacks: readonly ItemStack[], put: boolean): string =>
-      stacks.length
-        ? stacks.map((s) => `<button data-item="${esc(s.id)}" data-put="${put ? 1 : 0}" title="${esc(itemDef(CONTENT, s.id)?.name ?? s.id)}"><img src="${iconUrl(s.id)}" width="40" height="40" style="image-rendering:pixelated;display:block">${s.count > 1 ? `×${s.count}` : ''}</button>`).join('')
-        : '<span style="color:var(--dim)">empty</span>';
-    this.el.innerHTML = `<h2>The ${name}</h2><div>${row(t.stored, false)}</div><h3>Your bag (click to put it in)</h3><div>${row(bag, true)}</div><button data-close="1">Close</button>`;
+    const name = `The ${thingDef(CONTENT, t.def).name}`;
+    if (this.title.textContent !== name) this.title.textContent = name;
+    this.area.sync(t.stored);
   }
 }

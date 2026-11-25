@@ -50,13 +50,18 @@
   every frame, `cellOf` maps a world point to the frame's cell, `placeOf` maps a cell back (fire light/smoke/sound). So
   standing, bumping, blows, fire, frost and rain work per cell with no craft code. GPU draws each frame by turning the
   eye into its cells (`gpuStructures.draw` views). Frames are set each tick from the craft entity (pos, z, angle).
-- `CraftDef` = hull boxes (`fine: true` = half-metre grid) + fittings + what each named channel does (thrust, turn, climb, fuel), wind share, thin air
-  (faster, calmer higher up), clearance, horn cruise. Stations (`ThingDef.station`) write a channel: E takes it, movement
-  keys move it, it eases to the middle while manned, holds when left; `feed` stations take items (rune shard = 300 s,
-  burnt only under power). No fuel: it sinks and moors (resting, the wind leaves it). `ThingDef.store` = hold window,
-  `onJump` = launching plank, item `calls` = sky horn (calls/re-routes the craft; built on first call).
-- `craftMotion` (host and a guest's foresight, `sim/foresight.ts`) moves the craft and carries whoever stands on it.
-  Not yet: the ship casts no sun shadow (gpuSolid), your view does not turn with the ship.
+- `CraftDef` = hull boxes (`fine: true` = half-metre grid; the airship's curved hull and envelope are swept by
+  `content/hullSweep.ts`, which keeps the shell of a solid and shapes each cell by which sides face the air: bilge,
+  rounded slope, rounded corner) + fittings (`fill` = a station's starting value, the tank starts with fuel) + what each
+  named channel does (thrust, turn, climb, fuel), wind share, thin air, clearance, horn cruise. Stations
+  (`ThingDef.station`) write a channel: E takes it, movement keys move it, it eases to the middle while manned, holds
+  when left; `feed` stations take items (rune shard = 300 s, burnt only under power). No fuel: it sinks and moors.
+  `ThingDef.store` = hold (shown as a bag, drag to and from your own), `onJump` = launching plank, item `calls` = sky horn.
+- `craftMotion` (host and a guest's foresight, `sim/foresight.ts`) moves the craft and carries every body inside its
+  box (`Entity.aboard`): standing, on stairs, jumping, falling. Entering, a body's speed becomes relative to the craft;
+  leaving (over the side, off the plank) it keeps the craft's speed. In the air bodies keep their momentum (air control
+  only adds; knockback fades only on the ground). Fire on a ship's cells spreads: `matter.place` gives a spot's world
+  position, so it is never "far from everyone". Not yet: no sun shadow from the ship, view does not turn with it.
 
 ## Ruins
 Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with weighted `styles` (ring, street, cross, scatter) over decayed recipes

@@ -85,6 +85,8 @@ export interface MatterAccess {
   forNeighbours(x: number, y: number, z: number, fn: (x: number, y: number, z: number, weight: number) => void): void;
   /** Can you see from A to B? False if ground, a wall, a closed door or a cell of the 3D layer is in the way (sampled every half metre). */
   clearLine(ax: number, ay: number, az: number, bx: number, by: number, bz: number): boolean;
+  /** Where the middle of a spot stands in the world (a ship's cell is wherever the ship is now). */
+  place(x: number, y: number, z: number): { x: number; y: number; z: number };
   /** The cell of the 3D layer at a point in space, if it holds something there (shapes count where they really fill). */
   cellAt(x: number, y: number, z: number): { x: number; y: number; z: number } | null;
   /** Every spot with fire in it. */

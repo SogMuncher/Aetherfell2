@@ -19,6 +19,17 @@ export function aboard(e: Entity, cd: CraftDef, x: number, y: number): { x: numb
   return { x: e.pos.x + dx * c - dy * s, y: e.pos.y + dx * s + dy * c };
 }
 
+/** Is this world point over the craft's box (seen from above)? */
+function inBox(e: Entity, cd: CraftDef, x: number, y: number): boolean {
+  const c = Math.cos(e.angle);
+  const s = Math.sin(e.angle);
+  const dx = x - e.pos.x;
+  const dy = y - e.pos.y;
+  const lx = cd.pivot[0] + dx * c + dy * s;
+  const ly = cd.pivot[1] - dx * s + dy * c;
+  return lx >= 0 && lx < cd.size[0] && ly >= 0 && ly < cd.size[1];
+}
+
 /**
  * One tick of flight for every craft, the same on the host and in a guest's own foresight: the craft moves by the
  * speed, climb and turn its own system gave it; bodies standing on it (found before it moves) ride along, turned with
@@ -37,12 +48,25 @@ export function craftMotion(ctx: SimContext): void {
       continue;
     }
     vol.setFrame(f0);
-    const reach = Math.hypot(cd.size[0], cd.size[1]) / 2 + 2;
+    // Whoever is inside its box, from the keel to a little over its top, is carried with it: standing, climbing stairs,
+    // jumping or falling. Their speed is their own relative to the craft; coming in they lose the craft's speed, and
+    // leaving (a jump over the side, the plank) they keep it.
     const riders: Entity[] = [];
     for (const o of state.entities.values()) {
       if (o === e || o.dead || o.ride || o.craft || o.heldBy !== null || o.player?.station != null) continue;
-      if (Math.hypot(o.pos.x - e.pos.x, o.pos.y - e.pos.y) > reach || o.vz > 0.5) continue;
-      if (vol.floorOn(e.id, o.pos.x, o.pos.y, o.z + 0.3) > o.z - 0.3) riders.push(o);
+      const inside = o.z >= e.z - 0.1 && o.z < e.z + cd.size[2] + 1.5 && inBox(e, cd, o.pos.x, o.pos.y);
+      if (inside === (o.aboard === e.id)) {
+        if (inside) riders.push(o);
+        continue;
+      }
+      const k = inside ? -1 : 1;
+      o.vel.x += k * (c.vel.x - c.spin * (o.pos.y - e.pos.y));
+      o.vel.y += k * (c.vel.y + c.spin * (o.pos.x - e.pos.x));
+      o.vz += k * c.vz;
+      if (inside) {
+        o.aboard = e.id;
+        riders.push(o);
+      } else delete o.aboard;
     }
     c.prevYaw = e.angle;
     const ox = e.pos.x;
@@ -62,6 +86,8 @@ export function craftMotion(ctx: SimContext): void {
       o.pos.x = e.pos.x + rx * cs - ry * sn;
       o.pos.y = e.pos.y + rx * sn + ry * cs;
       o.z += c.vz * dt;
+      // Things that do not steer themselves turn with it (a player's view follows their own mouse).
+      if (!o.player) o.angle += c.spin * dt;
     }
     const f1 = frameOf(e, cd);
     if (f1) vol.setFrame(f1);

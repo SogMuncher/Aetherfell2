@@ -146,7 +146,7 @@ export class GameUI {
       wearFrom: (id) => this.cb.wearFrom(id),
     });
     this.doll = new PaperdollWindow(host, { remove: (r) => this.cb.remove(r) });
-    this.store = new StoreWindow(host, (id, item, put) => this.cb.stow(id, item, put));
+    this.store = new StoreWindow(host, (id, item, put) => this.cb.stow(id, item, put), this.bag);
     this.bag.dollAt = (x, y) => this.doll.contains(x, y);
     this.bag.dollSlotAt = (x, y) => this.doll.slotAt(x, y);
     this.bag.dollOpen = () => this.doll.open;

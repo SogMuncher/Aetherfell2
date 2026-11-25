@@ -22,6 +22,8 @@ export interface Fitting {
   thing: ThingId;
   at: readonly [number, number, number];
   face?: number;
+  /** A station's channel when the craft is made (fuel in a tank). */
+  fill?: number;
 }
 
 /**

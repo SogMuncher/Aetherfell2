@@ -4,6 +4,8 @@ import { composeSpell, isDisabled, moveFactor, stackWeight, thingDef, wornWeight
 
 const JUMP_SPEED = 7.2;
 const STRIDE = 1.7;
+/** How much of your walking speed you can add in one tick while in the air. */
+const AIR_CONTROL = 0.08;
 
 /**
  * First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
@@ -89,10 +91,19 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
       e.vel.y += (ty - e.vel.y) * 0.06;
       const lift = updraft(ctx, e);
       e.vz += (-glide.sink + lift - e.vz) * (lift > 0 ? 0.15 : 0.08);
+    } else if (a.onGround || swimming) {
+      e.vel.x = mx * speed;
+      e.vel.y = my * speed;
     } else {
-      const control = a.onGround || swimming ? 1 : 0.08;
-      e.vel.x += (mx * speed - e.vel.x) * control;
-      e.vel.y += (my * speed - e.vel.y) * control;
+      // In the air you keep your momentum (a leap, a fling off a plank) and can only push a little more along your keys.
+      const m = Math.hypot(mx, my);
+      if (m > 0.01) {
+        const ux = mx / m;
+        const uy = my / m;
+        const gain = Math.max(0, Math.min(speed * m - (e.vel.x * ux + e.vel.y * uy), speed * AIR_CONTROL));
+        e.vel.x += ux * gain;
+        e.vel.y += uy * gain;
+      }
     }
 
     if (sprinting) p.stamina = Math.max(0, p.stamina - 18 * dt);

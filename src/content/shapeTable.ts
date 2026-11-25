@@ -109,6 +109,8 @@ export const SHAPES: Record<string, ShapeDef> = {
   roundCorner: { name: 'round corner', pieces: [{ box: FULL, cuts: [[0.9808, 0.1951, 0, 0.9808], [0.8315, 0.5556, 0, 0.9808], [0.5556, 0.8315, 0, 0.9808], [0.1951, 0.9808, 0, 0.9808]] }] },
   // A door leaf swung open: the middle panel turned back against its -x jamb.
   doorOpen: { name: 'open door', pieces: [{ box: [0, 0.45, 0, 0.12, 1, 1] }], swing: 'panelMid', open: true },
+  // The rounded slope upside down: solid toward +x and the top, curving away underneath (a hull's bilge, a balloon's belly).
+  bilge: { name: 'bilge', pieces: [{ box: FULL, cuts: [[-0.9808, 0, -0.1951, -0.1951], [-0.8315, 0, -0.5556, -0.4063], [-0.5556, 0, -0.8315, -0.4063], [-0.1951, 0, -0.9808, -0.1951]] }] },
 };
 
 /** Lasting numbers of shapes (a shape's place in this list + 1). Never reorder; add at the end. At most 63. */
@@ -118,4 +120,5 @@ export const SHAPE_LEDGER: readonly string[] = [
   'postThin', 'postCorner', 'panelMid', 'panelThin', 'parapet', 'rail', 'column', 'columnWide', 'roundRamp', 'cove',
   'archCurve', 'spire', 'gable', 'hipLow', 'window', 'vee', 'slopePlank', 'wallHalf', 'pillarCorner', 'tetra', 'roundCorner',
   'doorOpen',
+  'bilge',
 ];

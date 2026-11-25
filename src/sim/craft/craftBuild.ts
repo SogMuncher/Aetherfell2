@@ -33,6 +33,7 @@ export function buildCraft(ctx: SimContext, thing: ThingId, x: number, y: number
   for (const f of cd.fittings) {
     const o = ctx.spawn(f.thing, x, y, { z });
     o.ride = { craft: e.id, x: f.at[0], y: f.at[1], z: f.at[2], face: f.face ?? 0 };
+    if (o.control && f.fill) o.control.v = f.fill;
   }
   return e;
 }

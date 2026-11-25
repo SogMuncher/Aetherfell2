@@ -94,6 +94,9 @@ const BASE: Record<string, TileEntry> = {
   roofTile: { durability: 140, breaksInto: 'rubble', name: 'clay tiles', floor: 'roof', wall: 'roof', material: 'stone', far: [140, 70, 50] },
   slate: { durability: 160, breaksInto: 'rubble', name: 'slate', floor: 'slate', wall: 'slate', material: 'stone', far: [78, 86, 98] },
   plaster: { durability: 260, breaksInto: 'rubble', name: 'plaster', floor: 'plaster', wall: 'plaster', material: 'stone', far: [200, 190, 162] },
+  // A ship's tarred hull strakes (decked over in planks) and the sailcloth of an airship's envelope.
+  hullPlank: { durability: 240, breaksInto: 'woodFloor', name: 'hull planking', floor: 'planks', wall: 'hull', material: 'wood', shape: 'block', solid: true, flammability: 0.12, fuel: 255, far: [126, 84, 52] },
+  sailcloth: { durability: 30, breaksInto: 'ash', name: 'sailcloth', floor: 'canvas', wall: 'canvas', material: 'cloth', shape: 'block', solid: true, flammability: 0.6, fuel: 90, far: [214, 200, 168] },
   // The living rock of the underworld: you cannot dig through it, nor climb over it.
   caveRock: { name: 'living rock', floor: 'rock', wall: 'rock', material: 'stone', shape: 'block', solid: true, height: 30, far: [38, 34, 40] },
   caveFloor: { name: 'cave floor', floor: 'rock', material: 'stone', far: [52, 48, 54] },
