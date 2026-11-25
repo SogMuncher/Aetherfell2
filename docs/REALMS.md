@@ -6,10 +6,17 @@
 ## 3D layer (`types/volume.ts`, `types/structures.ts`, `sim/world/volume.ts`)
 - Sparse 1 m cells in 16^3 bricks: shape byte (shape + quarter turn) + material byte (a tile kind). Each brick's `rev`
   goes up on any cell or state change (wet, frost, fire…); the GPU re-copies a brick by its own `rev`.
-- Shapes are data (`content/shapes.ts`, ledger `SHAPE_LEDGER`, add numbers at the end). Faces come from the material tile's
+- Fine cells (`sim/world/volumeFine.ts`): any cell can be split into 2x2x2 half-metre cells (`setFine`, fine coords =
+  2x cell coords), each any shape and material; the split cell keeps one material and one set of states, so fire/frost/
+  blows and the ground tiles beside it work per whole 1 m cell (tiles need no finer grid). Physics reads them
+  (`volumeColumns.ts`), the GPU walks them (a fine atlas, 128 split bricks), saves/net pack them. Splitting a shaped cell
+  keeps its look (`splitShape` best fit); eight blocks of one stuff merge back.
+- Shapes are data (`content/shapeTable.ts`, 43 shapes, ledger `SHAPE_LEDGER`, add at the end, max 63; compiled in
+  `shapes.ts`); every shape fits a whole or a fine cell. Faces come from the material tile's
   `wall`/`floor` surfaces. Ground tile and 3D cell are one "spot" (`GROUND_Z` = ground) in `ctx.matter`.
 - Builder (`sim/structures/builder.ts` + `builder/placer|house|arch.ts`) snaps shapes from recipes
-  (`content/structures.ts`): 3 m storeys, walls, floors, stairs, gable/hip/flat roofs, arches, decay for ruins.
+  (`content/structures.ts`): 3 m storeys, walls, floors, gable/hip/flat roofs, arches, decay for ruins. Stairs are
+  fine-cell flights (quarter-metre steps) entered from the side at the foot, under an open stairwell (`Placer.putFine`).
 - Physics asks `floorBelow`, `ceilingAbove`, `solidBetween`; weather asks `openSky`. Changes go out as one
   `volumeChanged` event per brick. Cheat "Build a building" raises any recipe.
 
@@ -36,7 +43,7 @@
   every frame, `cellOf` maps a world point to the frame's cell, `placeOf` maps a cell back (fire light/smoke/sound). So
   standing, bumping, blows, fire, frost and rain work per cell with no craft code. GPU draws each frame by turning the
   eye into its cells (`gpuStructures.draw` views). Frames are set each tick from the craft entity (pos, z, angle).
-- `CraftDef` = hull boxes + fittings + what each named channel does (thrust, turn, climb, fuel), wind share, thin air
+- `CraftDef` = hull boxes (`fine: true` = half-metre grid) + fittings + what each named channel does (thrust, turn, climb, fuel), wind share, thin air
   (faster, calmer higher up), clearance, horn cruise. Stations (`ThingDef.station`) write a channel: E takes it, movement
   keys move it, it eases to the middle while manned, holds when left; `feed` stations take items (rune shard = 300 s,
   burnt only under power). No fuel: it sinks and moors (resting, the wind leaves it). `ThingDef.store` = hold window,
@@ -50,7 +57,7 @@ Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with 
 
 ## Add / change
 - New realm: a `REALMS` entry + portals/habitats naming it; new ground kind only if needed (ground generator).
-- New building: `structures` recipe. New shape: append to `shapes.ts` (never renumber).
+- New building: `structures` recipe. New shape: append to `shapeTable.ts` (never renumber).
 
 ## Checks
-`scripts/volumeSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`.
+`scripts/volumeSmoke.ts`, `fineSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`.

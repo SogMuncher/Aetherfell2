@@ -1,50 +1,16 @@
+// Compiles the shape palette (shapeTable.ts) for ray casting and standing on things
 /**
  * The simple shapes every 3D structure is snapped together from. A shape is one or more convex
  * pieces; each piece is a box, optionally sliced by flat planes (a ramp is a cube cut along a slope).
  * Coordinates are inside a 1 m cell, 0..1. Every shape can face four ways (turned in quarter turns).
  *
- * A new shape is a new entry here (and a line at the end of SHAPE_LEDGER); the renderer, physics and
+ * A new shape is a new entry in shapeTable.ts (and a line at the end of SHAPE_LEDGER); the renderer, physics and
  * builder all read this table and need no changes.
  */
 
-/** A flat plane slicing a piece: the solid side is where nx·x + ny·y + nz·z ≤ d. */
-export type Cut = readonly [nx: number, ny: number, nz: number, d: number];
-
-export interface ShapePiece {
-  /** x0, y0, z0, x1, y1, z1 */
-  readonly box: readonly [number, number, number, number, number, number];
-  readonly cuts?: readonly Cut[];
-}
-
-export interface ShapeDef {
-  readonly name: string;
-  readonly pieces: readonly ShapePiece[];
-}
-
-export const SHAPES: Record<string, ShapeDef> = {
-  cube: { name: 'block', pieces: [{ box: [0, 0, 0, 1, 1, 1] }] },
-  // Lower half: a thin floor seen from above is `slabHigh` (its top is flush with the cell above).
-  slabLow: { name: 'low slab', pieces: [{ box: [0, 0, 0, 1, 1, 0.5] }] },
-  slabHigh: { name: 'high slab', pieces: [{ box: [0, 0, 0.5, 1, 1, 1] }] },
-  // Rises one metre over one metre toward +x (turn it to face other ways).
-  ramp: { name: 'ramp', pieces: [{ box: [0, 0, 0, 1, 1, 1], cuts: [[-1, 0, 1, 0]] }] },
-  // A little roof ridge: two slopes meeting in a point half a metre up.
-  ridge: { name: 'ridge', pieces: [{ box: [0, 0, 0, 1, 1, 0.5], cuts: [[-1, 0, 1, 0], [1, 0, 1, 1]] }] },
-  // Two half-metre steps rising toward +x.
-  stair: { name: 'stair', pieces: [{ box: [0, 0, 0, 0.5, 1, 0.5] }, { box: [0.5, 0, 0, 1, 1, 1] }] },
-  // Outer corner of a hip roof: rises toward the +x,+y corner.
-  hip: { name: 'hip corner', pieces: [{ box: [0, 0, 0, 1, 1, 1], cuts: [[-1, 0, 1, 0], [0, -1, 1, 0]] }] },
-  // The top of a pyramid roof: four slopes meeting half a metre up.
-  cap: { name: 'roof cap', pieces: [{ box: [0, 0, 0, 1, 1, 0.5], cuts: [[-1, 0, 1, 0], [1, 0, 1, 1], [0, -1, 1, 0], [0, 1, 1, 1]] }] },
-  // Solid above a slope, open below it: the shoulder of an arch (left side; turn it for the right).
-  bracket: { name: 'arch shoulder', pieces: [{ box: [0, 0, 0, 1, 1, 1], cuts: [[1, 0, -1, 0]] }] },
-  post: { name: 'post', pieces: [{ box: [0.3, 0.3, 0, 0.7, 0.7, 1] }] },
-  // A thin wall along the -y edge of the cell.
-  panel: { name: 'panel', pieces: [{ box: [0, 0, 0, 1, 0.3, 1] }] },
-};
-
-/** Lasting numbers of shapes (a shape's place in this list + 1). Never reorder; add at the end. */
-export const SHAPE_LEDGER: readonly string[] = ['cube', 'slabLow', 'slabHigh', 'ramp', 'ridge', 'stair', 'post', 'panel', 'hip', 'cap', 'bracket'];
+import { SHAPES, SHAPE_LEDGER, type Cut, type ShapePiece } from './shapeTable';
+export { SHAPES, SHAPE_LEDGER } from './shapeTable';
+export type { Cut, ShapePiece, ShapeDef } from './shapeTable';
 
 export function shapeId(id: string): number {
   const i = SHAPE_LEDGER.indexOf(id);
@@ -53,6 +19,8 @@ export function shapeId(id: string): number {
 }
 
 export const SHAPE_CUBE = shapeId('cube');
+/** The shape byte of a cell split into 2 × 2 × 2 fine cells (types/volume.ts). */
+export const SHAPE_FINE = shapeId('fine');
 
 // ---------------------------------------------------------------------------------------------
 // Compiled form: flat arrays for the hot loops (ray casting and standing on things).
@@ -92,6 +60,7 @@ function compilePieces(): Float32Array {
     const def = SHAPES[id];
     if (!def) throw new Error(`shape '${id}' is in the ledger but not defined`);
     let pieces = def.pieces;
+    if (pieces.length > 4) throw new Error(`shape '${id}' has more than 4 pieces`);
     for (let rot = 0; rot < 4; rot++) {
       const byte = (i + 1) | (rot << 6);
       SHAPE_START[byte] = out.length / PIECE_FLOATS;
@@ -225,6 +194,64 @@ export function sampleAt(fx: number, fy: number): number {
   const sx = Math.min(SAMPLES - 1, Math.max(0, Math.floor(fx * SAMPLES)));
   const sy = Math.min(SAMPLES - 1, Math.max(0, Math.floor(fy * SAMPLES)));
   return sy * SAMPLES + sx;
+}
+
+/** Is the point (cell coordinates 0..1) inside this shape byte? */
+export function insideShape(byte: number, x: number, y: number, z: number): boolean {
+  const n = SHAPE_COUNT[byte] ?? 0;
+  const P = SHAPE_PIECES;
+  for (let k = 0, s = (SHAPE_START[byte] ?? 0) * PIECE_FLOATS; k < n; k++, s += PIECE_FLOATS) {
+    if (x < (P[s] ?? 0) || y < (P[s + 1] ?? 0) || z < (P[s + 2] ?? 0) || x > (P[s + 3] ?? 1) || y > (P[s + 4] ?? 1) || z > (P[s + 5] ?? 1)) continue;
+    let ok = true;
+    for (let c = 0; c < (P[s + 6] ?? 0) && ok; c++) {
+      const b = s + 7 + c * 4;
+      if ((P[b] ?? 0) * x + (P[b + 1] ?? 0) * y + (P[b + 2] ?? 0) * z > (P[b + 3] ?? 0) + 1e-6) ok = false;
+    }
+    if (ok) return true;
+  }
+  return false;
+}
+
+const FIT = 4;
+let fitBits: Uint8Array | null = null;
+const splits = new Map<number, Uint8Array>();
+
+/**
+ * A whole cell's shape as its eight fine cells (index i + 2j + 4k for the half at x i, y j, z k): each half gets the
+ * shape (any shape, any turn, or empty) that best matches that part of the whole one. Worked out once per shape byte.
+ */
+export function splitShape(byte: number): Uint8Array {
+  const known = splits.get(byte);
+  if (known) return known;
+  const S = FIT * FIT * FIT;
+  const at = (a: number): number => (a + 0.5) / FIT;
+  if (!fitBits) {
+    fitBits = new Uint8Array(256 * S);
+    for (let b = 1; b < 256; b++) {
+      if ((SHAPE_COUNT[b] ?? 0) === 0) continue;
+      for (let q = 0; q < S; q++) fitBits[b * S + q] = insideShape(b, at(q % FIT), at((q >> 2) % FIT), at(q >> 4)) ? 1 : 0;
+    }
+  }
+  const bits = fitBits;
+  const out = new Uint8Array(8);
+  for (let o = 0; o < 8; o++) {
+    const want = new Uint8Array(S);
+    for (let q = 0; q < S; q++) want[q] = insideShape(byte, ((o & 1) + at(q % FIT)) / 2, (((o >> 1) & 1) + at((q >> 2) % FIT)) / 2, ((o >> 2) + at(q >> 4)) / 2) ? 1 : 0;
+    let best = 0;
+    let bestMiss = want.reduce((a, v) => a + v, 0);
+    for (let b = 1; b < 256 && bestMiss > 0; b++) {
+      if ((SHAPE_COUNT[b] ?? 0) === 0) continue;
+      let miss = 0;
+      for (let q = 0; q < S && miss < bestMiss; q++) if (bits[b * S + q] !== want[q]) miss++;
+      if (miss < bestMiss) {
+        best = b;
+        bestMiss = miss;
+      }
+    }
+    out[o] = best;
+  }
+  splits.set(byte, out);
+  return out;
 }
 
 export function validateShapes(): string[] {

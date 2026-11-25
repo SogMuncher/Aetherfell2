@@ -70,6 +70,17 @@ const lowStep = aboard(ship, cd, 3.25, 0.5);
 const highStep = aboard(ship, cd, 8.25, 3);
 check('stairs rise the right way (boarding stair, stern stair)', Math.abs(vol.floorOn(ship.id, lowStep.x, lowStep.y, ship.z + 3) - ship.z - 0.5) < 0.01 && Math.abs(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 7) - ship.z - 5) < 0.01, `${(vol.floorOn(ship.id, lowStep.x, lowStep.y, ship.z + 3) - ship.z).toFixed(2)} / ${(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 7) - ship.z).toFixed(2)}`);
 
+// Down the hatch stair into the hold and back up: the deck above leaves head room all the way.
+const origin = aboard(ship, cd, 0, 0);
+stand(15, 5, 4);
+run(sim, 60, () => ({ forward: 1, yaw: Math.PI }));
+const downAt = me.pos.x - origin.x;
+check('you can walk down the hatch stair into the hold', Math.abs(me.z - ship.z - 1) < 0.1 && downAt < 11, `at x ${downAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
+stand(8, 5, 1);
+for (let i = 0; i < 80 && me.pos.x - origin.x < 15; i++) run(sim, 1, () => ({ forward: 1, yaw: 0 }));
+const upAt = me.pos.x - origin.x;
+check('and back up it onto the deck', Math.abs(me.z - ship.z - 4) < 0.1 && upAt > 14, `at x ${upAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
+
 // Stations: E takes the wheel, keys move it, it eases back while manned and holds once you leave.
 const use = (t: Entity): void => {
   s.queues.use.push({ player: me.id, tileX: 0, tileY: 0, entity: t.id });
@@ -185,7 +196,7 @@ const place = s.volume.placeOf(cell.x, cell.y, cell.z);
 check('and its fire would show where the ship is', Math.hypot(place.x - deckCell.x, place.y - deckCell.y) < 0.8);
 s.queues.effects.push({ target: { kind: 'cell', ...cell }, effects: [{ type: 'heat', amount: 400 }], source: null, from: null });
 run(sim, 10);
-check('a hull cell catches fire by itself', s.volume.cellGet('fire', cell.x, cell.y, cell.z) > 0 && s.volume.cellGet('fire', cell.x, cell.y - 3, cell.z) === 0);
+check('a hull cell (split into fine deck planks) catches fire by itself', s.volume.cellGet('fire', cell.x, cell.y, cell.z) > 0 && s.volume.cellGet('fire', cell.x, cell.y - 3, cell.z) === 0);
 const wet = { x: cell.x, y: cell.y - 3, z: cell.z };
 s.queues.effects.push({ target: { kind: 'cell', ...wet }, effects: [{ type: 'soak', amount: 200 }, { type: 'chill', amount: 400 }], source: null, from: null });
 run(sim, 4);

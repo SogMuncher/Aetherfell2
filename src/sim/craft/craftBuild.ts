@@ -19,10 +19,14 @@ export function buildCraft(ctx: SimContext, thing: ThingId, x: number, y: number
     const shape = b.shape ? shapeByte(shapeId(b.shape), b.rot ?? 0) : 0;
     const mat = b.shape && b.mat ? tileCode(b.mat) : 0;
     const every = b.every ?? 1;
-    for (let cx = b.from[0]; cx < b.to[0]; cx++) {
-      for (let cy = b.from[1]; cy < b.to[1]; cy++) {
-        if ((cx - b.from[0]) % every || (cy - b.from[1]) % every) continue;
-        for (let cz = b.from[2]; cz < b.to[2]; cz++) vol.set(a.x + cx, a.y + cy, a.z + cz, shape, mat);
+    const k = b.fine ? 2 : 1;
+    const put = b.fine ? (cx: number, cy: number, cz: number): unknown => vol.setFine(a.x * 2 + cx, a.y * 2 + cy, a.z * 2 + cz, shape, mat) : (cx: number, cy: number, cz: number): unknown => vol.set(a.x + cx, a.y + cy, a.z + cz, shape, mat);
+    const [x0, y0, z0] = b.from.map((v) => Math.round(v * k));
+    const [x1, y1, z1] = b.to.map((v) => Math.round(v * k));
+    for (let cx = x0 ?? 0; cx < (x1 ?? 0); cx++) {
+      for (let cy = y0 ?? 0; cy < (y1 ?? 0); cy++) {
+        if ((cx - (x0 ?? 0)) % every || (cy - (y0 ?? 0)) % every) continue;
+        for (let cz = z0 ?? 0; cz < (z1 ?? 0); cz++) put(cx, cy, cz);
       }
     }
   }
