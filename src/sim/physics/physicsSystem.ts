@@ -156,7 +156,8 @@ export const physicsSystem: SimSystem = (ctx: SimContext) => {
       struck = bounce(ctx, e, d, 'y') || struck;
     }
 
-    if (e.kb) {
+    // Knockback fades against the ground; a body flung into the air keeps it until it lands.
+    if (e.kb && onGround0) {
       e.kb.x *= KB_FADE;
       e.kb.y *= KB_FADE;
       if (Math.abs(e.kb.x) + Math.abs(e.kb.y) < 0.2) delete e.kb;

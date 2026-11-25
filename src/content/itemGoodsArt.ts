@@ -99,16 +99,18 @@ export const ITEM_GOODS_ART: Record<ArtId, ArtDef> = {
     ],
     20,
   ),
-  'item.horn': goods(
-    [
-      { shape: 'cone', at: [0, 0.2, 0], size: [0.13, 0.3, 0.13], color: 'bone', surface: 'smooth', tilt: 180 },
-      { shape: 'cone', at: [0.05, 0.48, 0], size: [0.08, 0.28, 0.08], color: 'bone', surface: 'smooth', tilt: 165 },
-      { shape: 'cone', at: [0.13, 0.72, 0], size: [0.04, 0.22, 0.04], color: 'bone', surface: 'smooth', tilt: 150 },
-      { shape: 'drum', at: [0, 0.08, 0], size: [0.135, 0.025, 0.135], color: '#b08838', surface: 'metal' },
-      { shape: 'drum', at: [0.05, 0.4, 0], size: [0.085, 0.02, 0.085], color: '#b08838', surface: 'metal' },
-    ],
-    30,
-  ),
+  // A curled horn: a tube that thickens along a curve to a flared bell, brass at the mouthpiece and round the bell.
+  'item.horn': goods([
+    ...Array.from({ length: 9 }, (_, i): ArtPart => {
+      const a = -160 + i * 22;
+      const r = (a * Math.PI) / 180;
+      return { shape: 'drum', at: [0.05 + Math.cos(r) * 0.3, 0.42 + Math.sin(r) * 0.3, 0], size: [0.025 + i * 0.008, 0.075, 0.025 + i * 0.008], tilt: -a, color: 'bone', surface: 'smooth' };
+    }),
+    { shape: 'cone', at: [0.05 + Math.cos(0.72) * 0.36, 0.42 + Math.sin(0.72) * 0.36, 0], size: [0.17, 0.16, 0.17], tilt: 180 - 41, color: 'bone', surface: 'smooth' },
+    { shape: 'drum', at: [0.05 + Math.cos(0.72) * 0.37, 0.42 + Math.sin(0.72) * 0.37, 0], size: [0.175, 0.015, 0.175], tilt: -41, color: '#b08838', surface: 'metal' },
+    { shape: 'drum', at: [0.05 + Math.cos(-2.79) * 0.3, 0.42 + Math.sin(-2.79) * 0.3, 0], size: [0.03, 0.05, 0.03], tilt: 160, color: '#b08838', surface: 'metal' },
+    { shape: 'drum', at: [0.05 + Math.cos(-1.4) * 0.3, 0.42 + Math.sin(-1.4) * 0.3, 0], size: [0.06, 0.015, 0.06], tilt: 80, color: '#b08838', surface: 'metal' },
+  ]),
   'item.stone': goods([
     { shape: 'ball', at: [0, 0.32, 0], size: [0.28, 0.27, 0.1], color: 'shell', surface: 'stone' },
     // A glyph of a few strokes, different on every stone (each stroke is a feature its seed rolls).

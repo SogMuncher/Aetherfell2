@@ -1,10 +1,11 @@
-import { AREA_H, AREA_W, DROP_BELOW, type Drag, ICON, type Icon, PICK_PAD, STORE, type Spot, type WorldDrag, clamp01, describe, esc, iconUrl, leatherUrl, readStore } from './bagParts';
+import { DROP_BELOW, ICON, PICK_PAD, STORE, type Spot, type WorldDrag, clamp01, esc, iconUrl, readStore } from './bagParts';
+import { BagArea, type DropTarget } from './bagArea';
+import { makeMovable } from './movable';
 import { CONTENT, itemDef, stackWeight, thingDef, weaponStats, wornWeight } from '../../content';
-import type { Entity, ItemId, ItemStack, SimState, ThrowAim } from '../../types';
+import type { Entity, ItemId, SimState, ThrowAim } from '../../types';
 import { bagOf, HAND_SLOT } from '../../types';
 import { type Projection, toScreen } from '../raycaster/camera';
 import { itemWorldSize } from '../entities/itemArt';
-import { rhash } from '../color';
 
 
 export interface BagCallbacks {
@@ -30,24 +31,15 @@ export interface BagCallbacks {
 export class BagWindow {
   readonly el: HTMLElement;
   open = false;
-  private readonly area: HTMLElement;
+  readonly area: BagArea;
   private readonly foot: HTMLElement;
-  private readonly label: HTMLElement;
-  private readonly icons = new Map<ItemId, Icon>();
   private readonly spots: Map<ItemId, Spot>;
   private win: Spot | null;
-  /** Throws sent but not yet seen in the inventory: hide that many so the item leaves your hand at once. */
-  private readonly pending = new Map<ItemId, { target: number; until: number }>();
   private proj: Projection | null = null;
-  private drag: Drag | null = null;
   private worldDrag: WorldDrag | null = null;
   private state: SimState | null = null;
   private me: Entity | null = null;
   private readonly hit = { sx: 0, sy: 0, depth: 0 };
-  private lastClick = { id: '', at: 0 };
-  /** The item named by the last click while its label shows. */
-  private labelled = '';
-  private labelUntil = 0;
   private footKey = '';
   /** Set by the interface: is this screen point over the paperdoll window, and is it open (it also lets things be dragged out of the world). */
   dollAt: (x: number, y: number) => boolean = () => false;
@@ -64,25 +56,22 @@ export class BagWindow {
     this.win = stored.win;
     this.el = document.createElement('div');
     this.el.className = 'panel bag hidden';
-    this.el.innerHTML = `<div class="bag-title"><h2>Bag</h2><button data-close title="Close (I)">×</button></div><div class="bag-area"></div><div class="bag-foot"></div>
+    this.el.innerHTML = `<div class="bag-title"><h2>Bag</h2><button data-close title="Close (I)">×</button></div><div class="bag-foot"></div>
       <div class="hint">Click: identify · double-click: use · drag onto the world: throw (higher up = further, bottom = set down) · drag things lying nearby into the bag to pick them up</div>`;
     host.appendChild(this.el);
-    const area = this.el.querySelector<HTMLElement>('.bag-area');
     const foot = this.el.querySelector<HTMLElement>('.bag-foot');
     const title = this.el.querySelector<HTMLElement>('.bag-title');
-    if (!area || !foot || !title) throw new Error('bag markup');
-    this.area = area;
+    if (!foot || !title) throw new Error('bag markup');
     this.foot = foot;
-    this.area.style.width = `${AREA_W}px`;
-    this.area.style.height = `${AREA_H}px`;
-    this.area.style.backgroundImage = `url(${leatherUrl()})`;
-    this.label = document.createElement('div');
-    this.label.className = 'bag-label hidden';
-    this.area.appendChild(this.label);
+    this.area = new BagArea(host, this.el, this.spots, { use: (id) => this.cb.use(id), moved: () => this.save() });
+    this.el.insertBefore(this.area.el, foot);
+    this.area.targets.push(this.dollTarget(), this.viewTarget());
     this.el.style.setProperty('--icon', `${ICON}px`);
     this.el.querySelector('button[data-close]')?.addEventListener('click', () => this.toggle(false));
-    this.makeMovable(title);
-    this.placeWindow();
+    makeMovable(this.el, title, this.win, (w) => {
+      this.win = w;
+      this.save();
+    });
     this.listenToView();
   }
 
@@ -90,7 +79,7 @@ export class BagWindow {
     this.open = force ?? !this.open;
     this.el.classList.toggle('hidden', !this.open);
     if (!this.open) {
-      this.cancelDrag();
+      this.area.cancel();
       this.cancelWorldDrag();
       const canvas = document.getElementById('screen');
       if (canvas) canvas.style.cursor = '';
@@ -105,13 +94,7 @@ export class BagWindow {
     this.me = e;
     const p = e.player;
     if (!this.open || !p) return;
-    const now = performance.now();
-    this.sync(bagOf(e), now);
-    if (this.labelUntil && now > this.labelUntil) {
-      this.labelled = '';
-      this.label.classList.add('hidden');
-      this.labelUntil = 0;
-    }
+    this.area.sync(bagOf(e));
     const a = e.actor;
     const wpn = a ? weaponStats(CONTENT, thingDef(CONTENT, e.def), a.weapon) : null;
     const load = stackWeight(bagOf(e)) + wornWeight(CONTENT, e.worn);
@@ -128,169 +111,34 @@ export class BagWindow {
       <div class="dim">Might ${p.stats.might} · Grace ${p.stats.grace} · Will ${p.stats.will}</div>`;
   }
 
-  /** Keeps one picture per stack, with a count when there is more than one. */
-  private sync(inv: readonly ItemStack[], now: number): void {
-    const present = new Set<ItemId>();
-    for (const s of inv) {
-      present.add(s.id);
-      let shown = s.count;
-      const pend = this.pending.get(s.id);
-      if (pend) {
-        if (s.count <= pend.target || now > pend.until) this.pending.delete(s.id);
-        else shown = Math.min(shown, pend.target);
-      }
-      let icon = this.icons.get(s.id);
-      if (!icon) icon = this.addIcon(s.id);
-      if (icon.shown !== shown) {
-        icon.shown = shown;
-        icon.count.textContent = shown > 1 ? String(shown) : '';
-        icon.el.classList.toggle('hidden', shown <= 0);
-      }
-    }
-    for (const [id, icon] of this.icons) {
-      if (present.has(id)) continue;
-      if (this.drag?.id === id) this.cancelDrag();
-      icon.el.remove();
-      this.icons.delete(id);
-      this.pending.delete(id);
-    }
-  }
-
-  private addIcon(id: ItemId): Icon {
-    const el = document.createElement('div');
-    el.className = 'bag-item';
-    el.innerHTML = `<img alt="" draggable="false" src="${iconUrl(id)}"><span class="n"></span>`;
-    const count = el.querySelector<HTMLElement>('.n') ?? el;
-    this.area.appendChild(el);
-    const spot = this.spots.get(id) ?? this.freeSpot(id);
-    this.spots.set(id, spot);
-    this.placeIcon(el, spot);
-    const icon: Icon = { el, count, shown: -1 };
-    this.icons.set(id, icon);
-    el.addEventListener('pointerdown', (ev) => this.down(ev, id, el));
-    el.addEventListener('pointermove', (ev) => this.move(ev));
-    el.addEventListener('pointerup', (ev) => this.up(ev));
-    el.addEventListener('pointercancel', () => this.cancelDrag());
-    return icon;
-  }
-
-  /** New things land somewhere in the bag that is not already covered. */
-  private freeSpot(id: ItemId): Spot {
-    const taken = [...this.icons.keys()].map((k) => this.spots.get(k)).filter((s): s is Spot => !!s);
-    let seed = 0;
-    for (let i = 0; i < id.length; i++) seed = (seed * 31 + id.charCodeAt(i)) | 0;
-    for (let tries = 0; tries < 60; tries++) {
-      const s = { x: rhash(seed, tries, 11), y: rhash(seed, tries, 12) };
-      const minGap = tries < 40 ? 0.16 : 0.08;
-      if (taken.every((t) => Math.hypot(t.x - s.x, (t.y - s.y) * (AREA_H / AREA_W)) > minGap)) return s;
-    }
-    return { x: rhash(seed, 99, 11), y: rhash(seed, 99, 12) };
-  }
-
-  private placeIcon(el: HTMLElement, s: Spot): void {
-    el.style.left = `${Math.round(s.x * (AREA_W - ICON))}px`;
-    el.style.top = `${Math.round(s.y * (AREA_H - ICON))}px`;
-  }
-
-  private down(ev: PointerEvent, id: ItemId, el: HTMLElement): void {
-    if (ev.button !== 0 || this.drag) return;
-    ev.preventDefault();
-    el.setPointerCapture(ev.pointerId);
-    const r = el.getBoundingClientRect();
-    this.drag = { id, el, pointer: ev.pointerId, sx: ev.clientX, sy: ev.clientY, ox: ev.clientX - r.left, oy: ev.clientY - r.top, ghost: null };
-  }
-
-  private move(ev: PointerEvent): void {
-    const d = this.drag;
-    if (!d || d.pointer !== ev.pointerId) return;
-    if (!d.ghost) {
-      if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < 4) return;
-      const g = document.createElement('div');
-      g.className = 'bag-item bag-ghost';
-      g.innerHTML = `<img alt="" src="${iconUrl(d.id)}"><span class="tag"></span>`;
-      this.host.appendChild(g);
-      d.ghost = g;
-      d.el.classList.add('lifted');
-      this.label.classList.add('hidden');
-    }
-    d.ghost.style.left = `${ev.clientX - d.ox}px`;
-    d.ghost.style.top = `${ev.clientY - d.oy}px`;
-    // Tell the player what letting go here will do.
-    const where = this.targetAt(ev.clientX, ev.clientY);
-    const aim = where === 'view' ? this.aimAt(d.id, ev.clientX, ev.clientY) : null;
-    const toHand = this.toHand(d.id, ev.clientX, ev.clientY);
-    const tag = where === 'view' && aim ? (aim.power < DROP_BELOW ? 'set down' : aim.power > 0.7 ? 'hurl' : 'throw') : where === 'bag' ? '' : where === 'doll' ? (toHand ? 'hold' : 'wear') : '✕';
-    const t = d.ghost.querySelector<HTMLElement>('.tag');
-    if (t && t.textContent !== tag) t.textContent = tag;
-  }
-
-  private up(ev: PointerEvent): void {
-    const d = this.drag;
-    if (!d || d.pointer !== ev.pointerId) return;
-    if (!d.ghost) {
-      this.drag = null;
-      this.click(d.id);
-      return;
-    }
-    const where = this.targetAt(ev.clientX, ev.clientY);
-    if (where === 'bag') {
-      const r = this.area.getBoundingClientRect();
-      const s = { x: clamp01((ev.clientX - d.ox - r.left) / (AREA_W - ICON)), y: clamp01((ev.clientY - d.oy - r.top) / (AREA_H - ICON)) };
-      this.spots.set(d.id, s);
-      this.placeIcon(d.el, s);
-      // The last thing you touched sits on top.
-      this.area.appendChild(d.el);
-      this.save();
-    } else if (where === 'doll') {
-      if (this.toHand(d.id, ev.clientX, ev.clientY)) this.cb.wear(d.id, HAND_SLOT);
-      else this.cb.wear(d.id);
-    } else if (where === 'view') {
-      const aim = this.aimAt(d.id, ev.clientX, ev.clientY);
-      const icon = this.icons.get(d.id);
-      if (aim && icon && icon.shown > 0) {
-        this.cb.throwItem(aim);
-        this.pending.set(d.id, { target: icon.shown - 1, until: performance.now() + 1500 });
-      }
-    }
-    this.cancelDrag();
-  }
-
-  private cancelDrag(): void {
-    const d = this.drag;
-    if (!d) return;
-    d.ghost?.remove();
-    d.el.classList.remove('lifted');
-    if (d.el.hasPointerCapture(d.pointer)) d.el.releasePointerCapture(d.pointer);
-    this.drag = null;
-  }
-
   /** The item you last clicked, while the bag is open and its label shows (for the quick keys). */
   picked(): ItemId | null {
-    return this.open && this.labelled !== '' && !this.label.classList.contains('hidden') ? this.labelled : null;
+    return this.open ? this.area.picked() : null;
   }
 
-  /** One click names the item; a second quick click uses it. */
-  private click(id: ItemId): void {
-    const now = performance.now();
-    if (this.lastClick.id === id && now - this.lastClick.at < 380) {
-      this.lastClick = { id: '', at: 0 };
-      this.cb.use(id);
-      return;
-    }
-    this.lastClick = { id, at: now };
-    this.labelled = id;
-    const def = itemDef(CONTENT, id);
-    const icon = this.icons.get(id);
-    const spot = this.spots.get(id);
-    if (!def || !icon || !spot) return;
-    const n = icon.shown > 1 ? ` ×${icon.shown}` : '';
-    this.label.innerHTML = `<b>${esc(def.name)}${n}</b>${describe(def).map((l) => `<div>${esc(l)}</div>`).join('')}`;
-    const x = spot.x * (AREA_W - ICON) + ICON / 2;
-    this.label.style.left = `${Math.round(Math.max(90, Math.min(AREA_W - 90, x)))}px`;
-    this.label.style.top = `${Math.round(spot.y * (AREA_H - ICON))}px`;
-    this.label.classList.remove('hidden');
-    this.area.appendChild(this.label);
-    this.labelUntil = now + 4000;
+  /** Let go over the paperdoll: armour onto the body, anything onto the hands. */
+  private dollTarget(): DropTarget {
+    return {
+      tag: (id, x, y) => (this.dollAt(x, y) ? (this.toHand(id, x, y) ? 'hold' : 'wear') : null),
+      drop: (id, x, y) => this.cb.wear(id, this.toHand(id, x, y) ? HAND_SLOT : undefined),
+    };
+  }
+
+  /** Let go over the open world: throw toward that point (higher up harder, near the bottom just set down). */
+  private viewTarget(): DropTarget {
+    return {
+      tag: (id, x, y) => {
+        if (this.targetAt(x, y) !== 'view') return null;
+        const aim = this.aimAt(id, x, y);
+        return aim ? (aim.power < DROP_BELOW ? 'set down' : aim.power > 0.7 ? 'hurl' : 'throw') : null;
+      },
+      drop: (id, x, y) => {
+        const aim = this.aimAt(id, x, y);
+        if (!aim) return;
+        this.cb.throwItem(aim);
+        this.area.sent(id);
+      },
+    };
   }
 
   /** Is this screen point inside the bag, over the open world, or over some other window? */
@@ -300,8 +148,7 @@ export class BagWindow {
   }
 
   private targetAt(x: number, y: number): 'bag' | 'doll' | 'view' | 'none' {
-    const r = this.area.getBoundingClientRect();
-    if (this.open && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return 'bag';
+    if (this.open && this.area.contains(x, y)) return 'bag';
     if (this.dollAt(x, y)) return 'doll';
     const hit = document.elementFromPoint(x, y);
     if (hit instanceof Element && hit.closest('.panel, .spellbar')) return 'none';
@@ -337,7 +184,7 @@ export class BagWindow {
    */
   private listenToView(): void {
     window.addEventListener('pointerdown', (ev) => {
-      if ((!this.open && !this.dollOpen()) || ev.button !== 0 || this.drag || this.worldDrag) return;
+      if ((!this.open && !this.dollOpen()) || ev.button !== 0 || this.area.dragging || this.worldDrag) return;
       if (this.targetAt(ev.clientX, ev.clientY) !== 'view') return;
       const hit = this.worldItemAt(ev.clientX, ev.clientY);
       if (!hit) return;
@@ -347,7 +194,7 @@ export class BagWindow {
     window.addEventListener('pointermove', (ev) => {
       const d = this.worldDrag;
       if (!d) {
-        if ((this.open || this.dollOpen()) && !this.drag) this.hover(ev.clientX, ev.clientY);
+        if ((this.open || this.dollOpen()) && !this.area.dragging) this.hover(ev.clientX, ev.clientY);
         return;
       }
       if (d.pointer !== ev.pointerId) return;
@@ -375,15 +222,7 @@ export class BagWindow {
         this.cb.wearFrom(d.entity);
       } else if (d.ghost && this.targetAt(ev.clientX, ev.clientY) === 'bag' && this.inReach(d.entity)) {
         // It lands in the bag where you let go of it.
-        const r = this.area.getBoundingClientRect();
-        const s = { x: clamp01((ev.clientX - ICON / 2 - r.left) / (AREA_W - ICON)), y: clamp01((ev.clientY - ICON / 2 - r.top) / (AREA_H - ICON)) };
-        this.spots.set(d.item, s);
-        const icon = this.icons.get(d.item);
-        if (icon) {
-          this.placeIcon(icon.el, s);
-          this.area.appendChild(icon.el);
-        }
-        this.save();
+        this.area.landAt(d.item, ev.clientX, ev.clientY);
         this.cb.pickUp(d.entity);
       }
       this.cancelWorldDrag();
@@ -436,42 +275,6 @@ export class BagWindow {
       bestDepth = this.hit.depth;
     }
     return best;
-  }
-
-  /** Drag the bag by its title bar, like any window. */
-  private makeMovable(handle: HTMLElement): void {
-    let grab: { id: number; ox: number; oy: number } | null = null;
-    handle.addEventListener('pointerdown', (ev) => {
-      if (ev.button !== 0 || (ev.target instanceof Element && ev.target.closest('button'))) return;
-      const r = this.el.getBoundingClientRect();
-      grab = { id: ev.pointerId, ox: ev.clientX - r.left, oy: ev.clientY - r.top };
-      handle.setPointerCapture(ev.pointerId);
-      ev.preventDefault();
-    });
-    handle.addEventListener('pointermove', (ev) => {
-      if (!grab || grab.id !== ev.pointerId) return;
-      this.win = { x: ev.clientX - grab.ox, y: ev.clientY - grab.oy };
-      this.placeWindow();
-    });
-    const end = (ev: PointerEvent): void => {
-      if (!grab || grab.id !== ev.pointerId) return;
-      grab = null;
-      this.save();
-    };
-    handle.addEventListener('pointerup', end);
-    handle.addEventListener('pointercancel', end);
-    window.addEventListener('resize', () => this.placeWindow());
-  }
-
-  private placeWindow(): void {
-    if (!this.win) return;
-    const w = this.el.offsetWidth || AREA_W + 32;
-    const h = this.el.offsetHeight || AREA_H + 120;
-    const x = Math.max(0, Math.min(window.innerWidth - w, this.win.x));
-    const y = Math.max(0, Math.min(window.innerHeight - h, this.win.y));
-    this.el.style.left = `${x}px`;
-    this.el.style.top = `${y}px`;
-    this.el.style.right = 'auto';
   }
 
   private save(): void {

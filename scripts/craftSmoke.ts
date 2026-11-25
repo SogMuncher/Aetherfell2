@@ -58,28 +58,30 @@ const stand = (lx: number, ly: number, dz: number): void => {
   me.z = ship.z + dz + 0.05;
   me.vz = 0;
   me.vel = { x: 0, y: 0 };
+  delete me.kb;
   // Falls between the checks may have knocked the tester down.
   if (me.player) me.player.downed = 0;
   me.hp = me.maxHp;
 };
-stand(8, 6, 4);
+stand(10, 5, 4.5);
 run(sim, 20);
-check('the main deck holds you up in the air', Math.abs(me.z - (ship.z + 4)) < 0.1, `${(me.z - ship.z).toFixed(2)} m above the keel`);
+check('the main deck holds you up in the air', Math.abs(me.z - (ship.z + 4.5)) < 0.1, `${(me.z - ship.z).toFixed(2)} m above the keel`);
 const vol = s.volume;
-const lowStep = aboard(ship, cd, 3.25, 0.5);
-const highStep = aboard(ship, cd, 8.25, 3);
-check('stairs rise the right way (boarding stair, stern stair)', Math.abs(vol.floorOn(ship.id, lowStep.x, lowStep.y, ship.z + 3) - ship.z - 0.5) < 0.01 && Math.abs(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 7) - ship.z - 5) < 0.01, `${(vol.floorOn(ship.id, lowStep.x, lowStep.y, ship.z + 3) - ship.z).toFixed(2)} / ${(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 7) - ship.z).toFixed(2)}`);
+const lowStep = aboard(ship, cd, 5.85, 1.5);
+const highStep = aboard(ship, cd, 8.1, 3);
+check('stairs rise the right way (boarding stair, stern stair)', Math.abs(vol.floorOn(ship.id, lowStep.x, lowStep.y, ship.z + 3) - ship.z - 0.5) < 0.01 && Math.abs(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 6) - ship.z - 5.5) < 0.01, `${(vol.floorOn(ship.id, lowStep.x, lowStep.y, ship.z + 3) - ship.z).toFixed(2)} / ${(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 6) - ship.z).toFixed(2)}`);
 
 // Down the hatch stair into the hold and back up: the deck above leaves head room all the way.
 const origin = aboard(ship, cd, 0, 0);
-stand(15, 5, 4);
-run(sim, 60, () => ({ forward: 1, yaw: Math.PI }));
+stand(12.5, 7.75, 4.5);
+for (let i = 0; i < 60 && me.pos.x - origin.x < 16.8; i++) run(sim, 1, () => ({ forward: 1, yaw: 0 }));
+run(sim, 10);
 const downAt = me.pos.x - origin.x;
-check('you can walk down the hatch stair into the hold', Math.abs(me.z - ship.z - 1) < 0.1 && downAt < 11, `at x ${downAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
-stand(8, 5, 1);
-for (let i = 0; i < 80 && me.pos.x - origin.x < 15; i++) run(sim, 1, () => ({ forward: 1, yaw: 0 }));
+check('you can walk down the hatch stair into the hold', Math.abs(me.z - ship.z - 1.5) < 0.1 && downAt > 16.5, `at x ${downAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
+stand(17.5, 7.75, 1.5);
+for (let i = 0; i < 80 && me.pos.x - origin.x > 13; i++) run(sim, 1, () => ({ forward: 1, yaw: Math.PI }));
 const upAt = me.pos.x - origin.x;
-check('and back up it onto the deck', Math.abs(me.z - ship.z - 4) < 0.1 && upAt > 14, `at x ${upAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
+check('and back up it onto the deck', Math.abs(me.z - ship.z - 4.5) < 0.1 && upAt < 13.5, `at x ${upAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
 
 // Stations: E takes the wheel, keys move it, it eases back while manned and holds once you leave.
 const use = (t: Entity): void => {
@@ -101,7 +103,7 @@ check('a wheel left over turns the ship', Math.abs(ship.craft.spin) > 0.05);
 if (wheel.control) wheel.control.v = 0;
 
 // Flight carries whoever stands on deck; fuel burns only under power.
-stand(8, 6, 4);
+stand(10, 5, 4.5);
 run(sim, 4);
 const fuel0 = tank.control?.v ?? 0;
 if (throttle.control) throttle.control.v = 1;
@@ -109,7 +111,7 @@ const x0 = ship.pos.x;
 run(sim, 60);
 const flew = ship.pos.x - x0;
 const deck = vol.floorOn(ship.id, me.pos.x, me.pos.y, me.z + 0.3);
-check('the throttle drives it forward and you ride along on deck', flew > 5 && Math.abs(deck - me.z) < 0.1 && Math.abs(me.z - ship.z - 4) < 0.15, `${flew.toFixed(1)} m`);
+check('the throttle drives it forward and you ride along on deck', flew > 5 && Math.abs(deck - me.z) < 0.1 && Math.abs(me.z - ship.z - 4.5) < 0.15, `${flew.toFixed(1)} m`);
 const burnt = fuel0 - (tank.control?.v ?? 0);
 check('fuel burns while flying (one second a second)', Math.abs(burnt - 3) < 0.2, `${burnt.toFixed(2)} s`);
 if (throttle.control) throttle.control.v = 0;
@@ -124,6 +126,15 @@ run(sim, 20);
 const before = { x: me.pos.x, sx: ship.pos.x };
 sim.predict('local', emptyInput(999, 0));
 check("a guest's foresight moves deck and rider together", Math.abs(me.pos.x - before.x - (ship.pos.x - before.sx)) < 0.05 && ship.pos.x > before.sx);
+const rel = (): { x: number; y: number } => ({ x: me.pos.x - ship.pos.x, y: me.pos.y - ship.pos.y });
+const r0 = rel();
+run(sim, 1, () => ({ jump: true }));
+run(sim, 24);
+const r1 = rel();
+check('jumping in place on a flying deck lands you where you were', Math.hypot(r1.x - r0.x, r1.y - r0.y) < 0.3 && Math.abs(me.z - ship.z - 4.5) < 0.1, `${Math.hypot(r1.x - r0.x, r1.y - r0.y).toFixed(2)} m off`);
+stand(8.8, 3, 4.5);
+for (let i = 0; i < 60 && me.z - ship.z < 6.9; i++) run(sim, 1, () => ({ forward: 1, yaw: Math.PI }));
+check('the stern stairs can be climbed while it flies', Math.abs(me.z - ship.z - 7) < 0.1, `${(me.z - ship.z).toFixed(2)} m above the keel`);
 if (throttle.control) throttle.control.v = 0;
 
 // Thin air: faster high up; wind drifts it aloft but not moored on the ground.
@@ -167,16 +178,19 @@ run(sim, 1);
 check('E at the tank feeds it one shard: five minutes of flight', (tank.control?.v ?? 0) === 300 && countItem(bag(), 'runeShard') === 1);
 
 // The plank flings a jumper out and up.
-stand(11, 13, 4);
+stand(11.75, 13, 4.5);
 run(sim, 3);
 run(sim, 1, () => ({ jump: true }));
 run(sim, 1);
-const out = aboard(ship, cd, 11, 30);
+const out = aboard(ship, cd, 11.75, 30);
 const away = (me.kb?.x ?? 0) * (out.x - me.pos.x) + (me.kb?.y ?? 0) * (out.y - me.pos.y);
 check('jumping from the plank launches you out and up', me.vz > 7.5 && away > 0, `vz ${me.vz.toFixed(1)}`);
+const p0 = { x: me.pos.x, y: me.pos.y };
+run(sim, 20);
+check('and you keep flying out (no sudden stop in the air)', Math.hypot(me.pos.x - p0.x, me.pos.y - p0.y) > 10, `${Math.hypot(me.pos.x - p0.x, me.pos.y - p0.y).toFixed(1)} m in a second`);
 
 // The hold keeps what you put in it.
-stand(14.5, 5, 1);
+stand(17.5, 5, 1.5);
 run(sim, 20);
 const hold = fit('shipHold');
 use(hold);
@@ -188,20 +202,30 @@ run(sim, 1, () => ({ stow: { entity: hold.id, item: 'bread', put: false } }));
 check('and gives it back', countItem(bag(), 'bread') === bread);
 
 // Every cell burns and freezes on its own: fire on one hull cell, frost on another.
-const deckCell = aboard(ship, cd, 15.5, 4.5);
-const cell = s.volume.cellOf(deckCell.x, deckCell.y, ship.z + 3.5);
+const deckCell = aboard(ship, cd, 12.5, 4.5);
+const cell = s.volume.cellOf(deckCell.x, deckCell.y, ship.z + 4.25);
 const a = ship.craft.anchor;
-check('a point on deck is a cell of the ship', cell.x - a.x === 15 && cell.y - a.y === 4 && cell.z - a.z === 3, JSON.stringify({ x: cell.x - a.x, y: cell.y - a.y, z: cell.z - a.z }));
+check('a point on deck is a cell of the ship', cell.x - a.x === 12 && cell.y - a.y === 4 && cell.z - a.z === 4, JSON.stringify({ x: cell.x - a.x, y: cell.y - a.y, z: cell.z - a.z }));
 const place = s.volume.placeOf(cell.x, cell.y, cell.z);
 check('and its fire would show where the ship is', Math.hypot(place.x - deckCell.x, place.y - deckCell.y) < 0.8);
 s.queues.effects.push({ target: { kind: 'cell', ...cell }, effects: [{ type: 'heat', amount: 400 }], source: null, from: null });
 run(sim, 10);
-check('a hull cell (split into fine deck planks) catches fire by itself', s.volume.cellGet('fire', cell.x, cell.y, cell.z) > 0 && s.volume.cellGet('fire', cell.x, cell.y - 3, cell.z) === 0);
-const wet = { x: cell.x, y: cell.y - 3, z: cell.z };
+check('a hull cell (split into fine deck planks) catches fire by itself', s.volume.cellGet('fire', cell.x, cell.y, cell.z) > 0 && s.volume.cellGet('fire', cell.x - 3, cell.y, cell.z) === 0);
+const wet = { x: cell.x - 3, y: cell.y, z: cell.z };
 s.queues.effects.push({ target: { kind: 'cell', ...wet }, effects: [{ type: 'soak', amount: 200 }, { type: 'chill', amount: 400 }], source: null, from: null });
 run(sim, 4);
 check('another cell freezes', s.volume.cellGet('frost', wet.x, wet.y, wet.z) > 0, `frost ${s.volume.cellGet('frost', wet.x, wet.y, wet.z)}`);
 
+
+// Fire on the ship spreads along its timbers like anywhere else (it is not "far from everyone" at its quiet store spot).
+for (const dx of [1, -1]) s.queues.effects.push({ target: { kind: 'cell', x: cell.x + dx, y: cell.y, z: cell.z }, effects: [{ type: 'coat', liquid: 'oil', amount: 6 }], source: null, from: null });
+s.queues.effects.push({ target: { kind: 'cell', ...cell }, effects: [{ type: 'heat', amount: 400 }], source: null, from: null });
+let spread = false;
+for (let i = 0; i < 600 && !spread; i++) {
+  run(sim, 1);
+  spread = [1, -1].some((dx) => s.volume.cellGet('fire', cell.x + dx, cell.y, cell.z) > 0);
+}
+check('fire on a ship spreads to the timbers beside it', spread);
 
 console.log(failures() === 0 ? 'craft checks passed' : `${failures()} craft checks FAILED`);
 if (failures() > 0) throw new Error('craft checks failed');

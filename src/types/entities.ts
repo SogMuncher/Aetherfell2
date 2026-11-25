@@ -235,6 +235,8 @@ export interface Entity {
   craft?: CraftData;
   /** Fixed aboard a craft. */
   ride?: RideData;
+  /** Inside a craft's box (on its decks, or jumping or falling in its air): moves with it, its speed taken relative to it. */
+  aboard?: number;
   /** A station's control. */
   control?: ControlData;
   /** What is kept in it (a hold, a chest you can fill). */

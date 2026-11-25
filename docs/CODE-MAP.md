@@ -36,7 +36,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matterKit.ts` (52) Shared helpers for the matter checks: a calm world, flat ground, stepping, PASS/FAIL counting, common cells
 - `handsSmoke.ts` (67) Headless checks: creatures carry a bag (players' own kind), spill all of it when they die, and their brains
 - `musicSmoke.ts` (181) Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, combos climb,
-- `craftSmoke.ts` (207) CRAFTS: the airship is cells of the 3D layer flown as one frame: decks hold you up and carry you, stations, fu
+- `craftSmoke.ts` (231) CRAFTS: the airship is cells of the 3D layer flown as one frame: decks hold you up and carry you, stations, fu
 - `fineSmoke.ts` (64) FINE CELLS: a 3D cell split into 2 x 2 x 2 half-metre cells; the shape palette, splitting, standing, saving, f
 
 ## src/audio/
@@ -113,24 +113,25 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (466) building recipes for the 3D layer (D)
-- `surfaces.ts` (223) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
+- `surfaces.ts` (241) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
 - `things.ts` (249) entity archetypes by trait (D)
-- `tileCodes.ts` (17) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
-- `tiles.ts` (201) all tile kinds + code assignment from the ledger
+- `tileCodes.ts` (18) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
+- `tiles.ts` (204) all tile kinds + code assignment from the ledger
 - `validate.ts` (268) validateContent: every reference must point at something that exists
 - `viewmodel.ts` (36) held-item hand poses (viewmodel thread)
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
 - `artCheck.ts` (41) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
 - `smallForms.ts` (253) Bushes, rocks, plants and small heaps (haystacks, woodpiles, wells, rubble) grown from parts, like trees (form
 - `itemGearArt.ts` (124) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
-- `itemGoodsArt.ts` (135) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
+- `itemGoodsArt.ts` (137) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
 - `creatures.ts` (153) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
 - `handling.ts` (87) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
 - `bodyPlans.ts` (172) Body plans as reusable parts (two legs, four legs, hopper, antlers): segmented limbs on joints, roles for body
 - `moves.ts` (78) Body moves seen from outside: how arms, torso, head (or a beast's neck) turn through each swing direction and
-- `crafts.ts` (73) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
-- `shipProps.ts` (58) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
-- `shapeTable.ts` (114) The shape palette of the 3D layer as data: every shape a cell (1 m) or a fine cell (half a metre) can take
+- `crafts.ts` (101) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
+- `shipProps.ts` (92) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
+- `shapeTable.ts` (117) The shape palette of the 3D layer as data: every shape a cell (1 m) or a fine cell (half a metre) can take
+- `hullSweep.ts` (60) Curved hulls as fine cells: every half-metre cell inside a solid is kept where it shows, shaped by which sides
 
 ## src/input/
 - `input.ts` (185) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -167,7 +168,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `viewModel.ts` (270) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
 - `artGrow.ts` (264) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
-- `artSprites.ts` (137) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
+- `artSprites.ts` (138) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
 - `assembler.ts` (246) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
 - `itemLook.ts` (93) What an item looks like, worked out from its definition: base shape, colours, size, gear parts (no item ids)
 - `gearArt.ts` (96) Worn armour and the held item laid onto any creature's art recipe: shells over the parts each slot covers, the
@@ -210,7 +211,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `tileBillboards.ts` (169) tree/rock billboards from tiles
 
 ## src/render/ui/
-- `bag.ts` (486) BagWindow: draggable inventory window (C)
+- `bag.ts` (289) BagWindow: draggable inventory window (C)
 - `bagParts.ts` (149) bag constants, icon urls, item description, layout store
 - `paperdoll.ts` (254) C key: armour slots and the hand slot, drag to take off
 - `paperdollStats.ts` (52) the paperdoll's side panel: health, protection, hands, skills
@@ -219,7 +220,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `ui.ts` (624) GameUI: HUD, dialogue, journal, map, runebook (C)
 - `paperdollFigure.ts` (81) The paperdoll's figure: your own body sprite in what you wear and hold, turned with the mouse wheel
 - `prompt.ts` (56) The line under the crosshair: what pressing E (or F, or jumping) would do with what you are looking at
-- `storeWindow.ts` (55) The hold window: what a store keeps (a ship's hold) beside what is in your bag; click a stack to move it acros
+- `storeWindow.ts` (92) The hold window: what a store keeps (a ship's hold) beside what is in your bag; click a stack to move it acros
+- `bagArea.ts` (246) A bag's leather area: one picture per stack lying where you put it, click to name, double-click to use, drag t
+- `movable.ts` (38) Windows you drag by their title bar: kept on screen, told where they ended up so they can remember it
 
 ## src/render/vfx/
 - `particleKinds.ts` (90) particle kinds, physics, mote look tables
@@ -272,11 +275,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/physics/
 - `impacts.ts` (79) fast loose things hurt, onImpact bursts, thrown items take a blow and break
-- `physicsSystem.ts` (266) Knockback left after each tick (it fades in about a third of a second).
+- `physicsSystem.ts` (267) Knockback left after each tick (it fades in about a third of a second).
 - `spatialHash.ts` (41) Uniform grid of entities, rebuilt once per tick. Answers "what is near here?" cheaply.
 
 ## src/sim/player/
-- `playerSystem.ts` (242) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
+- `playerSystem.ts` (253) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
 
 ## src/sim/rpg/
 - `gearHandling.ts` (67) put on / take off armour, hold anything in the hands
@@ -308,7 +311,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `cityWard.ts` (152) one ward: keep, landmarks, blocks
 - `crossings.ts` (201) Where water meets people. Bridges come with the ways (sim/world/roads.ts routes each way straight across the water it
 - `decks.ts` (174) Decks over water: bridges where a way crosses a river or lake, piers where a port meets the water. One shape of thing
-- `matter.ts` (224) ctx.matter: stuff at (x,y,z) for tiles and cells
+- `matter.ts` (228) ctx.matter: stuff at (x,y,z) for tiles and cells
 - `noise.ts` (59) Small, fast, seedable noise helpers. Pure functions of (seed, coords).
 - `realms.ts` (93) Who goes along when the party changes realm: the travellers and what they carry.
 - `roads.ts` (112) ways per region: waysTouching, wayHit
@@ -335,14 +338,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
 - `defs.ts` (82) Content type + re-exports of defs/*
 - `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
-- `entities.ts` (242) Entity and its components
+- `entities.ts` (244) Entity and its components
 - `events.ts` (66) Things that happened during a tick. Audio, render effects, UI and the network react to these.
 - `gear.ts` (199) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
 - `index.ts` (21) re-exports all types
 - `input.ts` (96) Letting go of an item from the bag over the view: where the cursor was decides the throw.
 - `items.ts` (48) Inventory helpers shared by every system that touches items.
 - `math.ts` (10) 
-- `matter.ts` (94) MATTER — one way to talk about "the stuff at a place", whatever holds it.
+- `matter.ts` (96) MATTER — one way to talk about "the stuff at a place", whatever holds it.
 - `net.ts` (53) co-op message types
 - `palettes.ts` (22) Colour as data. Pictures are never painted in fixed colours: every part of a creature, tree,
 - `sky.ts` (95) RGB, 0..255.
@@ -354,7 +357,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (202) surface, biome, water and world-generation defs
 - `art.ts` (203) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
-- `craft.ts` (96) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
+- `craft.ts` (98) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
 
 ## src/types/defs/
 - `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population
@@ -368,7 +371,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
 
 ## src/sim/craft/
-- `craftBuild.ts` (39) Makes a craft: its hull cells written into a quiet corner of the 3D layer and its fittings set aboard
-- `craftMotion.ts` (91) Moves every craft by its own speed and turn, carrying whoever stands on it, and keeps its frame in the 3D laye
+- `craftBuild.ts` (40) Makes a craft: its hull cells written into a quiet corner of the 3D layer and its fittings set aboard
+- `craftMotion.ts` (117) Moves every craft by its own speed and turn, carrying whoever stands on it, and keeps its frame in the 3D laye
 - `craftSystem.ts` (189) Crafts: stations taken and fed, horn calls answered, and flight worked out from the stations' channels, wind a
 - `index.ts` (3) The craft system (airships): stations, calls, flight, and the motion shared with a guest's foresight

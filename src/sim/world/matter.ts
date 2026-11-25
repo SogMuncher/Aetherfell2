@@ -178,6 +178,10 @@ export class Matter implements MatterAccess {
     return true;
   }
 
+  place(x: number, y: number, z: number): { x: number; y: number; z: number } {
+    return z === GROUND_Z ? { x: x + 0.5, y: y + 0.5, z: this.tiles.ground(x + 0.5, y + 0.5) } : this.vol.placeOf(x, y, z);
+  }
+
   cellAt(x: number, y: number, z: number): { x: number; y: number; z: number } | null {
     if (this.vol.bricks.size === 0) return null;
     if (!this.vol.solidBetween(x, y, z - 0.01, z + 0.01)) return null;

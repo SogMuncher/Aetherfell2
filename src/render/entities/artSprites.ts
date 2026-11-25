@@ -1,6 +1,6 @@
 // Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and side
 import type { ArtDef, ArtId, Entity } from '../../types';
-import { CONTENT } from '../../content';
+import { CONTENT, thingDef } from '../../content';
 import { rhash } from '../color';
 import { sideFrom, type Projection } from '../raycaster/camera';
 import { ArtBank, VIEW_DIRS, artVariants, assemble, poseFrames, variantSeed, type Pose } from './assembler';
@@ -83,7 +83,8 @@ export class ArtSprites {
         colours: artColours(def, e.id * 31 + 7, dress),
         scale: 1 + (rhash(e.id, 3, 55) - 0.5) * 2 * (def.vary ?? 0),
         phase: rhash(e.id, 4, 55),
-        spin: def.gait ? 0 : rhash(e.id, 2, 211) * Math.PI * 2,
+        // Fixed things (stations, furniture) face the way they were set; loose ones lie any which way.
+        spin: def.gait || thingDef(CONTENT, e.def).body.anchored ? 0 : rhash(e.id, 2, 211) * Math.PI * 2,
         last: time,
       };
       this.tracked.set(e.id, tr);

@@ -1,65 +1,93 @@
-// Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
-import type { CraftDef } from '../types';
+// Crafts as data: the airship's hull (swept fine cells), what is fitted aboard, and how it flies
+import type { CraftDef, HullBox } from '../types';
+import { sweep } from './hullSweep';
 
 const Q = Math.PI / 2;
 
-/**
- * The airship, in its own metres: x runs stern (0) to bow (20), y port (0) to starboard, z up from the keel.
- * Below deck (z 1-3.5) is a walled hold with windows; the main deck (stand at 4) has the throttle and altitude levers,
- * a hatch with stairs down and a plank out to starboard; the raised stern deck (stand at 7) has the wheel and the
- * fuel tank. A boarding stair runs up the port side from the keel.
+/*
+ * The airship, in its own metres: x runs stern (0) to bow (22), y port to starboard about the keel line YC, z up from
+ * the keel. A round-bellied hull with a rising bow; below deck a hold (floor 1.5, deck 4.5); a raised stern deck (7)
+ * over a cabin, with the wheel, levers and aether tank; a sailcloth envelope on two masts overhead.
  */
+const L = 22;
+const HB = 4.5;
+const YC = 6.25;
+const MAIN = 4.5;
+const QUARTER = 7;
+const AFT = 6.5;
+
+/** Width of the deck seen from above, 0..1: a square stern, a long rounded bow. */
+const plan = (x: number): number => (x < 3 ? 0.78 + 0.22 * Math.sqrt(x / 3) : x > L - 9 ? Math.sqrt(Math.max(0, 1 - ((x - (L - 9)) / 9) ** 2)) : 1);
+/** The keel rises toward bow and stern. */
+const bottom = (x: number): number => 0.5 + (x > L - 7 ? 3 * ((x - (L - 7)) / 7) ** 2 : x < 4 ? 1.2 * ((4 - x) / 4) ** 2 : 0);
+/** The round of the bilge: half the beam at the keel, the full beam 2.5 m up. */
+const section = (h: number): number => (h < 0 ? 0 : 0.5 + 0.5 * Math.sqrt(Math.min(1, h / 2.5)));
+const top = (x: number): number => (x < AFT ? QUARTER : MAIN);
+const inPlan = (x: number, y: number): boolean => x >= 0 && x < L && Math.abs(y - YC) < HB * plan(x);
+const inHull = (x: number, y: number, z: number): boolean => z >= bottom(x) && z < top(x) && Math.abs(y - YC) < HB * plan(x) * section(z - bottom(x));
+/** A metre-high bulwark round the edge of each deck. */
+const bulwark = (x: number, y: number, z: number): boolean =>
+  z >= top(x) && z < top(x) + 1 && inPlan(x, y) && [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]].some(([dx = 0, dy = 0]) => !inPlan(x + dx, y + dy) || top(x + dx) < top(x));
+
+const hull = sweep({
+  solid: (x, y, z) => inHull(x, y, z) || bulwark(x, y, z),
+  // The shell, the bulwarks, the decks and the hold floor show; the hold and the stern cabin are hollow.
+  keep: (x, _y, z, edge) => edge || z >= top(x) || z < 1.5 || z >= top(x) - 0.5 || (x < AFT && z >= MAIN - 0.5 && z < MAIN),
+  mat: 'hullPlank',
+  from: [0, 0, 0],
+  to: [L, 13, QUARTER + 1],
+});
+
+/** The gas envelope: a long sailcloth shell over the deck. */
+const envelope = sweep({
+  solid: (x, y, z) => ((x - 11) / 10.5) ** 2 + ((y - YC) / 3.75) ** 2 + ((z - 12.75) / 3.2) ** 2 < 1,
+  keep: (_x, _y, _z, edge) => edge,
+  mat: 'sailcloth',
+  from: [0, 2, 9],
+  to: [L, 10.5, 16],
+});
+
+const box = (from: [number, number, number], to: [number, number, number], shape: string | null, mat?: string, rot?: number): HullBox => ({ from, to, shape, mat, rot, fine: true });
+/** A flight of half-metre stair cells, `n` long, rising `dir` (+1 toward the bow, -1 toward the stern). */
+const flight = (x: number, y0: number, y1: number, z: number, n: number, dir: number): HullBox[] =>
+  Array.from({ length: n }, (_, k) => box([x + dir * k * 0.5, y0, z + k * 0.5], [x + dir * k * 0.5 + 0.5, y1, z + k * 0.5 + 0.5], 'stair', 'hullPlank', dir > 0 ? 0 : 2));
+
 export const AIRSHIP: CraftDef = {
-  size: [20, 14, 8],
-  pivot: [10, 5],
+  size: [L, 15, 16],
+  pivot: [11, YC],
   hull: [
-    // Below deck: floor, walls up to the deck planks, windows cut through the sides.
-    { from: [2, 2, 0], to: [18, 8, 1], shape: 'cube', mat: 'woodFloor' },
-    { from: [2, 2, 1], to: [18, 3, 3.5], shape: 'cube', mat: 'woodWall', fine: true },
-    { from: [2, 7, 1], to: [18, 8, 3.5], shape: 'cube', mat: 'woodWall', fine: true },
-    { from: [2, 3, 1], to: [3, 7, 3.5], shape: 'cube', mat: 'woodWall', fine: true },
-    { from: [17, 3, 1], to: [18, 7, 3.5], shape: 'cube', mat: 'woodWall', fine: true },
-    { from: [5, 2, 2], to: [6, 3, 3], shape: null },
-    { from: [9, 2, 2], to: [10, 3, 3], shape: null },
-    { from: [13, 2, 2], to: [14, 3, 3], shape: null },
-    { from: [5, 7, 2], to: [6, 8, 3], shape: null },
-    { from: [9, 7, 2], to: [10, 8, 3], shape: null },
-    { from: [13, 7, 2], to: [14, 8, 3], shape: null },
-    // Main deck: half-metre planks (2.5 m of head room below), the bow narrowed, and a hatch with a stair down.
-    { from: [0, 1, 3.5], to: [20, 9, 4], shape: 'cube', mat: 'woodFloor', fine: true },
-    { from: [18, 1, 3], to: [20, 3, 4], shape: null },
-    { from: [18, 7, 3], to: [20, 9, 4], shape: null },
-    { from: [11, 4, 3.5], to: [14, 6, 4], shape: null, fine: true },
-    // The hatch stair: quarter-metre steps from the hold floor (1) up to the deck (4).
-    ...[0, 1, 2, 3, 4, 5].map((k) => ({ from: [11 + k * 0.5, 4, 1 + k * 0.5] as const, to: [11.5 + k * 0.5, 6, 1.5 + k * 0.5] as const, shape: 'stair', mat: 'woodFloor', fine: true })),
-    // The raised stern deck and the stairs up to it.
-    { from: [0, 1, 4], to: [6, 9, 6], shape: 'cube', mat: 'woodWall' },
-    { from: [0, 1, 6], to: [6, 9, 7], shape: 'cube', mat: 'woodFloor' },
-    { from: [8, 2, 4], to: [9, 4, 5], shape: 'stair', mat: 'woodFloor', rot: 2 },
-    { from: [7, 2, 5], to: [8, 4, 6], shape: 'stair', mat: 'woodFloor', rot: 2 },
-    { from: [6, 2, 6], to: [7, 4, 7], shape: 'stair', mat: 'woodFloor', rot: 2 },
-    // Rails along the edges (rail on the outer side), gaps for the boarding stair and the plank.
-    { from: [9, 1, 4], to: [18, 2, 5], shape: 'rail', mat: 'woodWall' },
-    { from: [8, 8, 4], to: [10, 9, 5], shape: 'rail', mat: 'woodWall', rot: 2 },
-    { from: [12, 8, 4], to: [18, 9, 5], shape: 'rail', mat: 'woodWall', rot: 2 },
-    { from: [0, 1, 7], to: [6, 2, 8], shape: 'rail', mat: 'woodWall' },
-    { from: [0, 8, 7], to: [6, 9, 8], shape: 'rail', mat: 'woodWall', rot: 2 },
-    { from: [0, 2, 7], to: [1, 8, 8], shape: 'rail', mat: 'woodWall', rot: 3 },
-    { from: [5, 4, 7], to: [6, 8, 8], shape: 'rail', mat: 'woodWall', rot: 1 },
-    // Boarding stair up the port side, and the launching plank out to starboard.
-    { from: [3, 0, 0], to: [4, 1, 1], shape: 'stair', mat: 'woodFloor' },
-    { from: [4, 0, 1], to: [5, 1, 2], shape: 'stair', mat: 'woodFloor' },
-    { from: [5, 0, 2], to: [6, 1, 3], shape: 'stair', mat: 'woodFloor' },
-    { from: [6, 0, 3], to: [7, 1, 4], shape: 'stair', mat: 'woodFloor' },
-    { from: [10, 9, 3.5], to: [12, 14, 4], shape: 'cube', mat: 'woodFloor', fine: true },
+    ...hull,
+    ...envelope,
+    // Keel, and two masts holding the envelope up.
+    box([3, 6, 0], [17, 6.5, 0.5], 'vee', 'hullPlank'),
+    box([7.5, 6, MAIN], [8, 6.5, 10.5], 'columnWide', 'post'),
+    box([17.5, 6, MAIN], [18, 6.5, 10.5], 'columnWide', 'post'),
+    // Cut out: the hatch, the cabin door, stern windows, portholes, gaps in the bulwarks for the stairs and the plank.
+    box([14, 7, MAIN - 0.5], [16.5, 8.5, MAIN], null),
+    box([AFT - 0.5, 5.5, MAIN], [AFT, 7, MAIN + 2], null),
+    box([0, 4.5, 5.5], [0.5, 5, 6], null),
+    box([0, 7.5, 5.5], [0.5, 8, 6], null),
+    ...[5, 8, 11, 14, 17].flatMap((x) => [box([x, 1.5, 2.5], [x + 0.5, 3.5, 3], null), box([x, 9, 2.5], [x + 0.5, 11, 3], null)]),
+    box([AFT - 0.5, 2.5, QUARTER], [AFT, 3.5, QUARTER + 1], null),
+    box([AFT - 0.5, 9, QUARTER], [AFT, 10, QUARTER + 1], null),
+    box([9.5, 1.5, MAIN], [11, 2.5, MAIN + 1], null),
+    box([11, 10, MAIN], [12.5, 11, MAIN + 1], null),
+    // Stairs: down the hatch to the hold, up both sides to the stern deck, and up the port side from the ground.
+    ...flight(16, 7, 8.5, 1.5, 6, -1),
+    ...flight(8.5, 2.5, 3.5, MAIN, 5, -1),
+    ...flight(8.5, 9, 10, MAIN, 5, -1),
+    ...flight(5.5, 1, 2, 0, 9, 1),
+    // The launching plank out to starboard.
+    box([11, 10.5, MAIN - 0.5], [12.5, 15, MAIN], 'cube', 'hullPlank'),
   ],
   fittings: [
-    { thing: 'shipWheel', at: [3.5, 5, 7] },
-    { thing: 'fuelTank', at: [1, 2.5, 7] },
-    { thing: 'throttleLever', at: [16.5, 3.5, 4] },
-    { thing: 'altitudeLever', at: [16.5, 6.5, 4] },
-    { thing: 'shipHold', at: [15.5, 5, 1], face: 2 * Q },
-    { thing: 'launchPlank', at: [11, 11.6, 4], face: Q },
+    { thing: 'shipWheel', at: [4, YC, QUARTER] },
+    { thing: 'throttleLever', at: [4.3, YC - 1.6, QUARTER] },
+    { thing: 'altitudeLever', at: [4.3, YC + 1.6, QUARTER] },
+    // It comes with ten minutes of aether, enough to answer the first call and fly a while.
+    { thing: 'fuelTank', at: [1.6, YC, QUARTER], fill: 600 },
+    { thing: 'shipHold', at: [18.2, 5, 1.5], face: 2 * Q },
+    { thing: 'launchPlank', at: [11.75, 13, MAIN], face: Q },
   ],
   thrust: { channel: 'throttle', speed: 9, accel: 0.5 },
   turn: { channel: 'helm', rate: 0.35 },

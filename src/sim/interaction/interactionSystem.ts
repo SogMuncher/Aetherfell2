@@ -79,7 +79,8 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
     }
     // Spread every few ticks, staggered so fires do not pulse in lockstep.
     if (!beat) continue;
-    if (eyes.length > 0 && !eyes.some((p) => (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y) < sleep2)) continue;
+    const at = matter.place(x, y, z);
+    if (eyes.length > 0 && !eyes.some((p) => (p.x - at.x) ** 2 + (p.y - at.y) ** 2 < sleep2)) continue;
     // A fire with little fuel left spreads less.
     const left = oil > 0 ? 1 : Math.max(rule.dying, Math.min(1, matter.get('fuel', x, y, z) / Math.max(1, inf.fuel)));
     const heat = Math.min(1, fire / 160) * (oil > 0 ? 2.2 : 1) * left;
@@ -97,7 +98,6 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
       const p = (n.flammability + (nOil > 0 ? 0.9 : 0)) * rule.spread * heat * windF * w;
       if (rng.chance(p)) heatSpot(nx, ny, nz);
     });
-    const top = ground ? tiles.ground(x, y) : z;
     // Strong wind lifts burning motes far ahead of the fire front.
     if (fire > 120 && rng.chance(rule.spark.chance + windSpeed * rule.spark.wind)) {
       if (sparks < 0) {
@@ -106,8 +106,8 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
       }
       if (sparks < rule.spark.max) {
         sparks++;
-        ctx.spawn(mote, x + 0.5, y + 0.5, {
-          z: top + 1.2,
+        ctx.spawn(mote, at.x, at.y, {
+          z: at.z + 1.2,
           vel: { x: w.wind.x * 0.9 + rng.range(-1, 1), y: w.wind.y * 0.9 + rng.range(-1, 1) },
           vz: rng.range(2, 4.5),
         });
