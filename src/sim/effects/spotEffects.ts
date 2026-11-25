@@ -85,9 +85,13 @@ export function strikeSpot(ctx: SimContext, x: number, y: number, z: number, amo
     matter.set('wear', x, y, z, total);
     return;
   }
-  matter.set('wear', x, y, z, 0);
-  matter.setKind(x, y, z, inf.breaksInto);
-  if (z === GROUND_Z) ctx.tiles.setDoor(x, y, 0);
+  // A door gives way as a whole leaf; on the ground a broken door is no longer shut.
+  const door = matter.doorOpen(x, y, z) !== null;
+  for (const k of door ? matter.leaf(x, y, z) : [z]) {
+    matter.set('wear', x, y, k, 0);
+    matter.setKind(x, y, k, inf.breaksInto);
+  }
+  if (door && z === GROUND_Z) ctx.tiles.setDoor(x, y, 0);
   ctx.emit({ type: 'tileBroken', x, y, z, tile: inf.code });
 }
 

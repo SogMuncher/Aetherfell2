@@ -1,7 +1,9 @@
+// buildStructure entry: recipe -> cells
 import type { CellWriter, Furnishing, Rng, StructureDef, StructureReport, StructureSite } from '../../types';
-import { Placer, type Site, between, hash2, pick, turn } from './builder/placer';
+import { Placer, type Site, between, hash2, key, pick, turn } from './builder/placer';
 import { buildArch, buildWall, decay } from './builder/arch';
-import { buildHouse, furnishSpots } from './builder/house';
+import { buildHouse } from './builder/house';
+import { furnishSpots } from './builder/furnish';
 
 
 /** Metres between one floor and the next. */
@@ -51,6 +53,8 @@ export function buildStructure(def: StructureDef, out: CellWriter, site: Structu
   let z0 = Infinity;
   let z1 = -Infinity;
   for (const c of p.cells.values()) {
+    // Eaves and verges only reach where nothing stands (a neighbour's wall keeps its blocks).
+    if (p.soft.has(key(c.lx, c.ly, c.lz)) && out.shapeAt(c.x, c.y, c.z) !== 0) continue;
     out.set(c.x, c.y, c.z, c.shape, c.mat);
     if (c.x < x0) x0 = c.x;
     if (c.x > x1) x1 = c.x;

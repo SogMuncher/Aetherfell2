@@ -1,4 +1,5 @@
-import { BRACKET, type Info, type Mats, Placer, SLAB, STAIR, between, hash2, plinth } from './placer';
+// The arch and wall forms (gateways, ramparts) and the decay that turns any structure into a ruin
+import { ARCH, type Info, type Mats, PARAPET, Placer, SLAB, STAIR_FINE, between, hash2, plinth } from './placer';
 import type { Rng, StructureDef } from '../../../types';
 
 
@@ -17,9 +18,9 @@ export function buildArch(def: StructureDef, p: Placer, rng: Rng, m: { wall: num
       }
       p.put(lx, ly, -1, SLAB, 0, m.floor);
       p.cube(lx, ly, H, m.wall);
-      // Shoulders that round the corners of the opening.
-      if (lx === pier) p.put(lx, ly, H - 1, BRACKET, 0, m.wall);
-      if (lx === W - pier - 1) p.put(lx, ly, H - 1, BRACKET, 2, m.wall);
+      // A round arch springing from each pier (two halves meet in a full round over a two-metre opening).
+      if (lx === pier) p.put(lx, ly, H - 1, ARCH, 0, m.wall);
+      if (lx === W - pier - 1) p.put(lx, ly, H - 1, ARCH, 2, m.wall);
     }
   }
   let stairs: Info['stairs'] = null;
@@ -30,13 +31,16 @@ export function buildArch(def: StructureDef, p: Placer, rng: Rng, m: { wall: num
       if (ly % 2 === 0) {
         p.cube(0, ly, H + 1, m.wall);
         p.cube(W - 1, ly, H + 1, m.wall);
+      } else {
+        p.put(0, ly, H + 1, PARAPET, 3, m.wall);
+        p.put(W - 1, ly, H + 1, PARAPET, 1, m.wall);
       }
     }
     const sy = Math.floor(D / 2);
     const rise = def.stairs === false ? 0 : H + 1;
     for (let i = 0; i < rise; i++) {
       const lx = -rise + i;
-      p.put(lx, sy, i, STAIR, 0, m.floor);
+      p.put(lx, sy, i, STAIR_FINE, 0, m.floor);
       for (let lz = 0; lz < i; lz++) p.cube(lx, sy, lz, m.floor);
     }
     if (rise > 0) stairs = { x: -rise, y: sy, z: 0 };
@@ -56,7 +60,10 @@ export function buildWall(def: StructureDef, p: Placer, rng: Rng, m: Mats): Info
       plinth(p, lx, ly, H - 2, m.base);
       p.cube(lx, ly, H - 1, ly === 0 ? m.wall : m.floor);
       for (let lz = 0; lz < H - 1; lz++) p.cube(lx, ly, lz, m.wall);
-      if (ly === 0 && lx % 2 === 0) p.cube(lx, ly, H, m.trim);
+      if (ly === 0) {
+        if (lx % 2 === 0) p.cube(lx, ly, H, m.trim);
+        else p.put(lx, ly, H, PARAPET, 0, m.trim);
+      }
     }
   }
   let stairs: Info['stairs'] = null;
@@ -65,7 +72,7 @@ export function buildWall(def: StructureDef, p: Placer, rng: Rng, m: Mats): Info
     const sy = D - 1;
     for (let i = 0; i < H; i++) {
       const lx = 1 + i;
-      p.put(lx, sy, i, STAIR, 0, m.floor);
+      p.put(lx, sy, i, STAIR_FINE, 0, m.floor);
       plinth(p, lx, sy, i - 1, m.base);
     }
     stairs = { x: 1, y: sy, z: 0 };

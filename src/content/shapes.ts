@@ -21,6 +21,13 @@ export function shapeId(id: string): number {
 export const SHAPE_CUBE = shapeId('cube');
 /** The shape byte of a cell split into 2 × 2 × 2 fine cells (types/volume.ts). */
 export const SHAPE_FINE = shapeId('fine');
+/** Door shapes by number: what each swings to (0 = not a door shape), and whether it is the open way. */
+export const SHAPE_SWING = new Uint8Array(64);
+export const SHAPE_OPEN = new Uint8Array(64);
+for (const [id, def] of Object.entries(SHAPES)) {
+  if (def.swing) SHAPE_SWING[shapeId(id)] = shapeId(def.swing);
+  if (def.open) SHAPE_OPEN[shapeId(id)] = 1;
+}
 
 // ---------------------------------------------------------------------------------------------
 // Compiled form: flat arrays for the hot loops (ray casting and standing on things).

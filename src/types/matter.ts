@@ -64,6 +64,12 @@ export function unpackSpot(key: number): { x: number; y: number; z: number } {
 export interface MatterAccess {
   /** The material at the spot, or null for an empty cell. */
   info(x: number, y: number, z: number): TileInfo | null;
+  /** Is the door here open? null when it is no door (a door is a ground door tile, or a cell of door stuff in a door shape). */
+  doorOpen(x: number, y: number, z: number): boolean | null;
+  /** Opens or shuts the door here; a door of the 3D layer swings every door cell stacked with this one (one leaf). */
+  setDoor(x: number, y: number, z: number, open: boolean): void;
+  /** Heights of the door cells stacked with this one (one leaf), this one first; just [z] on the ground. */
+  leaf(x: number, y: number, z: number): number[];
   kind(x: number, y: number, z: number): TileKind | -1;
   /** True where a cell of the 3D layer (not ground) holds something. */
   solid(x: number, y: number, z: number): boolean;
