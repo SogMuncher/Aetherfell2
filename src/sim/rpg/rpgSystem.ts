@@ -53,6 +53,7 @@ export const rpgSystem: SimSystem = (ctx: SimContext) => {
     if (p.input.throwHeld) throwHeld(ctx, e, p);
     if (p.input.pickUp !== null) pickFromView(ctx, e, p.input.pickUp);
     if (p.input.wear) changeClothes(ctx, e, p, p.input.wear);
+    if (p.input.stow) stow(ctx, e, p.input.stow);
     // Skill growth from what the player has been doing.
     const moved = Math.hypot(e.pos.x - e.prev.x, e.pos.y - e.prev.y);
     if (p.input.sprint && moved > 0.1) p.skills.athletics.xp += 0.05;
@@ -165,6 +166,11 @@ function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): voi
     ctx.emit({ type: 'notice', player: e.id, text: `Used ${def.name.toLowerCase()}.` });
     return;
   }
+  if (def.calls) {
+    ctx.state.queues.calls.push({ thing: def.calls, x: e.pos.x, y: e.pos.y, by: e.id });
+    ctx.emit({ type: 'notice', player: e.id, text: `You blow the ${def.name.toLowerCase()}.` });
+    return;
+  }
   if (def.glide) ctx.emit({ type: 'notice', player: e.id, text: 'Jump, then hold Space in the air to open the glider. Fires below lift you.' });
   else if (def.category === 'key') ctx.emit({ type: 'notice', player: e.id, text: 'Keys work by themselves: open the lock it fits with E.' });
   else ctx.emit({ type: 'notice', player: e.id, text: `You can't use the ${def.name.toLowerCase()} like that.` });
@@ -181,4 +187,21 @@ function learnRunes(ctx: SimContext, e: Entity, p: PlayerData): void {
     ctx.emit({ type: 'runeLearned', player: e.id, rune });
     ctx.state.journal.push({ tick: ctx.state.tick, day: ctx.state.weather.day, text: `${p.name} learned the ${name} rune.` });
   }
+}
+
+/** Moves one stack between the bag and a store within reach (a ship's hold): in while there is room, or back out. */
+function stow(ctx: SimContext, e: Entity, s: { entity: number; item: ItemId; put: boolean }): void {
+  const t = ctx.state.entities.get(s.entity);
+  const room = t ? thingDef(ctx.content, t.def).store : undefined;
+  if (!t?.stored || !room || t.dead || Math.hypot(t.pos.x - e.pos.x, t.pos.y - e.pos.y) > 3.5 || Math.abs(t.z - e.z) > 2.5) return;
+  const from = s.put ? bagOf(e) : t.stored;
+  const to = s.put ? t.stored : bagOf(e);
+  const n = countItem(from, s.item);
+  if (n === 0) return;
+  if (s.put && !to.some((x) => x.id === s.item) && to.length >= room.slots) {
+    ctx.emit({ type: 'notice', player: e.id, text: 'The hold is full.' });
+    return;
+  }
+  removeItem(from, s.item, n);
+  addItem(to, s.item, n);
 }

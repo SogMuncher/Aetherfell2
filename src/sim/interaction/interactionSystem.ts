@@ -186,6 +186,10 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
         continue;
       }
       const tdef = thingDef(content, t.def);
+      if (tdef.store && t.stored) {
+        ctx.emit({ type: 'storeOpened', player: pl.id, entity: t.id });
+        continue;
+      }
       if (tdef.use) {
         if (t.cooldown > 0) {
           ctx.emit({ type: 'notice', player: pl.id, text: `You are not tired enough to use the ${tdef.name} again yet.` });

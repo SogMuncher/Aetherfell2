@@ -99,6 +99,16 @@ export const ITEM_GOODS_ART: Record<ArtId, ArtDef> = {
     ],
     20,
   ),
+  'item.horn': goods(
+    [
+      { shape: 'cone', at: [0, 0.2, 0], size: [0.13, 0.3, 0.13], color: 'bone', surface: 'smooth', tilt: 180 },
+      { shape: 'cone', at: [0.05, 0.48, 0], size: [0.08, 0.28, 0.08], color: 'bone', surface: 'smooth', tilt: 165 },
+      { shape: 'cone', at: [0.13, 0.72, 0], size: [0.04, 0.22, 0.04], color: 'bone', surface: 'smooth', tilt: 150 },
+      { shape: 'drum', at: [0, 0.08, 0], size: [0.135, 0.025, 0.135], color: '#b08838', surface: 'metal' },
+      { shape: 'drum', at: [0.05, 0.4, 0], size: [0.085, 0.02, 0.085], color: '#b08838', surface: 'metal' },
+    ],
+    30,
+  ),
   'item.stone': goods([
     { shape: 'ball', at: [0, 0.32, 0], size: [0.28, 0.27, 0.1], color: 'shell', surface: 'stone' },
     // A glyph of a few strokes, different on every stone (each stroke is a feature its seed rolls).

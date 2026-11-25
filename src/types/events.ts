@@ -43,6 +43,8 @@ export type SimEvent =
   | { type: 'discovered'; locationId: number; name: string; x: number; y: number }
   | { type: 'journal'; text: string }
   | { type: 'containerOpened'; entity: number; x: number; y: number }
+  /** A player opened a store (a ship's hold): their screen shows it beside the bag. */
+  | { type: 'storeOpened'; player: number; entity: number }
   | { type: 'weatherShift'; rain: number; wind: number }
   | { type: 'thunder'; x: number; y: number }
   | { type: 'skillUp'; player: number; skill: SkillId; level: number }

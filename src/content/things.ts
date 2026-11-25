@@ -1,6 +1,7 @@
 // Thing definitions: every entity archetype (creatures from creatures.ts, plus props, fixtures, items, missiles)
 import type { ThingDef, ThingId } from '../types';
 import { CREATURES } from './creatures';
+import { AIRSHIP } from './crafts';
 
 /**
  * Entity archetypes built from traits. Systems act on the traits, never on the id, so a new
@@ -169,6 +170,58 @@ export const THINGS: Record<ThingId, ThingDef> = {
     portal: { to: 'overworld', text: 'You climb the steps up into the light…' },
     light: { r: 0.55, g: 0.55, b: 0.7, radius: 9, flicker: 0.05 },
     sprite: 'stairUp',
+  },
+  /** A rune-driven airship: its hull is cells of the 3D layer flown as one frame (content/crafts.ts). A horn calls it. */
+  airship: {
+    name: 'airship',
+    body: { radius: 1, height: 1, mass: 5000, solid: false, ghost: true },
+    material: 'wood',
+    craft: AIRSHIP,
+    sprite: null,
+  },
+  shipWheel: {
+    name: 'ship\'s wheel',
+    body: { radius: 0.45, height: 1.4, mass: 120, solid: false, anchored: true },
+    material: 'wood',
+    station: { channel: 'helm', axis: 'strafe', rate: 1.2, decay: 1.4, seat: [0.9, 0], text: 'Take the wheel', gauge: 5 },
+    sprite: 'shipWheel',
+  },
+  throttleLever: {
+    name: 'throttle',
+    body: { radius: 0.35, height: 1.2, mass: 60, solid: false, anchored: true },
+    material: 'wood',
+    station: { channel: 'throttle', axis: 'forward', rate: 0.8, decay: 0.6, seat: [0.9, 0], text: 'Work the throttle', gauge: 5 },
+    sprite: 'shipLever',
+  },
+  altitudeLever: {
+    name: 'altitude lever',
+    body: { radius: 0.35, height: 1.2, mass: 60, solid: false, anchored: true },
+    material: 'wood',
+    station: { channel: 'lift', axis: 'forward', rate: 1, decay: 1.4, seat: [0.9, 0], text: 'Work the altitude lever', gauge: 5 },
+    sprite: 'shipLever',
+  },
+  fuelTank: {
+    name: 'aether tank',
+    body: { radius: 0.45, height: 1.3, mass: 200, solid: false, anchored: true },
+    material: 'metal',
+    station: { channel: 'fuel', text: 'Feed it a rune shard', feed: { item: 'runeShard', amount: 300, max: 1500 }, gauge: 5 },
+    light: { r: 0.4, g: 0.9, b: 0.85, radius: 4, flicker: 0.15 },
+    sprite: 'fuelTank',
+  },
+  shipHold: {
+    name: 'ship\'s hold',
+    body: { radius: 0.5, height: 0.8, mass: 150, solid: false, anchored: true },
+    material: 'wood',
+    store: { slots: 24 },
+    sprite: 'chest',
+  },
+  launchPlank: {
+    name: 'plank',
+    body: { radius: 2.2, height: 0.1, mass: 80, solid: false, anchored: true },
+    material: 'wood',
+    // Jump from it to be flung out along it and up (open a glider to sail down).
+    onJump: [{ type: 'push', force: 70, lift: 9 }],
+    sprite: null,
   },
   looseItem: {
     name: 'item',

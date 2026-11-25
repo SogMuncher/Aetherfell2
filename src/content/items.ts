@@ -79,6 +79,8 @@ export const ITEMS: Record<ItemId, ItemDef> = {
   ruinKey: { name: 'Ruin key', category: 'key', weight: 0.1, value: 0, tint: 0x60e0d0 },
   wolfPelt: { name: 'Wolf pelt', category: 'material', weight: 1.5, value: 9, tint: 0x6a6a70 },
   runeShard: { name: 'Rune shard', category: 'material', weight: 0.1, value: 30, tint: 0x60e0d0 },
+  /** Blow it to call the airship to you (it is built the first time); blow it again to send it somewhere new. */
+  skyHorn: { name: 'Sky horn', category: 'tool', weight: 0.6, value: 40, tint: 0xd8c8a0, material: 'wood', look: { form: 'horn' }, calls: 'airship' },
   ...runeStones(),
   spicedCider: { name: 'Spiced cider', category: 'food', weight: 0.4, value: 4, tint: 0xc07028, look: { form: 'vessel', body: 'jug' }, use: [{ type: 'status', id: 'warmed', ticks: 1200 }, { type: 'cure', tag: 'cold' }, { type: 'restore', stat: 'stamina', amount: 15 }] },
 };

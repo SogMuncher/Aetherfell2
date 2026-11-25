@@ -51,6 +51,7 @@ const ui = new GameUI(
     wearFrom: (entity: number) => input.queueWearFrom(entity),
     remove: (region: BodyRegionId) => input.queueRemove(region),
     choose: (i: number) => input.queueChoice(i),
+    stow: (entity: number, item: ItemId, put: boolean) => input.queueStow(entity, item, put),
     prepare: (runes: readonly RuneId[]) => {
       input.queuePrepare(runes);
       ui.toggle('escape');

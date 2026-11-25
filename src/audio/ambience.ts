@@ -156,7 +156,8 @@ export class Ambience {
       if (d < 25) fire += 1 / (1 + d * 0.4);
     }
     for (const k of state.volume.burningCells) {
-      const c = unpackSpot(k);
+      const s = unpackSpot(k);
+      const c = state.volume.placeOf(s.x, s.y, s.z);
       const d = Math.hypot(c.x - me.pos.x, c.y - me.pos.y);
       if (d < 25) fire += 1 / (1 + d * 0.4);
     }

@@ -44,7 +44,7 @@ never `Math.random()`/clock in sim. `SimState` is plain data. All art/audio gene
 | shared systems, layers, tick order, anti-drift checklist | `docs/ARCHITECTURE.md` | `all` |
 | definition tables, thing traits, recipes for adding content | `docs/CONTENT.md` | `content` |
 | terrain, water, roads, places, cities | `docs/WORLD.md` | `world` |
-| 3D layer, buildings, realms, underworld | `docs/REALMS.md` | `realms` |
+| 3D layer, buildings, realms, underworld, airship | `docs/REALMS.md` | `realms` |
 | effects, melee, magic, armour | `docs/COMBAT.md` | `combat` |
 | player, skills, creatures, social, saves, cheats | `docs/RPG.md` | `rpg` |
 | drawing (sky/clouds: `RENDER-SKY.md`, sprites/held item: `RENDER-SPRITES.md`, GPU passes: `GPU-RENDER.md`) | `docs/RENDER.md` | `render` |

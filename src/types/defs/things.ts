@@ -5,6 +5,7 @@ import type { DamageKind, Effect } from '../effects';
 import type { SwingDir } from '../input';
 import type { AirDef } from '../sky';
 import type { HandlingDef } from './handling';
+import type { CraftDef, StationDef } from '../craft';
 
 
 /** Which family of sounds a material makes underfoot and when struck. */
@@ -156,6 +157,14 @@ export interface ThingDef {
   carry?: boolean;
   /** Holds loot. With a lock, the key item is needed (or brute force). */
   container?: { loot: LootId; lock?: ItemId };
+  /** Flies: its cells are built into the 3D layer and carried as one moving frame. */
+  craft?: CraftDef;
+  /** Worked by a player standing at it (a wheel, a lever, a fuel tank). */
+  station?: StationDef;
+  /** Keeps items put into it (E opens it beside the bag). */
+  store?: { slots: number };
+  /** Effects on whoever jumps while standing on it (a launching plank), pushed away from it. */
+  onJump?: Effect[];
   light?: LightDef;
   /** A fire that smokes: grey puffs rise from `rise` metres above it (a hearth's smoke leaves by the chimney, above the roof), about `rate` a second, only seen when near. */
   smoke?: { rise: number; rate: number };

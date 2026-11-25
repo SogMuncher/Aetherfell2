@@ -24,9 +24,10 @@ export function emitFire(out: FireSink, state: SimState, tiles: ReadonlyTiles, c
     spots.push({ x, y, z: Math.max(0, tiles.ground(x + 0.5, y + 0.5)), f: tiles.fire(x, y) / 255, tall });
   }
   for (const key of state.volume.burningCells) {
-    const { x, y, z } = unpackSpot(key);
+    const c = unpackSpot(key);
+    const { x, y, z } = state.volume.placeOf(c.x, c.y, c.z);
     if ((x - camX) ** 2 + (y - camY) ** 2 > r2) continue;
-    spots.push({ x, y, z, f: state.volume.cellGet('fire', x, y, z) / 255, tall: 0.9 });
+    spots.push({ x: x - 0.5, y: y - 0.5, z: z - 0.5, f: state.volume.cellGet('fire', c.x, c.y, c.z) / 255, tall: 0.9 });
   }
   if (spots.length === 0) return;
   // Share the budget: nearest-first isn't needed, a fair thinning is.

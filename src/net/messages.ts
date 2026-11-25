@@ -70,6 +70,7 @@ export function cleanInput(raw: unknown): InputSnapshot {
     pickUp: typeof i.pickUp === 'number' && Number.isInteger(i.pickUp) ? i.pickUp : null,
     wear: cleanWear(i.wear),
     choice: typeof i.choice === 'number' && Number.isInteger(i.choice) ? i.choice : null,
+    stow: cleanStow(i.stow),
   };
 }
 
@@ -146,7 +147,7 @@ export function cleanFriendId(v: unknown): string | null {
 
 /** True when an input presses something (these go by the sure road; plain movement goes by the fast one). */
 export function inputHasPress(i: InputSnapshot): boolean {
-  return i.jump || i.interact || i.grab || i.cast || i.prepare !== null || i.useItem !== null || i.dropItem !== null || i.throwItem !== null || i.throwHeld || i.pickUp !== null || i.wear !== null || i.choice !== null;
+  return i.jump || i.interact || i.grab || i.cast || i.prepare !== null || i.useItem !== null || i.dropItem !== null || i.throwItem !== null || i.throwHeld || i.pickUp !== null || i.wear !== null || i.stow !== null || i.choice !== null;
 }
 
 /**
@@ -190,4 +191,10 @@ export function unpackFast(raw: unknown): unknown {
   } catch {
     return null;
   }
+}
+
+function cleanStow(v: unknown): InputSnapshot['stow'] {
+  if (!v || typeof v !== 'object') return null;
+  const s = v as Record<string, unknown>;
+  return typeof s.entity === 'number' && Number.isInteger(s.entity) && typeof s.item === 'string' && s.item.length <= 64 ? { entity: s.entity, item: s.item, put: s.put === true } : null;
 }

@@ -266,7 +266,7 @@ for (const l of SKY.layers) {
 {
   const w = weather(0.2, 0);
   const tiles = { ground: () => 10, fire: (x: number, y: number) => (x === 3 && y === 4 ? 255 : 0) } as unknown as ReadonlyTiles;
-  const cellFire = (on: boolean): ReadonlyVolume => ({ burningCells: new Set(on ? [spotKey(20, 4, 30)] : []), cellGet: () => 255 }) as unknown as ReadonlyVolume;
+  const cellFire = (on: boolean): ReadonlyVolume => ({ burningCells: new Set(on ? [spotKey(20, 4, 30)] : []), cellGet: () => 255, placeOf: (x: number, y: number, z: number) => ({ x: x + 0.5, y: y + 0.5, z: z + 0.5 }) }) as unknown as ReadonlyVolume;
   const none = new AirSmoke();
   for (let i = 0; i < 30; i++) none.update(0.1, w, 0, 0, 12, tiles, new Set(), cellFire(false));
   check('no fire, no smoke', !none.active);

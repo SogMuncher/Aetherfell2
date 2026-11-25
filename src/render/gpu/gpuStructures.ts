@@ -3,7 +3,7 @@
  * into one atlas texture (shape + material per cell); each brick's box is rasterised and every pixel walks the cells inside it,
  * paints the hit from the material's surface textures, and writes its own depth. Shapes come from `content/shapes.ts` as textures.
  */
-import type { ReadonlyVolume, VolumeBrick } from '../../types';
+import type { ReadonlyVolume, VolumeBrick, VolumeFrame } from '../../types';
 import type { Env } from '../lighting';
 import { compile, loc, makeTexture, makeTextureArray } from './glUtil';
 import { bindStateLooks, packStates, STATE_LAYERS } from './gpuStates';
@@ -44,6 +44,8 @@ export class GpuStructures {
   private readonly tileData = new Uint8Array(4096 * 2);
   private instData = new Float32Array(12 * 64);
   private count = 0;
+  private budget = 0;
+  private fresh = 0;
   /** Bricks drawn in the last frame. */
   bricks = 0;
 
@@ -118,18 +120,50 @@ export class GpuStructures {
     return true;
   }
 
-  draw(vp: Float32Array, cam: CamBasis, w: number, h: number, time: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume): void {
+  /**
+   * Draws the bricks around the eye, then each moving frame (an airship) from its own point of view: the eye and view are
+   * turned into the frame's cells and the projection carries them back, so its bricks march exactly like a building's.
+   */
+  draw(vp: Float32Array, cam: CamBasis, w: number, h: number, time: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume, views: readonly VolumeFrame[] = []): void {
     this.bricks = 0;
     if (vol.bricks.size === 0) return;
+    const seen = new Set<number>();
+    this.budget = GPU_STRUCT.uploadsPerFrame;
+    this.fresh = GPU_STRUCT.freshPerFrame;
+    this.drawView(vp, cam, w, h, time, eye, env, vol, seen, 1, 0);
+    for (const f of views) {
+      const c = Math.cos(f.yaw);
+      const s = Math.sin(f.yaw);
+      const dx = eye.x - f.wx;
+      const dy = eye.y - f.wy;
+      const le = { x: f.px + dx * c + dy * s, y: f.py - dx * s + dy * c, z: eye.z - f.wz + f.z0 };
+      const turn = (v: readonly number[]): [number, number, number] => [c * (v[0] ?? 0) + s * (v[1] ?? 0), -s * (v[0] ?? 0) + c * (v[1] ?? 0), v[2] ?? 0];
+      const lc: CamBasis = { ...cam, fwd: turn(cam.fwd), right: turn(cam.right), up: turn(cam.up) };
+      // Frame cells -> world: turn about the pivot, move to the world spot (column-major), then the camera's own projection.
+      const m = [c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, f.wx - c * f.px + s * f.py, f.wy - s * f.px - c * f.py, f.wz - f.z0, 1];
+      const lvp = new Float32Array(16);
+      for (let col = 0; col < 4; col++) for (let row = 0; row < 4; row++) {
+        let sum = 0;
+        for (let k = 0; k < 4; k++) sum += (vp[k * 4 + row] ?? 0) * (m[col * 4 + k] ?? 0);
+        lvp[col * 4 + row] = sum;
+      }
+      this.drawView(lvp, lc, w, h, time, le, env, vol, seen, c, s);
+    }
+    for (const [key, r] of this.resident) {
+      if (!seen.has(key)) {
+        this.free.push(r.slot);
+        this.resident.delete(key);
+      }
+    }
+  }
+
+  private drawView(vp: Float32Array, cam: CamBasis, w: number, h: number, time: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume, seen: Set<number>, tc: number, ts: number): void {
     const gl = this.gl;
     const R2 = GPU_STRUCT.range * GPU_STRUCT.range;
     const gx0 = (Math.floor(eye.x) >> 4) - GRID.win;
     const gy0 = (Math.floor(eye.y) >> 4) - GRID.win;
-    let budget = GPU_STRUCT.uploadsPerFrame;
-    let fresh = GPU_STRUCT.freshPerFrame;
     this.pageData.fill(0);
     this.count = 0;
-    const seen = new Set<number>();
     for (const [key, b] of vol.bricks) {
       const gx = b.bx - gx0;
       const gy = b.by - gy0;
@@ -149,9 +183,9 @@ export class GpuStructures {
         this.resident.set(key, r);
       }
       // New bricks come first (their own budget); changed ones are re-checked a few a frame, so a busy world never starves new walls.
-      if (r.version < 0 ? fresh > 0 : r.version !== b.rev && budget > 0) {
-        if (r.version < 0) fresh--;
-        else budget--;
+      if (r.version < 0 ? this.fresh > 0 : r.version !== b.rev && this.budget > 0) {
+        if (r.version < 0) this.fresh--;
+        else this.budget--;
         this.upload(b, r);
         r.version = b.rev;
       }
@@ -165,13 +199,7 @@ export class GpuStructures {
       this.instData.set([bx0, by0, bz0, r.slot, bx1, by1, bz1, 0, b.bx * 16, b.by * 16, b.bz * 16, 0], this.count * 12);
       this.count++;
     }
-    for (const [key, r] of this.resident) {
-      if (!seen.has(key)) {
-        this.free.push(r.slot);
-        this.resident.delete(key);
-      }
-    }
-    this.bricks = this.count;
+    this.bricks += this.count;
     if (this.count === 0) return;
     const p = this.prog;
     gl.useProgram(p);
@@ -192,6 +220,7 @@ export class GpuStructures {
     bindStateLooks(gl, p, 6);
     gl.uniform1f(loc(gl, p, 'uRainWet'), env.rain > 0 ? 0.5 : 0);
     gl.uniform1f(loc(gl, p, 'uTime'), time);
+    gl.uniform2f(loc(gl, p, 'uTurn'), tc, ts);
     gl.uniformMatrix4fv(loc(gl, p, 'uVP'), false, vp);
     gl.uniform3f(loc(gl, p, 'uFwd'), cam.fwd[0], cam.fwd[1], cam.fwd[2]);
     gl.uniform3f(loc(gl, p, 'uRight'), cam.right[0], cam.right[1], cam.right[2]);

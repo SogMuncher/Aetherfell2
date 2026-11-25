@@ -46,6 +46,12 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
     const sin = Math.sin(e.angle);
     let mx = cos * input.forward - sin * input.strafe;
     let my = sin * input.forward + cos * input.strafe;
+    // Working a station: you stand at it and your movement keys work it instead (the craft system reads them).
+    const manning = p.station != null && state.entities.has(p.station);
+    if (manning) {
+      mx = 0;
+      my = 0;
+    }
     const len = Math.hypot(mx, my);
     if (len > 1) {
       mx /= len;
@@ -70,7 +76,7 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
 
     // Gliding: hold jump while falling to open the glider. Wind carries you; fires below lift you.
     const glide = gliderOf(ctx, bagOf(e));
-    const wantGlide = !!glide && input.jumpHeld && !a.onGround && !swimming && (p.gliding || e.vz < 0) && !isDisabled(content, e.status);
+    const wantGlide = !!glide && !manning && input.jumpHeld && !a.onGround && !swimming && (p.gliding || e.vz < 0) && !isDisabled(content, e.status);
     if (wantGlide !== p.gliding) {
       p.gliding = wantGlide;
       ctx.emit({ type: 'glide', entity: e.id, open: wantGlide });
@@ -92,10 +98,11 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
     if (sprinting) p.stamina = Math.max(0, p.stamina - 18 * dt);
     else p.stamina = Math.min(p.maxStamina, p.stamina + (a.guard ? 4 : 14) * (winding ? content.rules.combat.charge.regen : 1) * dt);
 
-    if (input.jump && a.onGround && p.stamina > 8 && !swimming) {
+    if (input.jump && a.onGround && p.stamina > 8 && !swimming && !manning) {
       e.vz = JUMP_SPEED;
       p.stamina -= 8;
       ctx.emit({ type: 'jump', entity: e.id });
+      jumpFrom(ctx, e);
     }
 
     if (a.onGround) {
@@ -138,7 +145,7 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
       p.cooldown = 4;
       const target = pickInFront(ctx, e, 2.6, (o) => {
         const od = thingDef(content, o.def);
-        return !!od.talk || !!od.container || !!od.use || !!od.portal || !!o.item || (o.player?.downed ?? 0) > 0;
+        return !!od.talk || !!od.container || !!od.use || !!od.portal || !!od.station || !!od.store || !!o.item || (o.player?.downed ?? 0) > 0;
       });
       let tx = Math.floor(e.pos.x + cos * 1.2);
       let ty = Math.floor(e.pos.y + sin * 1.2);
@@ -219,4 +226,17 @@ function pickInFront(ctx: SimContext, e: Entity, reach: number, ok: (o: Entity) 
     }
   }
   return best;
+}
+
+/** Jumping from something that flings (a launching plank): its effects land on the jumper, pushed away from it. */
+function jumpFrom(ctx: SimContext, e: Entity): void {
+  for (const o of ctx.query.near(e.pos.x, e.pos.y, 2)) {
+    const od = thingDef(ctx.content, o.def);
+    if (!od.onJump || o.dead || Math.abs(o.z - e.z) > 0.6) continue;
+    if (Math.hypot(o.pos.x - e.pos.x, o.pos.y - e.pos.y) > od.body.radius) continue;
+    // Pushed out along its facing, from its far back edge.
+    const back = od.body.radius + 0.5;
+    ctx.state.queues.effects.push({ target: { kind: 'entity', id: e.id }, effects: od.onJump, source: o.id, from: { x: o.pos.x - Math.cos(o.angle) * back, y: o.pos.y - Math.sin(o.angle) * back } });
+    return;
+  }
 }

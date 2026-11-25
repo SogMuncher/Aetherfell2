@@ -34,6 +34,8 @@ export function makeEntity(content: Content, id: number, def: ThingId, x: number
   }
   if (d.brain) base.ai = { mode: 'wander', target: null, goal: null, think: 0, home: { x, y } };
   if (d.container) base.container = { opened: false, locked: !!d.container.lock };
+  if (d.station) base.control = { v: 0, by: null };
+  if (d.store) base.stored = [];
   return { ...base, ...init, id, def, pos: { x, y }, prev: { x, y } };
 }
 

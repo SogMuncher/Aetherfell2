@@ -63,6 +63,8 @@ export interface InputSnapshot {
   wear: WearRequest | null;
   /** Picking a dialogue option (index) while talking. */
   choice: number | null;
+  /** Moving one stack between the bag and a store (entity id): `put` true puts it in, false takes it out. */
+  stow: { entity: number; item: ItemId; put: boolean } | null;
 }
 
 export function emptyInput(seq = 0, yaw = 0): InputSnapshot {
@@ -89,5 +91,6 @@ export function emptyInput(seq = 0, yaw = 0): InputSnapshot {
     pickUp: null,
     wear: null,
     choice: null,
+    stow: null,
   };
 }

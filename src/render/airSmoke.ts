@@ -129,7 +129,8 @@ export class AirSmoke {
     }
     for (const key of volume.burningCells) {
       const { x, y, z } = unpackSpot(key);
-      any = this.add(w, x + 0.5, y + 0.5, z + 1.5, (volume.cellGet('fire', x, y, z) / 255) * per) || any;
+      const at = volume.placeOf(x, y, z);
+      any = this.add(w, at.x, at.y, at.z + 1, (volume.cellGet('fire', x, y, z) / 255) * per) || any;
     }
     return any;
   }

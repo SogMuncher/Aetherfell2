@@ -181,6 +181,8 @@ export interface RulesDef {
   sites: { fill: number; keep: number };
   /** Metres from every player beyond which bodies sleep (no physics, so far chunks are not dragged back in). */
   awake: number;
+  /** Where crafts keep their cells in the 3D layer (a quiet corner nobody walks to), one box every `spacing` m along x. */
+  crafts: { dock: { x: number; y: number; z: number }; spacing: number };
   /** Co-op. A friend whose game sends nothing for `timeout` seconds is let go. */
   coop: { timeout: number };
   /** The day and its hours (content/day.ts asks these). */
