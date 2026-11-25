@@ -16,9 +16,9 @@ import { makeShapeTextures } from './gpuSolid';
 export const GPU_STRUCT = { range: 170, fade: 36, slots: 1024, uploadsPerFrame: 24, freshPerFrame: 64, tile: 64 } as const;
 const GW = GRID.win * 2 + 1;
 const ATLAS = 32 * GPU_STRUCT.tile;
-/** Fine cells of split bricks: each fine slot is 32 layers of 32 × 32 laid 8 × 4 (256 × 128); 8 × 16 slots. */
-const FINE_ATLAS = 2048;
-const FINE_SLOTS = 128;
+/** Fine cells of split bricks: each fine slot is 32 layers of 32 × 32 laid 8 × 4 (256 × 128); 16 × 32 slots (towns split many bricks). */
+const FINE_ATLAS = 4096;
+const FINE_SLOTS = 512;
 const CORNERS = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1]);
 const INDICES = new Uint8Array([0, 2, 1, 1, 2, 3, 4, 5, 6, 5, 7, 6, 0, 1, 4, 1, 5, 4, 2, 6, 3, 3, 6, 7, 0, 4, 2, 2, 4, 6, 1, 3, 5, 3, 7, 5]);
 
@@ -156,7 +156,7 @@ export class GpuStructures {
     const gl = this.gl;
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.bindTexture(gl.TEXTURE_2D, this.fineAtlas);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, (r.fslot % 8) * 256, Math.floor(r.fslot / 8) * 128, 256, 128, gl.RG_INTEGER, gl.UNSIGNED_BYTE, t);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, (r.fslot % 16) * 256, Math.floor(r.fslot / 16) * 128, 256, 128, gl.RG_INTEGER, gl.UNSIGNED_BYTE, t);
   }
 
   /**

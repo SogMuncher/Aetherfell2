@@ -36,6 +36,15 @@ function viaDoor(from: Vec2, to: Vec2, door: NpcData['door']): Vec2 {
   return Math.hypot(from.x - door.in.x, from.y - door.in.y) > 1.2 ? door.in : ahead(1);
 }
 
+/** On the way through a shut door, near it: open it the way a player does (it stays open behind you). */
+function openDoor(s: Senses, door: NonNullable<NpcData['door']>): void {
+  const x = Math.floor((door.in.x + door.out.x) / 2);
+  const y = Math.floor((door.in.y + door.out.y) / 2);
+  const z = Math.floor(s.me.z + 0.3);
+  if (Math.hypot(x + 0.5 - s.me.pos.x, y + 0.5 - s.me.pos.y) > 1.8 || s.ctx.matter.doorOpen(x, y, z) !== false) return;
+  s.ctx.state.queues.use.push({ player: s.me.id, tileX: x, tileY: y, z, entity: null });
+}
+
 type Behaviour<K extends BehaviourKind> = (s: Senses, b: Extract<BehaviourDef, { do: K }>) => boolean;
 
 /** The library. Adding a behaviour: add its shape to BehaviourDef in types/defs.ts, then one entry here. */
@@ -98,8 +107,10 @@ export const BEHAVIOURS: { [K in BehaviourKind]: Behaviour<K> } = {
   routine(s, b) {
     const n = s.me.npc;
     if (!n) return false;
-    if (busy(s, 'routine', 'goto')) return true;
     const spot = s.night ? n.home : n.work;
+    // On the way in or out, a shut door on the way is opened (even mid-walk).
+    if (n.door && within(s.me.pos, n.door.room) !== within(spot, n.door.room)) openDoor(s, n.door);
+    if (busy(s, 'routine', 'goto')) return true;
     if (Math.hypot(spot.x - s.me.pos.x, spot.y - s.me.pos.y) > 1.2) return go(s, 'goto', viaDoor(s.me.pos, spot, n.door));
     const { rng } = s.ctx;
     if (!s.night && rng.chance(b.chance)) return go(s, 'goto', { x: n.work.x + rng.range(-b.potter, b.potter), y: n.work.y + rng.range(-b.potter, b.potter) });

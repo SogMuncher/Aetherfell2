@@ -98,7 +98,7 @@ const signature = (v: VolumeStore): string => {
     check(`'${id}' is the same every time from the same seed`, signature(v) === signature(again.v));
   }
   const cottage = build('cottage', 5, 0, 0, 0, 0);
-  check('a cottage has a doorway you can walk through', !cottage.v.solidBetween(cottage.r.doorX + 0.5, cottage.r.doorY + 1.5, 0.1, 1.9) && !cottage.v.solidBetween(cottage.r.doorX + 0.5, cottage.r.doorY + 0.5, 0.1, 1.9));
+  check('a cottage has a doorway with a shut door in it', !cottage.v.solidBetween(cottage.r.doorX + 0.5, cottage.r.doorY + 0.5, 0.1, 1.9) && cottage.v.solidBetween(cottage.r.doorX + 0.5, cottage.r.doorY + 1.5, 0.1, 1.9) && !cottage.v.solidBetween(cottage.r.doorX + 0.5, cottage.r.doorY + 2.5, 0.1, 1.9));
   const rots = [0, 1, 2, 3].map((r) => build('hall', 3, 0, 0, 0, r).r);
   check('turning a building swaps its footprint', rots[0] !== undefined && rots[1] !== undefined && rots[0].width === rots[1]?.width && (rots[0].x1 - rots[0].x0) === (rots[2]?.x1 ?? 0) - (rots[2]?.x0 ?? 0) && (rots[0].x1 - rots[0].x0) === (rots[1].y1 - rots[1].y0));
   const dry = build('cottage', 5, 0, 0, 0, 0);
@@ -167,8 +167,11 @@ function flatSpot(sim: Simulation, from: Entity): { x: number; y: number; z: num
   me.z = spot.z;
   me.vel.x = 0;
   me.vel.y = 0;
+  const press = emptyInput(0, 0);
+  [press.yaw, press.interact] = [Math.PI / 2, true];
+  sim.enqueue({ type: 'input', playerId: 'local', input: press });
   walk(sim, me, Math.PI / 2, 30);
-  check('you can walk in through the door', me.pos.y > spot.y + 2 && Math.abs(me.z - spot.z) < 0.6, `y ${me.pos.y.toFixed(1)} (wall at ${spot.y}), z ${me.z.toFixed(2)} (floor ${spot.z})`);
+  check('you can open the door and walk in', me.pos.y > spot.y + 2 && Math.abs(me.z - spot.z) < 0.6, `y ${me.pos.y.toFixed(1)} (wall at ${spot.y}), z ${me.z.toFixed(2)} (floor ${spot.z})`);
   me.pos.x = spot.x + 0.5;
   me.pos.y = r.doorY + 0.5;
   me.z = spot.z;

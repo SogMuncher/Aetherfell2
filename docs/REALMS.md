@@ -9,14 +9,21 @@
 - Fine cells (`sim/world/volumeFine.ts`): any cell can be split into 2x2x2 half-metre cells (`setFine`, fine coords =
   2x cell coords), each any shape and material; the split cell keeps one material and one set of states, so fire/frost/
   blows and the ground tiles beside it work per whole 1 m cell (tiles need no finer grid). Physics reads them
-  (`volumeColumns.ts`), the GPU walks them (a fine atlas, 128 split bricks), saves/net pack them. Splitting a shaped cell
+  (`volumeColumns.ts`), the GPU walks them (a 4096² fine atlas, 512 split bricks in view), saves/net pack them. Splitting a shaped cell
   keeps its look (`splitShape` best fit); eight blocks of one stuff merge back.
-- Shapes are data (`content/shapeTable.ts`, 43 shapes, ledger `SHAPE_LEDGER`, add at the end, max 63; compiled in
+- Shapes are data (`content/shapeTable.ts`, 44 shapes, ledger `SHAPE_LEDGER`, add at the end, max 63; compiled in
   `shapes.ts`); every shape fits a whole or a fine cell. Faces come from the material tile's
   `wall`/`floor` surfaces. Ground tile and 3D cell are one "spot" (`GROUND_Z` = ground) in `ctx.matter`.
-- Builder (`sim/structures/builder.ts` + `builder/placer|house|arch.ts`) snaps shapes from recipes
-  (`content/structures.ts`): 3 m storeys, walls, floors, gable/hip/flat roofs, arches, decay for ruins. Stairs are
-  fine-cell flights (quarter-metre steps) entered from the side at the foot, under an open stairwell (`Placer.putFine`).
+- Builder (`sim/structures/builder.ts` + `builder/placer|house|roofs|furnish|arch.ts`) snaps shapes from recipes
+  (`content/structures.ts`): 3 m storeys, walls with framed windows, floors, gable/hip roofs with a 1 m eave/verge of
+  sloping planks (`putSoft`: only written where nothing stands), battlements (merlon + low wall), round arches, `round`
+  towers (corner columns become quarter rounds), `columns` (nave colonnade with round arches), decay for ruins. Stairs
+  are fine-cell flights entered from the side at the foot, under an open stairwell (`Placer.putFine`). Underworld roofs
+  vault down into the rock walls (`archCurve`); bridge/pier decks have rails and round posts.
+- Doors: a door is a cell of a door tile kind (`materials.door`, default `door`) in a shape with `swing` (shut
+  `panelMid` <-> `doorOpen`). `matter.doorOpen/setDoor/leaf` serve ground door tiles and cell doors alike; using one
+  swings the whole stacked leaf, villagers open theirs on the way through, blows break the whole leaf, fire/frost as any
+  cell (`doorSmoke.ts`). Ruins (decay) have no door.
 - Physics asks `floorBelow`, `ceilingAbove`, `solidBetween`; weather asks `openSky`. Changes go out as one
   `volumeChanged` event per brick. Cheat "Build a building" raises any recipe.
 
@@ -62,7 +69,7 @@ Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with 
 
 ## Add / change
 - New realm: a `REALMS` entry + portals/habitats naming it; new ground kind only if needed (ground generator).
-- New building: `structures` recipe. New shape: append to `shapeTable.ts` (never renumber).
+- New building: `structures` recipe. New shape: append to `shapeTable.ts` (never renumber). New door kind: a tile with `shape: 'door'` named in `materials.door`.
 
 ## Checks
-`scripts/volumeSmoke.ts`, `fineSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`.
+`scripts/volumeSmoke.ts`, `fineSmoke.ts`, `doorSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`.

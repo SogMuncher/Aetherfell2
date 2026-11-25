@@ -7,6 +7,8 @@ export interface StructureMaterials {
   roof: readonly string[];
   /** The plinth under the building. Falls back to the wall material. */
   foundation?: readonly string[];
+  /** The front door leaf (a door tile kind: it opens, shuts, burns and breaks). Default `door`. */
+  door?: readonly string[];
 }
 
 export type RoofKind = 'gable' | 'hip' | 'flat';
@@ -29,6 +31,10 @@ export interface StructureDef {
   windowEvery?: number;
   /** Corner posts and a band along each storey's top in the trim material. */
   frame?: boolean;
+  /** Rounded corners (a round tower). */
+  round?: boolean;
+  /** Open form: two rows of round columns this many metres apart (3 = round arches between them). */
+  columns?: number;
   /** Battlements around a flat roof, and stairs up to it. */
   parapet?: boolean;
   /** Somebody lives here (has a home spot, and a villager per house in a settlement). Default true for houses. */

@@ -134,8 +134,8 @@ export function planBridge(land: Wet, key: string, mid: Pt, dir: Pt, width: numb
 export function buildSpan(volume: Volume, land: Wet, s: Span, box: { x0: number; y0: number; x1: number; y1: number }): void {
   const slab = shapeByte(shapeId('slabHigh'), 0);
   const ramp = (rot: number): number => shapeByte(shapeId('ramp'), rot);
-  const panel = (rot: number): number => shapeByte(shapeId('panel'), rot);
-  const post = shapeByte(shapeId('post'), 0);
+  const panel = (rot: number): number => shapeByte(shapeId('rail'), rot);
+  const post = shapeByte(shapeId('column'), 0);
   const deck = tileCode(s.look.deck);
   const rail = tileCode(s.look.rail);
   const pole = tileCode(s.look.post);

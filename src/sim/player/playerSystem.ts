@@ -1,5 +1,5 @@
 import type { Entity, SimContext, SimSystem } from '../../types';
-import { bagOf, unpackSpot } from '../../types';
+import { GROUND_Z, bagOf, unpackSpot } from '../../types';
 import { composeSpell, isDisabled, moveFactor, stackWeight, thingDef, wornWeight } from '../../content';
 
 const JUMP_SPEED = 7.2;
@@ -158,18 +158,25 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
         const od = thingDef(content, o.def);
         return !!od.talk || !!od.container || !!od.use || !!od.portal || !!od.station || !!od.store || !!o.item || (o.player?.downed ?? 0) > 0;
       });
+      // The first thing in the way: a raised tile, or a cell of the 3D layer between your knees and your head.
       let tx = Math.floor(e.pos.x + cos * 1.2);
       let ty = Math.floor(e.pos.y + sin * 1.2);
-      for (let s = 0.4; s <= 2.2; s += 0.3) {
+      let tz = GROUND_Z;
+      reach: for (let s = 0.4; s <= 2.2; s += 0.3) {
         const x = Math.floor(e.pos.x + cos * s);
         const y = Math.floor(e.pos.y + sin * s);
+        for (let z = Math.floor(e.z + 0.3); z <= Math.floor(e.z + 1.5); z++) {
+          if (!ctx.matter.solid(x, y, z)) continue;
+          [tx, ty, tz] = [x, y, z];
+          break reach;
+        }
         if (tiles.info(x, y).shape !== 'floor') {
           tx = x;
           ty = y;
           break;
         }
       }
-      state.queues.use.push({ player: e.id, tileX: tx, tileY: ty, entity: target ? target.id : null });
+      state.queues.use.push({ player: e.id, tileX: tx, tileY: ty, z: tz, entity: target ? target.id : null });
     }
   }
 };

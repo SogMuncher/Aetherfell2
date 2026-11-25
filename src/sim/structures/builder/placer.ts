@@ -1,3 +1,4 @@
+// Placer: snap cells into the structure grid and world
 import { type Rng, type StructureSite, shapeByte, turnCell } from '../../../types';
 import { shapeId } from '../../../content/shapes';
 import { tileCode } from '../../../content/tiles';
@@ -11,6 +12,15 @@ export const STAIR = shapeId('stair');
 export const HIP = shapeId('hip');
 export const CAP = shapeId('cap');
 export const BRACKET = shapeId('bracket');
+export const SLOPE_PLANK = shapeId('slopePlank');
+export const WINDOW = shapeId('window');
+export const PARAPET = shapeId('parapet');
+export const COLUMN = shapeId('column');
+export const ARCH = shapeId('archCurve');
+export const ROUND = shapeId('roundCorner');
+export const STAIR_FINE = shapeId('stairFine');
+/** A shut door leaf (it swings to the open door shape, see shapeTable). */
+export const LEAF = shapeId('panelMid');
 
 export interface Cell {
   x: number;
@@ -35,6 +45,8 @@ export class Placer {
   readonly cells = new Map<number, Cell>();
   /** Half-metre fine cells (fine coordinates: twice cell coordinates), written after the whole cells. */
   readonly fine = new Map<number, Cell>();
+  /** Cells (keys) written only where nothing stands yet: eaves and verges reaching over a neighbour. */
+  readonly soft = new Set<number>();
   constructor(
     readonly site: Site,
     readonly W: number,
@@ -51,6 +63,11 @@ export class Placer {
     const [x, y] = this.world(lx, ly);
     const z = this.site.z + lz;
     this.cells.set(key(lx, ly, lz), { x, y, z, lx, ly, lz, shape: shapeByte(shape, turns + this.site.rot), mat });
+  }
+
+  putSoft(lx: number, ly: number, lz: number, shape: number, turns: number, mat: number): void {
+    this.put(lx, ly, lz, shape, turns, mat);
+    this.soft.add(key(lx, ly, lz));
   }
 
   /** A fine cell at fine local position (flx, fly, flz) = twice the cell position plus 0 or 1. */
@@ -72,6 +89,11 @@ export class Placer {
   remove(lx: number, ly: number, lz: number): void {
     this.cells.delete(key(lx, ly, lz));
   }
+}
+
+/** Quarter turns that put a thin wall shape (it stands on its -y edge) on the outer face of an edge cell of a W x D box. */
+export function outward(lx: number, ly: number, W: number, D: number): number {
+  return ly === 0 ? 0 : lx === W - 1 ? 1 : ly === D - 1 ? 2 : 3;
 }
 
 export function key(x: number, y: number, z: number): number {
@@ -112,6 +134,8 @@ export interface Info {
   stairRows: readonly [number, number] | null;
   /** Floors you can stand on: 0 = ground. */
   floors: number;
+  /** Ground-floor cells (key(lx, ly, 0)) taken by columns, kept free of furniture. */
+  pillars?: ReadonlySet<number>;
 }
 
 /** Fill from the plinth down to the ground under one footprint cell. */

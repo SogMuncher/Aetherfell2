@@ -19,6 +19,10 @@ export interface ShapePiece {
 export interface ShapeDef {
   readonly name: string;
   readonly pieces: readonly ShapePiece[];
+  /** A door made of this shape (a cell whose material is a door) turns into that shape when opened or shut. */
+  readonly swing?: string;
+  /** This is the open way of a door shape. */
+  readonly open?: boolean;
 }
 
 const FULL = [0, 0, 0, 1, 1, 1] as const;
@@ -62,7 +66,7 @@ export const SHAPES: Record<string, ShapeDef> = {
   beamLow: { name: 'sill beam', pieces: [{ box: [0, 0.3, 0, 1, 0.7, 0.3] }] },
   postThin: { name: 'thin post', pieces: [{ box: [0.4, 0.4, 0, 0.6, 0.6, 1] }] },
   postCorner: { name: 'corner post', pieces: [{ box: [0, 0, 0, 0.3, 0.3, 1] }] },
-  panelMid: { name: 'middle panel', pieces: [{ box: [0, 0.4, 0, 1, 0.6, 1] }] },
+  panelMid: { name: 'middle panel', pieces: [{ box: [0, 0.4, 0, 1, 0.6, 1] }], swing: 'doorOpen' },
   panelThin: { name: 'thin panel', pieces: [{ box: [0, 0, 0, 1, 0.15, 1] }] },
   parapet: { name: 'low wall', pieces: [{ box: [0, 0, 0, 1, 0.3, 0.5] }] },
   // A hand rail along the -y edge with its post at the -x end.
@@ -103,6 +107,8 @@ export const SHAPES: Record<string, ShapeDef> = {
   tetra: { name: 'corner wedge', pieces: [{ box: FULL, cuts: [[-1, -1, 1, -1]] }] },
   // A quarter round seen from above, round side out toward +x,+y (a round tower's wall, a rounded bow).
   roundCorner: { name: 'round corner', pieces: [{ box: FULL, cuts: [[0.9808, 0.1951, 0, 0.9808], [0.8315, 0.5556, 0, 0.9808], [0.5556, 0.8315, 0, 0.9808], [0.1951, 0.9808, 0, 0.9808]] }] },
+  // A door leaf swung open: the middle panel turned back against its -x jamb.
+  doorOpen: { name: 'open door', pieces: [{ box: [0, 0.45, 0, 0.12, 1, 1] }], swing: 'panelMid', open: true },
   // The rounded slope upside down: solid toward +x and the top, curving away underneath (a hull's bilge, a balloon's belly).
   bilge: { name: 'bilge', pieces: [{ box: FULL, cuts: [[-0.9808, 0, -0.1951, -0.1951], [-0.8315, 0, -0.5556, -0.4063], [-0.5556, 0, -0.8315, -0.4063], [-0.1951, 0, -0.9808, -0.1951]] }] },
 };
@@ -113,5 +119,6 @@ export const SHAPE_LEDGER: readonly string[] = [
   'fine', 'rampLow', 'rampHigh', 'wedge', 'valley', 'stairFine', 'stairLow', 'plate', 'plateLow', 'beam', 'beamLow',
   'postThin', 'postCorner', 'panelMid', 'panelThin', 'parapet', 'rail', 'column', 'columnWide', 'roundRamp', 'cove',
   'archCurve', 'spire', 'gable', 'hipLow', 'window', 'vee', 'slopePlank', 'wallHalf', 'pillarCorner', 'tetra', 'roundCorner',
+  'doorOpen',
   'bilge',
 ];
