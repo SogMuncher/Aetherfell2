@@ -1,5 +1,5 @@
-import type { BrickMatter, BrickMatterField, VolumeBrick, VolumeBrickData } from '../../types';
-import { BRICK_CELLS } from '../../types';
+import type { BrickMatter, BrickMatterField, FineCells, VolumeBrick, VolumeBrickData } from '../../types';
+import { BRICK_CELLS, FINE_CELLS } from '../../types';
 
 /** A brick of the 3D layer as data: run-packed for saves and the network, and the fresh state arrays of a brick. */
 
@@ -44,6 +44,7 @@ export function newMatter(): BrickMatter {
 export function packBrick(b: VolumeBrick): VolumeBrickData {
   const m = b.matter;
   const out: VolumeBrickData = { bx: b.bx, by: b.by, bz: b.bz, shape: pack(b.shape), mat: pack(b.mat) };
+  if (b.fine) out.fine = { shape: pack(b.fine.shape), mat: pack(b.fine.mat) };
   if (m) out.state = { wet: pack(m.wet), fire: pack(m.fire), oil: pack(m.oil), soot: pack(m.soot), frost: pack(m.frost), spent: pack(m.spent), wear: pack(m.wear) };
   return out;
 }
@@ -84,4 +85,13 @@ export function unpackMatter(d: VolumeBrickData): BrickMatter | null {
   unpack(d.state.spent, matter.spent);
   unpack(d.state.wear, matter.wear);
   return matter;
+}
+
+/** A received brick's fine cells, or null when none of its cells is split. */
+export function unpackFine(d: VolumeBrickData): FineCells | null {
+  if (!d.fine) return null;
+  const f = { shape: new Uint8Array(FINE_CELLS), mat: new Uint8Array(FINE_CELLS) };
+  unpack(d.fine.shape, f.shape);
+  unpack(d.fine.mat, f.mat);
+  return f;
 }

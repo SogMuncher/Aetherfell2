@@ -1,17 +1,17 @@
 import type { BrickMatterField, Volume, VolumeBrick, VolumeBrickData, VolumeFrame } from '../../types';
-import { BRICK_CELLS, brickKey, cellIndex, spotKey } from '../../types';
-import { SHAPE_BOTTOM, SHAPE_SAMPLES, SHAPE_TOP, sampleAt } from '../../content/shapes';
-import { FIELD_MAX, newMatter, packBrick, unpackMatter, unpackShape } from './brickData';
+import { BRICK_CELLS, brickKey, cellIndex, fineIndex, spotKey } from '../../types';
+import { SHAPE_FINE } from '../../content/shapes';
+import { refineCell, setFineCell } from './volumeFine';
+import { FIELD_MAX, newMatter, packBrick, unpackFine, unpackMatter, unpackShape } from './brickData';
+import { columnCeiling, columnFloor, columnSolid } from './volumeColumns';
 import { framedCeiling, framedCell, framedFloor, framedPlace, framedSolid, framedTop } from './volumeFrames';
-
-const SAMPLE_CELLS = SHAPE_SAMPLES * SHAPE_SAMPLES;
 
 function columnKey(x: number, y: number): number {
   return (x + 1048576) * 2097152 + (y + 1048576);
 }
 
 /**
- * The 3D layer's store. Cells are 1 m; each holds a shape byte and a material (a tile kind).
+ * The 3D layer's store. Cells are 1 m; each holds a shape byte and a material (a tile kind), or is split into fine cells.
  * Beside the bricks it remembers the top of every column, so "is there a roof over me?" is a lookup.
  */
 export class VolumeStore implements Volume {
@@ -44,6 +44,21 @@ export class VolumeStore implements Volume {
   matAt(x: number, y: number, z: number): number {
     const b = this.bricks.get(brickKey(x >> 4, y >> 4, z >> 4));
     return b ? (b.mat[cellIndex(x, y, z)] ?? 0) : 0;
+  }
+
+  fineAt(fx: number, fy: number, fz: number): number {
+    const b = this.bricks.get(brickKey(fx >> 5, fy >> 5, fz >> 5));
+    return b?.fine ? (b.fine.shape[fineIndex(fx, fy, fz)] ?? 0) : 0;
+  }
+
+  fineMatAt(fx: number, fy: number, fz: number): number {
+    const b = this.bricks.get(brickKey(fx >> 5, fy >> 5, fz >> 5));
+    return b?.fine ? (b.fine.mat[fineIndex(fx, fy, fz)] ?? 0) : 0;
+  }
+
+  /** Puts a fine cell in. A whole cell is split first (its shape becomes its eight best-matching halves). */
+  setFine(fx: number, fy: number, fz: number, shape: number, mat: number): boolean {
+    return setFineCell(this, fx, fy, fz, shape, mat);
   }
 
   cellGet(field: BrickMatterField, x: number, y: number, z: number): number {
@@ -112,12 +127,13 @@ export class VolumeStore implements Volume {
     if (old === shape && (shape === 0 || oldMat === mat)) return false;
     if (!b) {
       if (shape === 0) return false;
-      b = { bx: x >> 4, by: y >> 4, bz: z >> 4, shape: new Uint8Array(BRICK_CELLS), mat: new Uint8Array(BRICK_CELLS), matter: null, count: 0, dirty: false, rev: 0, box: new Uint8Array([15, 15, 15, 0, 0, 0]) };
+      b = { bx: x >> 4, by: y >> 4, bz: z >> 4, shape: new Uint8Array(BRICK_CELLS), mat: new Uint8Array(BRICK_CELLS), matter: null, fine: null, count: 0, dirty: false, rev: 0, box: new Uint8Array([15, 15, 15, 0, 0, 0]) };
       this.bricks.set(key, b);
       this.lowBrick = Math.min(this.lowBrick, b.bz);
     }
     // New stuff in a cell starts clean; a changed shape of the same stuff keeps what has happened to it.
     if (shape === 0 || (old !== 0 && oldMat !== mat) || old === 0) this.wipeCell(b, x, y, z, i);
+    if (b.fine && (old & 63) === SHAPE_FINE) refineCell(b.fine, x, y, z, shape, oldMat, mat);
     b.shape[i] = shape;
     b.mat[i] = shape === 0 ? 0 : mat;
     if (old === 0) b.count++;
@@ -148,7 +164,8 @@ export class VolumeStore implements Volume {
     return true;
   }
 
-  private touch(b: VolumeBrick): void {
+  /** Marks a brick changed (sent, saved, re-copied by the renderer). */
+  touch(b: VolumeBrick): void {
     b.dirty = true;
     b.rev++;
     this.dirtyList.add(b);
@@ -166,7 +183,7 @@ export class VolumeStore implements Volume {
   }
 
   clearAll(): void {
-    for (const b of this.bricks.values()) this.touch({ ...b, shape: new Uint8Array(BRICK_CELLS), mat: new Uint8Array(BRICK_CELLS), matter: null, count: 0 });
+    for (const b of this.bricks.values()) this.touch({ ...b, shape: new Uint8Array(BRICK_CELLS), mat: new Uint8Array(BRICK_CELLS), matter: null, fine: null, count: 0 });
     this.bricks.clear();
     this.tops.clear();
     this.burningCells.clear();
@@ -191,53 +208,18 @@ export class VolumeStore implements Volume {
   }
 
   rawFloor(x: number, y: number, zMax: number, zMin = this.lowBrick * 16): number {
-    const cx = Math.floor(x);
-    const cy = Math.floor(y);
-    const top = this.tops.get(columnKey(cx, cy));
-    if (top === undefined) return -Infinity;
-    const s = sampleAt(x - cx, y - cy);
-    for (let z = Math.min(Math.floor(zMax), top - 1); z >= zMin; z--) {
-      const b = this.shapeAt(cx, cy, z);
-      if (b === 0) continue;
-      const t = SHAPE_TOP[b * SAMPLE_CELLS + s] ?? Number.NaN;
-      if (Number.isNaN(t)) continue;
-      if (z + t <= zMax + 1e-4) return z + t;
-    }
-    return -Infinity;
+    const top = this.tops.get(columnKey(Math.floor(x), Math.floor(y)));
+    return top === undefined ? -Infinity : columnFloor(this, top, x, y, zMax, zMin);
   }
 
   rawCeiling(x: number, y: number, z: number): number {
-    const cx = Math.floor(x);
-    const cy = Math.floor(y);
-    const top = this.tops.get(columnKey(cx, cy));
-    if (top === undefined) return Infinity;
-    const s = sampleAt(x - cx, y - cy);
-    for (let zc = Math.floor(z); zc < top; zc++) {
-      const b = this.shapeAt(cx, cy, zc);
-      if (b === 0) continue;
-      const bot = SHAPE_BOTTOM[b * SAMPLE_CELLS + s] ?? Number.NaN;
-      if (Number.isNaN(bot)) continue;
-      if (zc + bot >= z - 1e-3) return zc + bot;
-    }
-    return Infinity;
+    const top = this.tops.get(columnKey(Math.floor(x), Math.floor(y)));
+    return top === undefined ? Infinity : columnCeiling(this, top, x, y, z);
   }
 
   rawSolid(x: number, y: number, z0: number, z1: number): boolean {
-    const cx = Math.floor(x);
-    const cy = Math.floor(y);
-    const top = this.tops.get(columnKey(cx, cy));
-    if (top === undefined || z0 >= top) return false;
-    const s = sampleAt(x - cx, y - cy);
-    const last = Math.min(Math.floor(z1 - 1e-6), top - 1);
-    for (let z = Math.floor(z0); z <= last; z++) {
-      const b = this.shapeAt(cx, cy, z);
-      if (b === 0) continue;
-      const bot = SHAPE_BOTTOM[b * SAMPLE_CELLS + s] ?? Number.NaN;
-      if (Number.isNaN(bot)) continue;
-      const tp = SHAPE_TOP[b * SAMPLE_CELLS + s] ?? Number.NaN;
-      if (z + bot < z1 && z + tp > z0) return true;
-    }
-    return false;
+    const top = this.tops.get(columnKey(Math.floor(x), Math.floor(y)));
+    return top !== undefined && columnSolid(this, top, x, y, z0, z1);
   }
 
   exportBrick(b: VolumeBrick): VolumeBrickData {
@@ -257,7 +239,7 @@ export class VolumeStore implements Volume {
       return;
     }
     const matter = unpackMatter(d);
-    const b: VolumeBrick = { bx: d.bx, by: d.by, bz: d.bz, shape, mat, matter, count, dirty: false, rev: (old?.rev ?? 0) + 1, box };
+    const b: VolumeBrick = { bx: d.bx, by: d.by, bz: d.bz, shape, mat, matter, fine: unpackFine(d), count, dirty: false, rev: (old?.rev ?? 0) + 1, box };
     this.bricks.set(key, b);
     if (matter) {
       for (let i = 0; i < BRICK_CELLS; i++) {

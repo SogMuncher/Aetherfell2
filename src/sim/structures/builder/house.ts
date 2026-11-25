@@ -1,4 +1,4 @@
-import { CAP, HIP, type Info, type Mats, Placer, RAMP, RIDGE, SLAB, STAIR, between, key, plinth } from './placer';
+import { CAP, CUBE, HIP, type Info, type Mats, Placer, RAMP, RIDGE, SLAB, STAIR, between, key, plinth } from './placer';
 import type { Furnish, Furnishing, Rng, StructureDef } from '../../../types';
 import { STOREY } from '../builder';
 
@@ -25,7 +25,7 @@ export function buildHouse(def: StructureDef, p: Placer, rng: Rng, m: Mats): Inf
     if (!climbs) return false;
     for (let b = 0; b < levels; b++) {
       if (lz !== (b + 1) * STOREY - 1) continue;
-      if (b % 2 === 0 ? ly === rowA && lx >= 1 && lx <= 2 : ly === rowB && lx >= 3 && lx <= 4) return true;
+      if (b % 2 === 0 ? ly === rowA && lx >= 1 && lx <= 3 : ly === rowB && lx >= 2 && lx <= 4) return true;
     }
     return false;
   };
@@ -70,17 +70,21 @@ export function buildHouse(def: StructureDef, p: Placer, rng: Rng, m: Mats): Inf
       }
     }
   }
-  // Stairs: flights of three, stacked up through the building.
+  // Stairs: flights of quarter-metre steps (half-metre fine cells) climbing a storey over 3 m, stacked up through the
+  // building. Each starts half a metre in from the end wall, so you step onto its foot from the side, and ends beside
+  // the next flight's foot; the floor above is open over the flight, so your head clears it all the way.
   let stairs: Info['stairs'] = null;
   if (climbs) {
     for (let b = 0; b < levels; b++) {
-      const z0 = b * STOREY;
+      const fz0 = b * STOREY * 2;
       const up = b % 2 === 0;
-      for (let i = 0; i < STOREY; i++) {
-        const lx = up ? 1 + i : 4 - i;
-        const ly = up ? rowA : rowB;
-        p.put(lx, ly, z0 + i, STAIR, up ? 0 : 2, m.floor);
-        for (let lz = z0; lz < z0 + i; lz++) p.cube(lx, ly, lz, m.floor);
+      const ly = up ? rowA : rowB;
+      for (let j = 0; j < STOREY * 2; j++) {
+        const fx = up ? 3 + j : 8 - j;
+        for (let k = 0; k < 2; k++) {
+          p.putFine(fx, ly * 2 + k, fz0 + j, STAIR, up ? 0 : 2, m.floor);
+          for (let fz = fz0; fz < fz0 + j; fz++) p.putFine(fx, ly * 2 + k, fz, CUBE, 0, m.floor);
+        }
       }
       if (b === 0) stairs = { x: 1, y: rowA, z: 0 };
     }

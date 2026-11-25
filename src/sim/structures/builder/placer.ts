@@ -33,6 +33,8 @@ export const turn = turnCell;
 
 export class Placer {
   readonly cells = new Map<number, Cell>();
+  /** Half-metre fine cells (fine coordinates: twice cell coordinates), written after the whole cells. */
+  readonly fine = new Map<number, Cell>();
   constructor(
     readonly site: Site,
     readonly W: number,
@@ -49,6 +51,14 @@ export class Placer {
     const [x, y] = this.world(lx, ly);
     const z = this.site.z + lz;
     this.cells.set(key(lx, ly, lz), { x, y, z, lx, ly, lz, shape: shapeByte(shape, turns + this.site.rot), mat });
+  }
+
+  /** A fine cell at fine local position (flx, fly, flz) = twice the cell position plus 0 or 1. */
+  putFine(flx: number, fly: number, flz: number, shape: number, turns: number, mat: number): void {
+    const [rx, ry] = turn(flx, fly, this.W * 2, this.D * 2, this.site.rot);
+    const x = this.site.x * 2 + rx;
+    const y = this.site.y * 2 + ry;
+    this.fine.set(key(flx, fly, flz), { x, y, z: this.site.z * 2 + flz, lx: flx, ly: fly, lz: flz, shape: shapeByte(shape, turns + this.site.rot), mat });
   }
 
   cube(lx: number, ly: number, lz: number, mat: number): void {

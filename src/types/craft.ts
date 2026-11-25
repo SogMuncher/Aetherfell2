@@ -13,6 +13,8 @@ export interface HullBox {
   rot?: number;
   /** Only every n-th cell along x and y (rail posts). */
   every?: number;
+  /** Half-metre fine cells: the box is on a half-metre grid and every half-metre cell in it gets the shape. */
+  fine?: boolean;
 }
 
 /** A thing fitted aboard (a station, the hold, the plank): where its foot stands in craft metres, and its facing (radians from forward). */

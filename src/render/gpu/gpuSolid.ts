@@ -7,7 +7,7 @@
 import type { ReadonlyTiles, ReadonlyVolume } from '../../types';
 import { BRICK_SIZE, CHUNK_SIZE } from '../../types';
 import { TILES } from '../../content/tiles';
-import { SHAPE_COUNT, SHAPE_CUBE, SHAPE_PIECES, SHAPE_START } from '../../content/shapes';
+import { SHAPE_COUNT, SHAPE_CUBE, SHAPE_FINE, SHAPE_PIECES, SHAPE_START } from '../../content/shapes';
 import { loc, makeTexture } from './glUtil';
 import { GPU_TILE_BLOCKS } from './gpuTileBlocks';
 
@@ -189,7 +189,8 @@ export class GpuSolid {
         const z = bz + (c >> 8);
         if (i < 0 || j < 0 || z < 0 || i >= S || j >= S || z >= H) continue;
         const byte = b.shape[c] ?? 0;
-        cells[(z * S + j) * S + i] = (byte & 63) === SHAPE_CUBE ? 255 : byte;
+        // A split cell shades like a block when at least half of it is filled.
+        cells[(z * S + j) * S + i] = (byte & 63) === SHAPE_CUBE || ((byte & 63) === SHAPE_FINE && fineFill(vol, i + ox, j + oy, z + oz) >= 4) ? 255 : (byte & 63) === SHAPE_FINE ? 0 : byte;
       }
     }
   }
@@ -215,4 +216,11 @@ export class GpuSolid {
     });
     gl.uniform3i(loc(gl, p, 'uSolid0'), this.ox, this.oy, this.oz);
   }
+}
+
+/** How many of a split cell's eight fine cells hold anything. */
+function fineFill(vol: ReadonlyVolume, x: number, y: number, z: number): number {
+  let n = 0;
+  for (let o = 0; o < 8; o++) if (vol.fineAt(x * 2 + (o & 1), y * 2 + ((o >> 1) & 1), z * 2 + (o >> 2)) !== 0) n++;
+  return n;
 }

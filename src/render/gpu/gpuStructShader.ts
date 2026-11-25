@@ -1,6 +1,7 @@
 import { SURFACE_MIX, SURFACE_OUT, SURFACE_SHADER } from './gpuSurfaces';
 import { STATE_SHADER } from './gpuStates';
 import { SHAPE_SHADER } from './gpuSolid';
+import { SHAPE_FINE } from '../../content/shapes';
 
 /** Shader text for GPU structures (docs/GPU-RENDER.md stage 2): each brick's box is rasterised, the pixel walks the cells inside it. */
 export const GRID = { win: 11, zLow: 2, zCount: 14 } as const;
@@ -20,7 +21,7 @@ void main(){
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 uniform mat4 uVP; uniform vec3 uEye, uFog; uniform float uFogDist; uniform vec2 uTurn; /* a moving frame's turn (cos, sin): normals back to the world */
-uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform float uTime; uniform float uRainWet; uniform vec2 uFade; uniform usampler2D uAtlas, uPage; uniform ivec2 uGrid0;
+uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform float uTime; uniform float uRainWet; uniform vec2 uFade; uniform usampler2D uAtlas, uPage, uFine; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; layout(location = 0) out vec4 o;
 ${SURFACE_SHADER}
 ${STATE_SHADER}
@@ -38,6 +39,33 @@ vec4 rayShape(int byte, vec3 o, vec3 d){
 }
 uvec2 cellAt(int slot, ivec3 l){
   return texelFetch(uAtlas, ivec2((slot % 32) * 64 + (l.z & 3) * 16 + l.x, (slot / 32) * 64 + (l.z >> 2) * 16 + l.y), 0).rg;
+}
+/** Shape and material of fine cell l (0..31 inside the brick) in fine slot fs (FINE_ATLAS layout in gpuStructures). */
+uvec2 fineAt(int fs, ivec3 l){
+  return texelFetch(uFine, ivec2((fs % 8) * 256 + (l.z & 7) * 32 + l.x, (fs / 8) * 128 + (l.z >> 3) * 32 + l.y), 0).rg;
+}
+/** A ray through a split cell (l: the cell in its brick, lo: where the ray is in the cell, fn: the face it came in by): walks its 2 × 2 × 2 fine cells. Returns (t in cell units, normal) and the material, or t < 0 on a miss. */
+vec4 rayFine(int fs, ivec3 l, vec3 lo, vec3 d, vec3 fn, bool within, out int fm){
+  vec3 q = lo * 2.0; ivec3 c = clamp(ivec3(floor(q)), ivec3(0), ivec3(1));
+  ivec3 st = ivec3(sign(d)); vec3 inv = 1.0 / d; vec3 tD = abs(inv);
+  vec3 tM = vec3(((d.x > 0.0 ? float(c.x + 1) : float(c.x)) - q.x) * inv.x, ((d.y > 0.0 ? float(c.y + 1) : float(c.y)) - q.y) * inv.y, ((d.z > 0.0 ? float(c.z + 1) : float(c.z)) - q.z) * inv.z);
+  float tc = 0.0; fm = 0;
+  for (int i = 0; i < 4; i++){
+    if (any(lessThan(c, ivec3(0))) || any(greaterThan(c, ivec3(1)))) break;
+    uvec2 sm = fineAt(fs, l * 2 + c);
+    if (sm.x != 0u){
+      bool inside = within && i == 0;
+      if ((sm.x & 63u) == 1u){ if (!inside){ fm = int(sm.y); return vec4(tc * 0.5, fn); } }
+      else {
+        vec4 r = rayShape(int(sm.x), clamp(q + d * tc - vec3(c), 0.0, 1.0), d);
+        if (r.x > (inside ? 1e-3 : -1.0)){ fm = int(sm.y); return vec4((tc + r.x) * 0.5, (r.y == 0.0 && r.z == 0.0 && r.w == 0.0) ? fn : r.yzw); }
+      }
+    }
+    if (tM.x < tM.y && tM.x < tM.z){ tc = tM.x; c.x += st.x; tM.x += tD.x; fn = vec3(-float(st.x), 0.0, 0.0); }
+    else if (tM.y < tM.z){ tc = tM.y; c.y += st.y; tM.y += tD.y; fn = vec3(0.0, -float(st.y), 0.0); }
+    else { tc = tM.z; c.z += st.z; tM.z += tD.z; fn = vec3(0.0, 0.0, -float(st.z)); }
+  }
+  return vec4(-1.0);
 }
 int fdiv(int a, int b){ return (a - (((a % b) + b) % b)) / b; }
 /** Shape and material of the world cell q (0 shape = empty or not loaded), whichever brick holds it. */
@@ -83,6 +111,13 @@ void main(){
       // The eye can sit inside a cell (a wall it brushes, a doorpost): look out of it instead of painting it over the whole view.
       bool within = axis < 0 && all(equal(cell, ivec3(floor(org))));
       if ((sm.x & 63u) == 1u){ if (!within){ hit = true; th = tc; n = fn; mat = int(sm.y); break; } }
+      else if ((sm.x & 63u) == ${SHAPE_FINE}u){
+        int fs = int(fB1.w) - 1, fm;
+        if (fs >= 0){
+          vec4 r = rayFine(fs, cell - origin, clamp(org + d * tc - vec3(cell), 0.0, 1.0), d, fn, within, fm);
+          if (r.x >= 0.0){ hit = true; th = tc + r.x; n = r.yzw; mat = fm; break; }
+        }
+      }
       else {
         vec3 lo = clamp(org + d * tc - vec3(cell), 0.0, 1.0);
         vec4 r = rayShape(int(sm.x), lo, d);

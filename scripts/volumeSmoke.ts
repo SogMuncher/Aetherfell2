@@ -202,6 +202,9 @@ function flatSpot(sim: Simulation, from: Entity): { x: number; y: number; z: num
     check('you can climb the stair to the next floor', me.z > spot.z + 2.7, `z ${me.z.toFixed(2)} (next floor ${spot.z + 3})`);
     // Walk back and down, then jump up under the stairwell's ceiling.
     check('and it holds you there', Math.abs(me.z - (spot.z + 3)) < 0.4);
+    walk(sim, me, Math.PI, 26);
+    walk(sim, me, -Math.PI / 2, 12);
+    check('and you can walk back down it under the floor above and step off its foot', Math.abs(me.z - spot.z) < 0.3, `z ${me.z.toFixed(2)} (ground floor ${spot.z})`);
   }
 }
 {

@@ -59,6 +59,7 @@ export function buildStructure(def: StructureDef, out: CellWriter, site: Structu
     if (c.z < z0) z0 = c.z;
     if (c.z > z1) z1 = c.z;
   }
+  for (const c of p.fine.values()) out.setFine(c.x, c.y, c.z, c.shape, c.mat);
   // The cell in front of the door (outside the front wall, in the structure's own frame).
   const [dx, dy] = p.world(info.doorX, -1);
   const stairsAt = info.stairs ? p.world(info.stairs.x, info.stairs.y) : null;
