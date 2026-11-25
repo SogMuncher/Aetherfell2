@@ -4,6 +4,7 @@ import type { InputSnapshot, SwingDir, ThrowAim } from './input';
 import type { BehaviourKind, FactionId, ItemId, RoleId, RuneId, SpellId, StatusId, ThingId } from './defs';
 import type { PlayerCheats } from './cheats';
 import type { BodyRegionId } from './gear';
+import type { ControlData, CraftData, RideData } from './craft';
 
 export type SkillId = 'blade' | 'evocation' | 'athletics' | 'speech';
 
@@ -120,6 +121,8 @@ export interface PlayerData {
   downed: number;
   /** Glider open. */
   gliding: boolean;
+  /** The station (entity id) this player is working: they stand at it and their movement keys work it. */
+  station?: number | null;
   /** Debug cheats switched on (see content/cheats.ts). Absent = none. */
   cheats?: PlayerCheats;
 }
@@ -228,4 +231,12 @@ export interface Entity {
   item?: ItemStack;
   container?: ContainerData;
   projectile?: ProjectileData;
+  /** A flying craft (its cells are a moving frame of the 3D layer). */
+  craft?: CraftData;
+  /** Fixed aboard a craft. */
+  ride?: RideData;
+  /** A station's control. */
+  control?: ControlData;
+  /** What is kept in it (a hold, a chest you can fill). */
+  stored?: ItemStack[];
 }

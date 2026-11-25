@@ -1,7 +1,8 @@
-import type { BrickMatterField, Volume, VolumeBrick, VolumeBrickData } from '../../types';
+import type { BrickMatterField, Volume, VolumeBrick, VolumeBrickData, VolumeFrame } from '../../types';
 import { BRICK_CELLS, brickKey, cellIndex, spotKey } from '../../types';
 import { SHAPE_BOTTOM, SHAPE_SAMPLES, SHAPE_TOP, sampleAt } from '../../content/shapes';
 import { FIELD_MAX, newMatter, packBrick, unpackMatter, unpackShape } from './brickData';
+import { framedCeiling, framedCell, framedFloor, framedPlace, framedSolid, framedTop } from './volumeFrames';
 
 const SAMPLE_CELLS = SHAPE_SAMPLES * SHAPE_SAMPLES;
 
@@ -24,6 +25,16 @@ export class VolumeStore implements Volume {
   readonly dampCells = new Set<number>();
   readonly wornCells = new Set<number>();
   private lowBrick = 0;
+  readonly frames = new Map<number, VolumeFrame>();
+  setFrame(f: VolumeFrame): void { this.frames.set(f.id, f); }
+  dropFrame(id: number): void { this.frames.delete(id); }
+  topAt(x: number, y: number): number { return this.frames.size ? framedTop(this, this.frames.values(), x, y) : this.rawTop(x, y); }
+  floorBelow(x: number, y: number, zMax: number, zMin?: number): number { return this.frames.size ? framedFloor(this, this.frames.values(), x, y, zMax, zMin) : this.rawFloor(x, y, zMax, zMin); }
+  ceilingAbove(x: number, y: number, z: number): number { return this.frames.size ? framedCeiling(this, this.frames.values(), x, y, z) : this.rawCeiling(x, y, z); }
+  solidBetween(x: number, y: number, z0: number, z1: number): boolean { return this.frames.size ? framedSolid(this, this.frames.values(), x, y, z0, z1) : this.rawSolid(x, y, z0, z1); }
+  floorOn(frame: number, x: number, y: number, zMax: number): number { const f = this.frames.get(frame); return f ? framedFloor(this, [f], x, y, zMax, Infinity) : -Infinity; }
+  cellOf(x: number, y: number, z: number): { x: number; y: number; z: number } { return framedCell(this, this.frames.values(), x, y, z); }
+  placeOf(x: number, y: number, z: number): { x: number; y: number; z: number } { return framedPlace(this.frames.values(), x, y, z); }
 
   shapeAt(x: number, y: number, z: number): number {
     const b = this.bricks.get(brickKey(x >> 4, y >> 4, z >> 4));
@@ -171,7 +182,7 @@ export class VolumeStore implements Volume {
     return out;
   }
 
-  topAt(x: number, y: number): number {
+  rawTop(x: number, y: number): number {
     return this.tops.get(columnKey(Math.floor(x), Math.floor(y))) ?? -Infinity;
   }
 
@@ -179,14 +190,13 @@ export class VolumeStore implements Volume {
     return this.topAt(x, y) <= z + 0.01;
   }
 
-  floorBelow(x: number, y: number, zMax: number): number {
+  rawFloor(x: number, y: number, zMax: number, zMin = this.lowBrick * 16): number {
     const cx = Math.floor(x);
     const cy = Math.floor(y);
     const top = this.tops.get(columnKey(cx, cy));
     if (top === undefined) return -Infinity;
     const s = sampleAt(x - cx, y - cy);
-    const low = this.lowBrick * 16;
-    for (let z = Math.min(Math.floor(zMax), top - 1); z >= low; z--) {
+    for (let z = Math.min(Math.floor(zMax), top - 1); z >= zMin; z--) {
       const b = this.shapeAt(cx, cy, z);
       if (b === 0) continue;
       const t = SHAPE_TOP[b * SAMPLE_CELLS + s] ?? Number.NaN;
@@ -196,7 +206,7 @@ export class VolumeStore implements Volume {
     return -Infinity;
   }
 
-  ceilingAbove(x: number, y: number, z: number): number {
+  rawCeiling(x: number, y: number, z: number): number {
     const cx = Math.floor(x);
     const cy = Math.floor(y);
     const top = this.tops.get(columnKey(cx, cy));
@@ -212,7 +222,7 @@ export class VolumeStore implements Volume {
     return Infinity;
   }
 
-  solidBetween(x: number, y: number, z0: number, z1: number): boolean {
+  rawSolid(x: number, y: number, z0: number, z1: number): boolean {
     const cx = Math.floor(x);
     const cy = Math.floor(y);
     const top = this.tops.get(columnKey(cx, cy));

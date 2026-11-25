@@ -7,7 +7,7 @@ import { CONTENT } from '../../content';
 import type { AirDef, WorldSampler } from '../../types';
 import type { Env } from '../lighting';
 import type { TerrainLod } from '../raycaster/terrainLod';
-import type { ReadonlyTiles, ReadonlyVolume, WeatherState } from '../../types';
+import type { ReadonlyTiles, ReadonlyVolume, VolumeFrame, WeatherState } from '../../types';
 import type { Billboard } from '../entities/spriteRenderer';
 import type { LightMap } from '../lighting';
 import type { CloudShadow } from '../raycaster/cloudShadow';
@@ -42,6 +42,8 @@ export interface GpuFrame {
   env: Env;
   weather: WeatherState;
   volume: ReadonlyVolume;
+  /** Moving frames (airships) where they are drawn this frame (between ticks). */
+  frames?: readonly VolumeFrame[];
   lightmap: LightMap;
   /** Lights each pixel takes (setting). */
   lightsPerPixel: number;
@@ -161,7 +163,7 @@ export class GpuRenderer {
     this.post.surfaces(true);
     this.terrain.draw(vp, f.eye, f.env, f.time);
     this.blocks.draw(vp, f.eye, f.env, f.tiles, f.time);
-    this.structures.draw(vp, cam, w, h, f.time, f.eye, f.env, f.volume);
+    this.structures.draw(vp, cam, w, h, f.time, f.eye, f.env, f.volume, f.frames);
     this.sprites.draw(vp, cam, f.eye, f.env, f.billboards);
     this.post.surfaces(false);
     this.casters.update(this.sprites.casters, this.solid.origin.x, this.solid.origin.y);

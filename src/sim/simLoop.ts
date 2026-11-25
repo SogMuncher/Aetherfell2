@@ -1,6 +1,6 @@
 import { CONTENT, setAirMoisture } from '../content';
 import { breakItem } from './breakage';
-import { type Command, type Entity, type InputSnapshot, type ItemStack, type SimContext, type SimEvent, type SimState, type SimSystem, type SpawnInit, TICK_DT, type ThingId, type WorldSampler, emptyInput, emptyQueues, unpackKey } from '../types';
+import { type Command, type Entity, type InputSnapshot, type ItemStack, type SimContext, type SimEvent, type SimState, type SimSystem, type SpawnInit, TICK_DT, type ThingId, type WorldSampler, emptyInput, unpackKey } from '../types';
 import { LatticeSampler, generateLatticeChunk } from './world/underworld';
 import { InputQueues } from './inputQueue';
 import { Matter, Terrain, VolumeStore, WorldTiles, createWorldSystem, unloadFarChunks } from './world';
@@ -21,6 +21,8 @@ import { meleeSystem } from './melee';
 import { openFloorNear, swapRealm } from './world/realms';
 import { playerSystem } from './player';
 import { rpgSystem } from './rpg';
+import { craftSystem } from './craft';
+import { foresee } from './foresight';
 import { socialSystem } from './social';
 import { statusSystem } from './statuses';
 import { structuresIn } from './world/sites';
@@ -137,6 +139,7 @@ export class Simulation {
       statusSystem,
       effectsSystem,
       rpgSystem,
+      craftSystem,
       socialSystem,
     ];
   }
@@ -165,6 +168,7 @@ export class Simulation {
     // End of tick: clear shared one-tick queues, remove the dead, publish tile changes.
     state.queues.use = [];
     state.queues.kills = [];
+    state.queues.calls = [];
     for (const [id, e] of state.entities) {
       if (!e.dead) continue;
       if (e.player) {
@@ -371,35 +375,7 @@ export class Simulation {
    * when it arrives; main.ts then replays the inputs the host has not seen yet.
    */
   predict(playerId: string, input: InputSnapshot): void {
-    const real = this.state;
-    const id = real.players[playerId];
-    const e = id !== undefined ? real.entities.get(id) : undefined;
-    if (!e?.player) return;
-    const own = new Map<number, Entity>([[e.id, e]]);
-    const held = e.player.holding !== null ? real.entities.get(e.player.holding) : undefined;
-    if (held) own.set(held.id, held);
-    const mini: SimState = { ...real, entities: own, players: { [playerId]: e.id }, queues: emptyQueues(), tileChanges: new Set() };
-    const query = new SpatialHash();
-    const ctx: SimContext = {
-      ...this.ctx,
-      state: mini,
-      query,
-      rng: makeRng({ ...mini, rng: real.tick }),
-      emit: () => {},
-      spawn: (thing, x, y, init) => makeEntity(CONTENT, -1, thing, x, y, init),
-      dropItems: () => {},
-      breakItem: () => {},
-    };
-    for (const o of own.values()) {
-      o.prev.x = o.pos.x;
-      o.prev.y = o.pos.y;
-      o.prevZ = o.z;
-    }
-    // Only moving is foreseen. Presses (use, grab, talk…) wait for the host's answer.
-    e.player.input = { ...input, interact: false, grab: false, cast: false, prepare: null, useItem: null, dropItem: null, throwItem: null, pickUp: null, wear: null, choice: null };
-    query.rebuild(own.values());
-    playerSystem(ctx);
-    physicsSystem(ctx);
+    foresee(this.ctx, this.state, playerId, input);
   }
 
   /** A guest's copy of the world: forget untouched land far from us (the host does this in its world system). */

@@ -14,6 +14,7 @@ import { LOOT } from './loot';
 import { MATERIALS } from './materials';
 import { PALETTES } from './palettes';
 import { PROPS } from './props';
+import { SHIP_PROPS } from './shipProps';
 import { REALMS } from './realms';
 import { ROLES, VILLAGER_NAMES } from './roles';
 import { RULES } from './rules';
@@ -72,7 +73,7 @@ export const CONTENT: Content = {
   rules: RULES,
   gear: GEAR,
   // One table of pictures built from parts: creatures (looks.ts), trees, rocks and plants (forms.ts, smallForms.ts), props (props.ts), item pieces (itemGearArt.ts, itemGoodsArt.ts).
-  art: { ...LOOKS, ...FORMS, ...SMALL_FORMS, ...PROPS, ...ITEM_GEAR_ART, ...ITEM_GOODS_ART },
+  art: { ...LOOKS, ...FORMS, ...SMALL_FORMS, ...PROPS, ...SHIP_PROPS, ...ITEM_GEAR_ART, ...ITEM_GOODS_ART },
   palettes: PALETTES,
   realms: REALMS,
   sky: SKY,

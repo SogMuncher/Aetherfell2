@@ -1,4 +1,4 @@
-# Realms and the 3D layer (sim/world/volume, realms, underworld; sim/structures)
+# Realms, the 3D layer and crafts (sim/world/volume, realms, underworld; sim/structures; sim/craft)
 
 **Purpose:** buildings with floors, roofs and overhangs, and whole other spaces (the underworld) using the same systems.
 **Never:** write `if (state.realm === 'underworld')` in a system. A realm is only *which* tiles/cells/things are loaded.
@@ -30,6 +30,20 @@
 - `RealmDef.scatter` lines what lies in each hall (`under` limits it to halls under given places); `habitats[].realm`
   says where a creature lives. There is one dungeon: every way down reaches the same network.
 
+## Crafts: the airship (`sim/craft`, `content/crafts.ts`, `types/craft.ts`)
+- A craft's hull is ordinary cells of the 3D layer kept at a quiet dock (`rules.crafts.dock`) and shown elsewhere as a
+  moving **frame** (`VolumeFrame`, `sim/world/volumeFrames.ts`): `floorBelow/ceilingAbove/solidBetween/topAt` also ask
+  every frame, `cellOf` maps a world point to the frame's cell, `placeOf` maps a cell back (fire light/smoke/sound). So
+  standing, bumping, blows, fire, frost and rain work per cell with no craft code. GPU draws each frame by turning the
+  eye into its cells (`gpuStructures.draw` views). Frames are set each tick from the craft entity (pos, z, angle).
+- `CraftDef` = hull boxes + fittings + what each named channel does (thrust, turn, climb, fuel), wind share, thin air
+  (faster, calmer higher up), clearance, horn cruise. Stations (`ThingDef.station`) write a channel: E takes it, movement
+  keys move it, it eases to the middle while manned, holds when left; `feed` stations take items (rune shard = 300 s,
+  burnt only under power). No fuel: it sinks and moors (resting, the wind leaves it). `ThingDef.store` = hold window,
+  `onJump` = launching plank, item `calls` = sky horn (calls/re-routes the craft; built on first call).
+- `craftMotion` (host and a guest's foresight, `sim/foresight.ts`) moves the craft and carries whoever stands on it.
+  Not yet: the ship casts no sun shadow (gpuSolid), your view does not turn with the ship.
+
 ## Ruins
 Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with weighted `styles` (ring, street, cross, scatter) over decayed recipes
 (`ruinedKeep|Tower|Hall|Cottage`, `brokenWall`, `brokenGate`), so they share the builder, wall faces and far LOD. Their `descent` sits in the courtyard.
@@ -39,4 +53,4 @@ Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with 
 - New building: `structures` recipe. New shape: append to `shapes.ts` (never renumber).
 
 ## Checks
-`scripts/volumeSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`.
+`scripts/volumeSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`.

@@ -78,8 +78,9 @@ export class LightMap {
       for (const key of state.volume.burningCells) {
         if (n > 400) break;
         const { x, y, z } = unpackSpot(key);
-        if (!near(x, y, 6)) continue;
-        add(fire, state.volume.cellGet('fire', x, y, z) / 255, x + 0.5, y + 0.5, z + 1, x * 1.7 + y * 2.3 + z, false);
+        const at = state.volume.placeOf(x, y, z);
+        if (!near(at.x - 0.5, at.y - 0.5, 6)) continue;
+        add(fire, state.volume.cellGet('fire', x, y, z) / 255, at.x, at.y, at.z + 0.5, x * 1.7 + y * 2.3 + z, false);
         n++;
       }
     }

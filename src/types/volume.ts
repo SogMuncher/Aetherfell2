@@ -73,8 +73,8 @@ export interface ReadonlyVolume {
   matAt(x: number, y: number, z: number): number;
   /** Top of the highest solid thing in this column (metres), or -Infinity. */
   topAt(x: number, y: number): number;
-  /** Highest solid top at or below `zMax` at this point, or -Infinity. */
-  floorBelow(x: number, y: number, zMax: number): number;
+  /** Highest solid top at or below `zMax` (and not below `zMin`) at this point, or -Infinity. */
+  floorBelow(x: number, y: number, zMax: number, zMin?: number): number;
   /** Lowest solid underside at or above `z` at this point, or Infinity. */
   ceilingAbove(x: number, y: number, z: number): number;
   /** Is there anything solid at this point between heights z0 and z1? */
@@ -88,6 +88,34 @@ export interface ReadonlyVolume {
   readonly dampCells: ReadonlySet<number>;
   /** Cells carrying wear from blows. */
   readonly wornCells: ReadonlySet<number>;
+  /** Moving frames (an airship): boxes of cells kept at a quiet spot of the store but standing somewhere else in the world, turned. Every question above that takes a world point also asks them. */
+  readonly frames: ReadonlyMap<number, VolumeFrame>;
+  /** The cell (store coordinates) solid at a world point, on a frame if one holds it. */
+  cellOf(x: number, y: number, z: number): { x: number; y: number; z: number };
+  /** Highest solid top at or below `zMax` on one frame only, at a world point, or -Infinity. */
+  floorOn(frame: number, x: number, y: number, zMax: number): number;
+  /** Where a cell's middle is in the world (moved and turned with its frame, if it is on one). */
+  placeOf(x: number, y: number, z: number): { x: number; y: number; z: number };
+}
+
+/**
+ * A box of the store's cells that stands elsewhere in the world: store box x0..x1 (end exclusive), pivot (px, py)
+ * inside it, put at world (wx, wy) turned by `yaw`; store height z0 stands at world height wz. Set every tick by its owner.
+ */
+export interface VolumeFrame {
+  id: number;
+  x0: number;
+  y0: number;
+  z0: number;
+  x1: number;
+  y1: number;
+  z1: number;
+  px: number;
+  py: number;
+  wx: number;
+  wy: number;
+  wz: number;
+  yaw: number;
 }
 
 export interface Volume extends ReadonlyVolume {
@@ -95,6 +123,8 @@ export interface Volume extends ReadonlyVolume {
   /** Writes one cell's state (clamped to its range); the brick is marked changed so friends hear of it. */
   cellSet(field: BrickMatterField, x: number, y: number, z: number, v: number): void;
   clearAll(): void;
+  setFrame(f: VolumeFrame): void;
+  dropFrame(id: number): void;
   /** Bricks changed since the last call (their `dirty` flag is cleared). */
   takeDirty(): VolumeBrick[];
   /** Bricks as lists, for saving and for sending to friends. */

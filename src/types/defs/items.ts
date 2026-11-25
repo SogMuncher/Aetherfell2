@@ -2,7 +2,7 @@ import type { ArmourStats } from '../gear';
 import type { Surface } from '../art';
 import type { HeldLightDef, WeaponStats } from './things';
 import type { Effect } from '../effects';
-import type { ItemId, MaterialId, RuneId } from './ids';
+import type { ItemId, MaterialId, RuneId, ThingId } from './ids';
 
 
 export type ItemCategory = 'currency' | 'potion' | 'throwable' | 'food' | 'weapon' | 'armour' | 'material' | 'key' | 'tool' | 'rune';
@@ -93,4 +93,6 @@ export interface ItemDef {
   glide?: { sink: number; speed: number };
   /** Carrying it teaches you this rune (the stone is used up the first time). */
   teaches?: RuneId;
+  /** Using it calls the nearest thing of this kind to you (a horn calls the airship); using it again sends it to the new spot. */
+  calls?: ThingId;
 }

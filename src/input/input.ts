@@ -22,6 +22,7 @@ export class InputSystem {
   private throwItem: ThrowAim | null = null;
   private pickUp: number | null = null;
   private wear: WearRequest | null = null;
+  private stow: InputSnapshot['stow'] = null;
   private uiQueue: UiAction[] = [];
   /** Set by main while a conversation is open: number keys pick replies. */
   dialogueOpen = false;
@@ -104,6 +105,11 @@ export class InputSystem {
     this.wear = slot ? { do: 'wear', item, slot } : { do: 'wear', item };
   }
   /** A piece of armour lying in the view was dragged onto the paperdoll. */
+  /** The hold window: move a stack into (put) or out of a store. */
+  queueStow(entity: number, item: ItemId, put: boolean): void {
+    this.stow = { entity, item, put };
+  }
+
   queueWearFrom(entity: number): void {
     this.wear = { do: 'wearFrom', entity };
   }
@@ -158,6 +164,7 @@ export class InputSystem {
       pickUp: this.pickUp,
       wear: this.wear,
       choice: this.choice,
+      stow: this.stow,
     };
     this.latched = { interact: false, grab: false, cast: false, jump: false, throwHeld: false };
     if (frozen) {
@@ -171,6 +178,7 @@ export class InputSystem {
     this.throwItem = null;
     this.pickUp = null;
     this.wear = null;
+    this.stow = null;
     this.choice = null;
     return snap;
   }

@@ -36,11 +36,12 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matterKit.ts` (52) Shared helpers for the matter checks: a calm world, flat ground, stepping, PASS/FAIL counting, common cells
 - `handsSmoke.ts` (67) Headless checks: creatures carry a bag (players' own kind), spill all of it when they die, and their brains
 - `musicSmoke.ts` (181) Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, combos climb,
+- `craftSmoke.ts` (196) CRAFTS: the airship is cells of the 3D layer flown as one frame: decks hold you up and carry you, stations, fu
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
 - `gameAudio.ts` (547) GameAudio class: reacts to sim events/state, owns ambience, steps, voices, spells, music hookup (C)
-- `ambience.ts` (186) The ambient bed: wind, rain, fire, water and cave air that follow your surroundings, plus one-shots from ambie
+- `ambience.ts` (187) The ambient bed: wind, rain, fire, water and cave air that follow your surroundings, plus one-shots from ambie
 - `ambientSounds.ts` (77) Ambient one-shots as data: birds, owls, frogs, drips, rumbles… each says where it belongs (under open sky or d
 
 ## src/audio/music/
@@ -91,8 +92,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemDefs.ts` (107) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (102) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
-- `index.ts` (86) collects every table into CONTENT, re-exports helpers, runs validation
-- `items.ts` (103) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
+- `index.ts` (87) collects every table into CONTENT, re-exports helpers, runs validation
+- `items.ts` (105) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
 - `living.ts` (128) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (175) creature looks as solid parts (D)
 - `loot.ts` (110) Drop tables: each entry rolls on its own.
@@ -101,7 +102,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `props.ts` (232) Props as forms: barrels, crates, chests, urns, torches, campfires and trap plates are put
 - `realms.ts` (67) The spaces the world is made of. A realm is a place with its own ground, light and sky; the whole
 - `roles.ts` (108) Villager jobs: what they add to a greeting, what they keep on the rack, the trouble they ask
-- `rules.ts` (127) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
+- `rules.ts` (129) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
 - `shapes.ts` (234) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
 - `sites.ts` (364) named places: odds, layout, population (D)
@@ -112,7 +113,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (466) building recipes for the 3D layer (D)
 - `surfaces.ts` (223) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
-- `things.ts` (196) entity archetypes by trait (D)
+- `things.ts` (249) entity archetypes by trait (D)
 - `tileCodes.ts` (17) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (201) all tile kinds + code assignment from the ledger
 - `validate.ts` (268) validateContent: every reference must point at something that exists
@@ -121,43 +122,45 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `artCheck.ts` (41) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
 - `smallForms.ts` (253) Bushes, rocks, plants and small heaps (haystacks, woodpiles, wells, rubble) grown from parts, like trees (form
 - `itemGearArt.ts` (124) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
-- `itemGoodsArt.ts` (125) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
+- `itemGoodsArt.ts` (135) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
 - `creatures.ts` (153) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
 - `handling.ts` (87) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
 - `bodyPlans.ts` (172) Body plans as reusable parts (two legs, four legs, hopper, antlers): segmented limbs on joints, roles for body
 - `moves.ts` (78) Body moves seen from outside: how arms, torso, head (or a beast's neck) turn through each swing direction and
+- `crafts.ts` (74) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
+- `shipProps.ts` (58) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
 
 ## src/input/
-- `input.ts` (177) keyboard+mouse -> InputSnapshot per tick and local UI actions
+- `input.ts` (185) keyboard+mouse -> InputSnapshot per tick and local UI actions
 - `keyboard.ts` (37) Tracks held keys and keys pressed since the last poll (edge-triggered).
 - `mouse.ts` (61) Pointer-lock mouse look plus button state. Yaw is applied instantly so looking feels smooth at any sim rate.
 - `quickSlots.ts` (37) The quick-use keys 1..4 (H and G still work as keys 1 and 2). Each holds an item id, or
 
 ## src/
-- `main.ts` (347) the only wiring: input -> sim (or guest replica) -> net/audio/render
+- `main.ts` (348) the only wiring: input -> sim (or guest replica) -> net/audio/render
 
 ## src/net/
-- `messages.ts` (193) validate and shape every co-op message
+- `messages.ts` (200) validate and shape every co-op message
 - `net.ts` (275) PeerJS transport: host/guest connections, snapshots
 - `prediction.ts` (76) guest-side view and input replay
 
 ## src/render/
 - `color.ts` (50) packed pixel colour helpers
 - `env.ts` (144) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
-- `lighting.ts` (163) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); 1 m grid for the held item; re-exports Env
-- `airSmoke.ts` (169) smoke: the live level of the air cells; burning spots feed it, it rises, spreads and thins in steps
+- `lighting.ts` (164) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); 1 m grid for the held item; re-exports Env
+- `airSmoke.ts` (170) smoke: the live level of the air cells; burning spots feed it, it rises, spreads and thins in steps
 - `airCells.ts` (228) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
 - `stateLooks.ts` (68) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
-- `renderer.ts` (173) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `renderer.ts` (188) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
 
 ## src/render/entities/
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
 - `bodyPaint.ts` (293) ray-intersect solids into colour-region pixels
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
-- `spriteRenderer.ts` (140) gathers billboards (trees, creatures, props, items) for the GPU
+- `spriteRenderer.ts` (151) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (270) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
@@ -172,11 +175,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `paintFinish.ts` (112) Last touches on a painted body picture: dark outlines, and flat item pictures (held items) stamped facing the
 
 ## src/render/gpu/
-- `gpuRenderer.ts` (200) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
+- `gpuRenderer.ts` (202) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
 - `gpuTerrain.ts` (274) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (63) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
-- `gpuStructures.ts` (211) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
+- `gpuStructures.ts` (240) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
 - `gpuStructShader.ts` (126) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (159) tile walls/doors/windows as boxes from tile data, with their matter states
 - `gpuSprites.ts` (254) billboards: sprite atlas + instanced quads
@@ -211,13 +214,15 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `paperdollStats.ts` (52) the paperdoll's side panel: health, protection, hands, skills
 - `settingsMenu.ts` (258) Esc/O menu built from settings data + cheat tab
 - `style.ts` (132) HUD CSS from content/hud.ts
-- `ui.ts` (658) GameUI: HUD, dialogue, journal, map, runebook (C)
+- `ui.ts` (624) GameUI: HUD, dialogue, journal, map, runebook (C)
 - `paperdollFigure.ts` (81) The paperdoll's figure: your own body sprite in what you wear and hold, turned with the mouse wheel
+- `prompt.ts` (56) The line under the crosshair: what pressing E (or F, or jumping) would do with what you are looking at
+- `storeWindow.ts` (55) The hold window: what a store keeps (a ship's hold) beside what is in your bag; click a stack to move it acros
 
 ## src/render/vfx/
 - `particleKinds.ts` (90) particle kinds, physics, mote look tables
 - `particles.ts` (458) Particles: visual effects from events and state (C)
-- `fireEmitter.ts` (46) Where fire's motes go: the particle system draws them from the palette in the fire rules.
+- `fireEmitter.ts` (47) Where fire's motes go: the particle system draws them from the palette in the fire rules.
 - `glow.ts` (86) Light painted straight over the frame: glows, lines, specks. Shared by the held item and its sparks.
 
 ## src/settings/
@@ -244,13 +249,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/
 - `breakage.ts` (18) ctx.breakItem: an item's onBreak burst + what it breaks into
-- `inputQueue.ts` (141) queueing/folding of guest inputs
-- `simLoop.ts` (446) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
+- `inputQueue.ts` (142) queueing/folding of guest inputs
+- `simLoop.ts` (422) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
 - `simState.ts` (96) rng, createState, newPlayer
-- `templates.ts` (65) Builds an entity from its definition. Only instance data lives on the entity.
+- `templates.ts` (67) Builds an entity from its definition. Only instance data lives on the entity.
+- `foresight.ts` (43) A guest's foresight: one tick of its own traveller (and the crafts it may stand on) by the host's rules, touch
 
 ## src/sim/interaction/
-- `interactionSystem.ts` (261) The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
+- `interactionSystem.ts` (265) The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
 
 ## src/sim/magic/
 - `magicSystem.ts` (188) Casting. The prepared spell is composed from runes (content/spellcraft.ts): a delivery (bolt,
@@ -268,12 +274,12 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `spatialHash.ts` (41) Uniform grid of entities, rebuilt once per tick. Answers "what is near here?" cheaply.
 
 ## src/sim/player/
-- `playerSystem.ts` (222) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
+- `playerSystem.ts` (242) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
 
 ## src/sim/rpg/
 - `gearHandling.ts` (67) put on / take off armour, hold anything in the hands
 - `throwing.ts` (113) throw from the bag, G throw/drop from the hands, pick up from the view
-- `rpgSystem.ts` (184) Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
+- `rpgSystem.ts` (207) Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
 
 ## src/sim/social/
 - `socialSystem.ts` (227) Conversation: greetings that depend on the hour and on what the party has done, rumours that
@@ -309,7 +315,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `underworld.ts` (164) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
 - `underSpot.ts` (132) `underAt`: what the underworld is at a tile (river, deck, cave, ruin street, hall, corridor, way artery, rock), read from the land
 - `underPlan.ts` (112) per-region plan of what the places above ask of the rock: caves, great halls, denser tunnels
-- `volume.ts` (283) VolumeStore: sparse 3D brick store (C)
+- `volume.ts` (293) VolumeStore: sparse 3D brick store (C)
 - `brickData.ts` (87) a brick as data: run-packing for saves/network, fresh cell-state arrays
 - `water.ts` (224) Rivers and lakes: a pure function of the seed that reads no places (cities and roads read it, never the other way).
 - `wayParts.ts` (137) way types, site neighbours, nets
@@ -318,39 +324,47 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `worldSystem.ts` (144) keeps world around the party: places, chunk unloading
 - `worldTiles.ts` (239) The tile world: lazily generated chunks held in SimState, with change tracking.
 - `gateRule.ts` (13) Says which street ends of a walled place roads really use (set by roads.ts, which knows the land). A gate open
+- `volumeFrames.ts` (86) Moving frames of the 3D layer (an airship): world questions asked again in each frame's own cells, turned and
 
 ## src/types/
 - `cheats.ts` (71) Debug cheats: shapes only. The list of cheats is data (src/content/cheats.ts), the menu builds
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
 - `defs.ts` (82) Content type + re-exports of defs/*
 - `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
-- `entities.ts` (231) Entity and its components
-- `events.ts` (64) Things that happened during a tick. Audio, render effects, UI and the network react to these.
+- `entities.ts` (242) Entity and its components
+- `events.ts` (66) Things that happened during a tick. Audio, render effects, UI and the network react to these.
 - `gear.ts` (199) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
-- `index.ts` (20) re-exports all types
-- `input.ts` (93) Letting go of an item from the bag over the view: where the cursor was decides the throw.
+- `index.ts` (21) re-exports all types
+- `input.ts` (96) Letting go of an item from the bag over the view: where the cursor was decides the throw.
 - `items.ts` (48) Inventory helpers shared by every system that touches items.
 - `math.ts` (10) 
 - `matter.ts` (94) MATTER — one way to talk about "the stuff at a place", whatever holds it.
 - `net.ts` (53) co-op message types
 - `palettes.ts` (22) Colour as data. Pictures are never painted in fixed colours: every part of a creature, tree,
 - `sky.ts` (95) RGB, 0..255.
-- `state.ts` (133) SimState and queues
+- `state.ts` (135) SimState and queues
 - `structures.ts` (173) StructureDef, planned structures, house geometry
 - `tiles.ts` (217) tile/chunk types, TileInfo, keys
 - `vfx.ts` (86) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
-- `volume.ts` (135) 3D layer brick/volume types
+- `volume.ts` (165) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (202) surface, biome, water and world-generation defs
 - `art.ts` (203) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
+- `craft.ts` (94) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
 
 ## src/types/defs/
 - `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population
 - `ids.ts` (23) id string types
-- `items.ts` (96) ItemDef, ItemLook
+- `items.ts` (98) ItemDef, ItemLook
 - `magic.ts` (194) SpellDef, RuneDef, StatusDef and spell look
-- `rules.ts` (229) RulesDef, SwingDef, DayRules, HudTheme
+- `rules.ts` (231) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (146) SiteDef, layouts, city, districts
 - `social.ts` (62) quests, trade, roles, factions
-- `things.ts` (190) MaterialDef, ThingDef, RealmDef, light, weapon stats
+- `things.ts` (199) MaterialDef, ThingDef, RealmDef, light, weapon stats
 - `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
+
+## src/sim/craft/
+- `craftBuild.ts` (35) Makes a craft: its hull cells written into a quiet corner of the 3D layer and its fittings set aboard
+- `craftMotion.ts` (91) Moves every craft by its own speed and turn, carrying whoever stands on it, and keeps its frame in the 3D laye
+- `craftSystem.ts` (189) Crafts: stations taken and fed, horn calls answered, and flight worked out from the stations' channels, wind a
+- `index.ts` (3) The craft system (airships): stations, calls, flight, and the motion shared with a guest's foresight

@@ -19,7 +19,7 @@ void main(){
 
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
-uniform mat4 uVP; uniform vec3 uEye, uFog; uniform float uFogDist;
+uniform mat4 uVP; uniform vec3 uEye, uFog; uniform float uFogDist; uniform vec2 uTurn; /* a moving frame's turn (cos, sin): normals back to the world */
 uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform float uTime; uniform float uRainWet; uniform vec2 uFade; uniform usampler2D uAtlas, uPage; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; layout(location = 0) out vec4 o;
 ${SURFACE_SHADER}
@@ -119,7 +119,7 @@ void main(){
   // What has happened to this cell (the same matter states the sim's rules use), blended over its own surface.
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2((slot % 32) * 64 + (cell.z - origin.z & 3) * 16 + (cell.x - origin.x), (slot / 32) * 64 + ((cell.z - origin.z) >> 2) * 16 + (cell.y - origin.y)), suv, open ? uRainWet : 0.0, 0.75 + 0.25 * sin(uTime * 40.0 + float(cell.x) * 1.7 + float(cell.y) * 2.3 + float(cell.z)), glow);
-  surfaceOut(col, n, 1.0);
+  surfaceOut(col, vec3(uTurn.x * n.x - uTurn.y * n.y, uTurn.y * n.x + uTurn.x * n.y, n.z), 1.0);
   float f = min(0.97, 1.0 - exp(-length(w - uEye) / uFogDist));
   o = vec4(col * glow * (1.0 - f) + uFog * f, 1.0);
   vec4 cp = uVP * vec4(w, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;

@@ -11,7 +11,7 @@ import { readdirSync } from 'node:fs';
 // Area -> checks. Keep in step with the "Checks" line of each docs/<area>.md.
 const AREAS = {
   combat: ['mechanicsSmoke', 'runebookSmoke', 'fireSmoke', 'gearSmoke', 'outfitSmoke', 'torchSmoke', 'senseSmoke'],
-  realms: ['volumeSmoke', 'realmSmoke', 'matterSmoke', 'matterFireSmoke'],
+  realms: ['volumeSmoke', 'realmSmoke', 'matterSmoke', 'matterFireSmoke', 'craftSmoke'],
   world: ['worldSmoke', 'settlementSmoke', 'waysSmoke', 'waterSmoke', 'matterSmoke', 'matterFireSmoke'],
   render: ['artSmoke', 'skySmoke'],
   rpg: ['mechanicsSmoke', 'simSmoke', 'cheatsSmoke', 'dataSmoke', 'gearSmoke', 'outfitSmoke', 'senseSmoke', 'handsSmoke'],

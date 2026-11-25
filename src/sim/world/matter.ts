@@ -181,7 +181,7 @@ export class Matter implements MatterAccess {
   cellAt(x: number, y: number, z: number): { x: number; y: number; z: number } | null {
     if (this.vol.bricks.size === 0) return null;
     if (!this.vol.solidBetween(x, y, z - 0.01, z + 0.01)) return null;
-    return { x: Math.floor(x), y: Math.floor(y), z: Math.floor(z) };
+    return this.vol.cellOf(x, y, z);
   }
 
   burning(): number[] {

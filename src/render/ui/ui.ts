@@ -5,6 +5,8 @@ import type { Projection } from '../raycaster/camera';
 import { toScreen } from '../raycaster/camera';
 import { UI_CSS, hudVariables } from './style';
 import { BagWindow } from './bag';
+import { promptText } from './prompt';
+import { StoreWindow } from './storeWindow';
 import { PaperdollWindow } from './paperdoll';
 import { SettingsMenu } from './settingsMenu';
 import type { SettingsStore } from '../../settings';
@@ -25,6 +27,8 @@ export interface UiCallbacks {
   /** The paperdoll: take what is worn on this part of the body off. */
   remove(region: BodyRegionId): void;
   choose(i: number): void;
+  /** The hold window: move a stack into (put) or out of a store. */
+  stow(entity: number, item: ItemId, put: boolean): void;
   /** Runebook: make these runes the prepared spell. */
   prepare(runes: readonly RuneId[]): void;
   menu(action: MenuAction, name: string, code: string): void;
@@ -93,6 +97,7 @@ export class GameUI {
   private sideMode: 'journal' | null = null;
   private bag: BagWindow;
   private doll: PaperdollWindow;
+  private store: StoreWindow;
   /** Settings and the Debug cheats sub-menu (settingsMenu.ts). */
   readonly settings: SettingsMenu;
   private mapOpen = false;
@@ -141,6 +146,7 @@ export class GameUI {
       wearFrom: (id) => this.cb.wearFrom(id),
     });
     this.doll = new PaperdollWindow(host, { remove: (r) => this.cb.remove(r) });
+    this.store = new StoreWindow(host, (id, item, put) => this.cb.stow(id, item, put));
     this.bag.dollAt = (x, y) => this.doll.contains(x, y);
     this.bag.dollSlotAt = (x, y) => this.doll.slotAt(x, y);
     this.bag.dollOpen = () => this.doll.open;
@@ -205,7 +211,7 @@ export class GameUI {
 
   /** True while a panel that needs the mouse is open. */
   get blocking(): boolean {
-    return this.menuOpen || this.settings.open || this.sideMode !== null || this.mapOpen || this.bookOpen || this.bag.open || this.doll.open || !this.dialogue.classList.contains('hidden');
+    return this.menuOpen || this.settings.open || this.sideMode !== null || this.mapOpen || this.bookOpen || this.bag.open || this.doll.open || this.store.open || !this.dialogue.classList.contains('hidden');
   }
 
   /** The frame-rate and details corner (F3, or the Video setting). */
@@ -225,7 +231,7 @@ export class GameUI {
     }
     if (what === 'escape') {
       // Escape closes whatever is open; with nothing open it opens the settings.
-      const anyOpen = this.settings.open || this.sideMode !== null || this.bag.open || this.doll.open || this.mapOpen || this.bookOpen;
+      const anyOpen = this.settings.open || this.sideMode !== null || this.bag.open || this.doll.open || this.store.open || this.mapOpen || this.bookOpen;
       if (!anyOpen) {
         this.settings.toggle(true);
         return;
@@ -234,6 +240,7 @@ export class GameUI {
       this.sideMode = null;
       this.bag.toggle(false);
       this.doll.toggle(false);
+      this.store.toggle(null);
       this.mapOpen = false;
       this.bookOpen = false;
     } else if (what === 'runebook') {
@@ -278,6 +285,9 @@ export class GameUI {
 
   onEvent(e: SimEvent, localId: number | null, state: SimState): void {
     switch (e.type) {
+      case 'storeOpened':
+        if (e.player === localId) this.store.toggle(e.entity);
+        break;
       case 'discovered':
         this.toast(e.name, 'discovered');
         break;
@@ -341,10 +351,11 @@ export class GameUI {
       this.downedEl.classList.toggle('hidden', p.downed <= 0);
       if (p.downed > 0) this.downedEl.textContent = `You are down — a friend can revive you (E). Waking in ${Math.ceil(p.downed / 20)}s`;
       this.updateCompass(f.state, e);
-      this.updatePrompt(f.state, e);
+      this.prompt.innerHTML = promptText(f.state, e);
       this.updateDialogue(e);
       this.updateSide(f.state, e);
       this.bag.update(e, f.proj, f.state);
+      this.store.update(f.state, e);
       this.doll.update(e);
       if (this.mapOpen) this.updateMap(f.state, e);
     }
@@ -523,46 +534,6 @@ export class GameUI {
     this.compass.innerHTML = parts.join('');
   }
 
-  private updatePrompt(state: SimState, e: Entity): void {
-    const p = e.player;
-    if (!p) return;
-    if (p.holding !== null) {
-      const h = state.entities.get(p.holding);
-      this.prompt.innerHTML = `Carrying ${esc(h ? thingName(h) : 'something')} — <kbd>F</kbd> throw (look up to throw far)`;
-      return;
-    }
-    let best: Entity | null = null;
-    let bd = 2.8;
-    for (const o of state.entities.values()) {
-      if (o === e || o.dead) continue;
-      const dx = o.pos.x - e.pos.x;
-      const dy = o.pos.y - e.pos.y;
-      const d = Math.hypot(dx, dy);
-      if (d > bd || Math.abs(o.z - e.z) > 2) continue;
-      let da = Math.atan2(dy, dx) - e.angle;
-      da = Math.atan2(Math.sin(da), Math.cos(da));
-      if (Math.abs(da) > 0.75 && d > 0.8) continue;
-      if (thingDef(CONTENT, o.def).body.ghost) continue;
-      best = o;
-      bd = d;
-    }
-    let text = '';
-    if (best) {
-      const d = thingDef(CONTENT, best.def);
-      const name = esc(thingName(best));
-      if (d.use) text = best.cooldown > 0 ? `A ${name}` : `<kbd>E</kbd> Use ${name}`;
-      else if (d.talk) text = `<kbd>E</kbd> Talk to ${esc(best.npc?.name ?? name)}`;
-      else if (d.container) {
-        const lock = d.container.lock && best.container?.locked ? ` (locked — needs a ${esc(CONTENT.items[d.container.lock]?.name.toLowerCase() ?? 'key')})` : '';
-        text = best.container?.opened ? `Empty ${name}` : `<kbd>E</kbd> Open ${name}${lock}`;
-      } else if (best.item) text = `<kbd>E</kbd> Take ${name}${best.item.count > 1 ? ` ×${best.item.count}` : ''}`;
-      else if ((best.player?.downed ?? 0) > 0) text = `<kbd>E</kbd> Revive ${esc(best.player?.name ?? '')}`;
-      else if (d.carry && d.body.mass <= 60) text = `<kbd>F</kbd> Grab ${name}`;
-      else if (d.contact) text = `A ${name}. Something heavy stepping on it would set it off.`;
-    }
-    this.prompt.innerHTML = text;
-  }
-
   private updateDialogue(e: Entity): void {
     const d = e.player?.dialogue ?? null;
     const key = d ? `${d.speaker}|${d.text}|${d.options.map((o) => o.label).join('|')}` : '';
@@ -650,9 +621,4 @@ export class GameUI {
   get element(): HTMLElement {
     return this.root;
   }
-}
-
-function thingName(e: Entity): string {
-  if (e.item) return itemDef(CONTENT, e.item.id)?.name ?? 'item';
-  return thingDef(CONTENT, e.def).name;
 }

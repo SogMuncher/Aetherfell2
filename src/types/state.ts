@@ -21,6 +21,8 @@ export interface SimQueues {
   kills: { killer: number; def: ThingId }[];
   /** A party taking a way into another realm (the sim loop swaps the realms after the systems have run). */
   travel: { to: RealmId; x: number; y: number; by: number }[];
+  /** Things called to a spot (a horn calling the airship): their own system answers. Cleared at the end of the tick. */
+  calls: { thing: ThingId; x: number; y: number; by: number }[];
 }
 
 /**
@@ -129,5 +131,5 @@ export interface SimContext {
 export type SimSystem = (ctx: SimContext) => void;
 
 export function emptyQueues(): SimQueues {
-  return { effects: [], use: [], kills: [], travel: [] };
+  return { effects: [], use: [], kills: [], travel: [], calls: [] };
 }

@@ -16,5 +16,6 @@ export * from './palettes';
 export * from './sky';
 export * from './vfx';
 export * from './volume';
+export * from './craft';
 export * from './matter';
 export * from './gear';

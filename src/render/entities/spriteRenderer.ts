@@ -1,4 +1,4 @@
-import type { Entity, ReadonlyTiles, SimState } from '../../types';
+import type { Entity, ReadonlyTiles, SimState, ThingDef } from '../../types';
 import { CONTENT, thingDef } from '../../content';
 import { lerp } from '../lighting';
 import { sideFrom, type Projection } from '../raycaster/camera';
@@ -94,7 +94,7 @@ export class SpriteRenderer {
       let scale = 1;
       let sink = 0;
       let colours: Uint32Array | null = null;
-      const artId = def.sprite === null ? undefined : e.container?.opened && CONTENT.art[`${def.sprite}Open`] ? `${def.sprite}Open` : def.sprite;
+      const artId = def.sprite === null ? undefined : stateArt(def, e, def.sprite);
       const art = artId !== undefined ? CONTENT.art[artId] : undefined;
       if (art && artId !== undefined) {
         const c = this.art.pick(e, artId, art, p, time);
@@ -137,4 +137,15 @@ export class SpriteRenderer {
     if (name === 'item') return e.item ? itemSprite(e.item.id) : null;
     return missingSprite();
   }
+}
+
+/** The picture that shows a thing's state: an opened container's `…Open`, a station's gauge frame `<sprite>N`. */
+function stateArt(def: ThingDef, e: Entity, sprite: string): string {
+  const st = def.station;
+  if (st?.gauge && e.control) {
+    const f = st.feed ? e.control.v / st.feed.max : (e.control.v + 1) / 2;
+    const id = `${sprite}${Math.round(Math.max(0, Math.min(1, f)) * (st.gauge - 1))}`;
+    if (CONTENT.art[id]) return id;
+  }
+  return e.container?.opened && CONTENT.art[`${sprite}Open`] ? `${sprite}Open` : sprite;
 }
