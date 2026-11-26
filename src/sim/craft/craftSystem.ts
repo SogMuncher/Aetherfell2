@@ -29,6 +29,7 @@ export const craftSystem: SimSystem = (ctx: SimContext) => {
     else {
       t.control.by = pl.id;
       p.station = t.id;
+      ctx.emit({ type: 'station', entity: pl.id, station: t.id, act: 'take' });
     }
   }
   for (const call of state.queues.calls) answer(ctx, call);
@@ -45,6 +46,7 @@ function leaveStation(ctx: SimContext, pl: Entity): void {
   if (!p || p.station == null) return;
   const t = ctx.state.entities.get(p.station);
   if (t?.control && t.control.by === pl.id) t.control.by = null;
+  ctx.emit({ type: 'station', entity: pl.id, station: p.station, act: 'leave' });
   p.station = null;
 }
 
@@ -57,6 +59,7 @@ function feed(ctx: SimContext, pl: Entity, t: Entity, st: StationDef): void {
   else {
     removeItem(bagOf(pl), f.item, 1);
     t.control.v = Math.min(f.max, t.control.v + f.amount);
+    ctx.emit({ type: 'station', entity: pl.id, station: t.id, act: 'feed' });
     ctx.emit({ type: 'notice', player: pl.id, text: `The ${name} melts into the ${thingDef(ctx.content, t.def).name}.` });
   }
 }
@@ -92,6 +95,7 @@ function answer(ctx: SimContext, call: { thing: ThingId; x: number; y: number; b
     // Called away, it weighs anchor.
     const cd = thingDef(ctx.content, best.def).craft;
     if (cd) haulIn(ctx, best, cd);
+    ctx.emit({ type: 'answer', entity: best.id, x: best.pos.x, y: best.pos.y });
     ctx.emit({ type: 'notice', player: call.by, text: `Far off, the ${thingDef(ctx.content, best.def).name} turns toward the call.` });
   }
 }

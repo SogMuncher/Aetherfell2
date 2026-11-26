@@ -89,10 +89,26 @@ export interface ItemDef {
   light?: HeldLightDef;
   /** Wearing it protects a part of the body (put on by double-clicking it, or dragging it onto the paperdoll). */
   armour?: ArmourStats;
-  /** Holding jump in the air opens it as a glider. */
-  glide?: { sink: number; speed: number };
+  /** Holding jump in the air opens it as a glider; how it flies (`sim/player/gliding.ts`). */
+  glide?: GlideDef;
   /** Carrying it teaches you this rune (the stone is used up the first time). */
   teaches?: RuneId;
   /** Using it calls the nearest thing of this kind to you (a horn calls the airship); using it again sends it to the new spot. */
   calls?: ThingId;
+}
+
+/** How a glider flies. Carrying several, the one that soars best opens. */
+export interface GlideDef {
+  /** Sinking speed (m/s) when drifting level. */
+  sink: number;
+  /** Cruising speed (m/s). */
+  speed: number;
+  /** 0 drifts (only slows your fall, whatever you look at) … 1 soars (fly where you look: dive for speed, pull up for height). */
+  soar: number;
+  /** How fast a soaring glider's speed returns to cruising (per second). */
+  drag: number;
+  /** Fastest it can dive (m/s). */
+  top: number;
+  /** How quickly your flight follows the cloth each tick (0..1): low feels floaty, high feels sharp. */
+  grip: number;
 }

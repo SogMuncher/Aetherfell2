@@ -49,6 +49,8 @@ export interface MoodSignals {
   speed: number;
   /** Gliding or falling high above the ground. */
   soaring: number;
+  /** Aboard a craft (the airship). */
+  voyage: number;
   /** Friends close by, 0 alone … 1 the whole party. */
   company: number;
 }
@@ -58,7 +60,7 @@ export type SignalName = keyof MoodSignals;
 export const SIGNAL_NAMES: readonly SignalName[] = [
   'danger', 'combat', 'threat', 'depth', 'dread', 'night', 'dusk', 'aurora', 'rain', 'storm', 'wind',
   'altitude', 'vista', 'forest', 'water', 'snow', 'sand', 'settlement', 'ruin', 'murk', 'warmth', 'wonder',
-  'triumph', 'hurt', 'downed', 'speed', 'soaring', 'company',
+  'triumph', 'hurt', 'downed', 'speed', 'soaring', 'voyage', 'company',
 ];
 
 const SIGNAL_SET: ReadonlySet<string> = new Set(SIGNAL_NAMES);

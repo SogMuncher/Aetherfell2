@@ -58,6 +58,12 @@ export type SimEvent =
   /** An item broke (in the hands or flying into something). */
   | { type: 'itemBroke'; item: ItemId; x: number; y: number; z: number }
   | { type: 'glide'; entity: number; open: boolean }
+  /** A horn blown to call a craft. */
+  | { type: 'call'; entity: number; x: number; y: number }
+  /** A craft turning toward a call: it sounds its own horn back. */
+  | { type: 'answer'; entity: number; x: number; y: number }
+  /** A station taken, left or fed (fuel into a tank). */
+  | { type: 'station'; entity: number; station: number; act: 'take' | 'leave' | 'feed' }
   | { type: 'locked'; entity: number; x: number; y: number }
   | { type: 'unlocked'; entity: number; x: number; y: number }
   | { type: 'equip'; entity: number; item: ItemId | null }

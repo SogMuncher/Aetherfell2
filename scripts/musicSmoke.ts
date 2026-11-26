@@ -9,7 +9,7 @@ import { reactionFor, REACTIONS } from '../src/audio/music/reactions';
 import { dials } from '../src/audio/music/modulators';
 import { INSTRUMENTS } from '../src/audio/music/instruments';
 import type { InstrumentId } from '../src/audio/music/instruments';
-import { METERS, STYLES, STYLE_IDS } from '../src/audio/music/styles';
+import { METERS, STYLES, STYLE_IDS, bestStyle } from '../src/audio/music/styles';
 import { AMBIENT_SOUNDS } from '../src/audio/ambientSounds';
 import { MoodTracker, emptySignals } from '../src/audio/music/signals';
 import { compose } from '../src/audio/music/composer';
@@ -177,5 +177,12 @@ check('deep sounds never need sky things (day, night, trees, wind)', crossed.len
 const kinds = Object.values(AMBIENT_SOUNDS);
 check('plenty of ambient sounds up top and below', kinds.filter((a) => a.where === 'sky').length >= 10 && kinds.filter((a) => a.where === 'deep').length >= 10);
 check('wandering styles can fall fully quiet for a while', STYLE_IDS.filter((id) => STYLES[id].silence >= 0.5).length >= 5);
+
+{
+  // Aboard the airship high over open country the voyage theme plays; a fight still takes over.
+  const sky = { ...emptySignals(), voyage: 1, soaring: 1, altitude: 0.8, vista: 1, wind: 0.5 };
+  check('aboard a craft the music turns to the voyage theme', bestStyle(sky, new Map(), 'wander') === 'voyage', bestStyle(sky, new Map(), 'wander'));
+  check('a fight aboard still brings the battle music', bestStyle({ ...sky, combat: 1, danger: 1 }, new Map(), 'voyage') === 'battle');
+}
 
 if (failures()) throw new Error(`${failures()} music check(s) failed`);
