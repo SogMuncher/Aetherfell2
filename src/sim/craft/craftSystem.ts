@@ -121,6 +121,7 @@ function fly(ctx: SimContext, e: Entity, cd: CraftDef, dt: number): void {
   let thrust = get(cd.thrust.channel);
   let turn = get(cd.turn.channel);
   let climb = get(cd.climb.channel);
+  if (cd.weigh && get(cd.weigh) > 0.95) haulIn(ctx, e, cd);
 
   // The highest ground anywhere under it, while anyone is near enough for it to be loaded.
   const near = Object.values(state.players).some((id) => {

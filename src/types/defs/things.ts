@@ -174,8 +174,8 @@ export interface ThingDef {
   /** Effects on whoever jumps while standing on it (a launching plank), pushed away from it. */
   onJump?: Effect[];
   light?: LightDef;
-  /** A fire that smokes: grey puffs rise from `rise` metres above it (a hearth's smoke leaves by the chimney, above the roof), about `rate` a second, only seen when near. `fx` = another burst (content/effects.ts); `pace` = only at full rate once the craft it is fitted to flies this fast (m/s; a propeller's trail); `spread` = from anywhere this many metres around its middle (default 0.15). */
-  smoke?: { rise: number; rate: number; fx?: string; pace?: number; spread?: number };
+  /** A fire that smokes: grey puffs rise from `rise` metres above it (a hearth's smoke leaves by the chimney, above the roof), about `rate` a second, only given off within `seen` m of the eye (default 45; a propeller's trail is seen from far off). `fx` = another burst (content/effects.ts); `pace` = only at full rate once the craft it is fitted to flies this fast (m/s; a propeller's trail); `spread` = from anywhere this many metres around its middle (default 0.15). */
+  smoke?: { rise: number; rate: number; fx?: string; pace?: number; spread?: number; seen?: number };
   /** Pictures `<sprite>0..frames-1` turned through in order as the craft it is fitted to flies, `turn` frames a metre (a propeller). */
   spin?: { frames: number; turn: number };
   /** What its chain is drawn with: a picture every `every` metres (default chain links; a rope ladder's rungs). */

@@ -18,7 +18,7 @@ sim never sees GPU types. The old CPU (Classic) renderer is gone. F3 shows `gpu`
 | Sprites (creatures, props, items, tile billboards) | one RGBA atlas (+ palette-region mask for `@palette` fill) | when a sprite is first built |
 | Lights (`LightMap.lights`: thing/spell/held light, realm lamp, `fire` state light) | RGBA32F list per 4 m square, nearest 16 | per frame |
 | What blocks light (tile walls, closed doors, 3D cells, ground heights) | 96x96x48 m R8 solid field + height grid (`gpuSolid.ts`) | on a step / 3D change / every 12 frames |
-| Moving frames (airships) blocking light | 32 m R8 grid per frame (2 nearest), every light ray turned into it (`gpuFrameShade.ts`) | pose every frame; cells on a 3D change, every 10 frames |
+| Moving frames (airships) blocking light | 32 m grid of 0.5 m cells per frame (2 nearest), each keeping its true shape; every light ray turned into it (`gpuFrameShade.ts`) | pose every frame; cells on a 3D change, every 10 frames |
 | Particles | one instanced quad buffer | per frame |
 
 ## Pass order (one depth buffer)

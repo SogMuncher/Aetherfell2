@@ -200,6 +200,13 @@ export const THINGS: Record<ThingId, ThingDef> = {
     station: { channel: 'lift', axis: 'forward', rate: 1, decay: 1.4, seat: [0.9, 0], text: 'Work the altitude lever', gauge: 9 },
     sprite: 'altitudeLever',
   },
+  anchorWinch: {
+    name: 'anchor winch',
+    body: { radius: 0.35, height: 1.2, mass: 60, solid: false, anchored: true },
+    material: 'wood',
+    station: { channel: 'weigh', axis: 'forward', rate: 1, decay: 2, seat: [0.9, 0], text: 'Work the anchor winch (forward hauls it in)', gauge: 9 },
+    sprite: 'anchorWinch',
+  },
   fuelTank: {
     name: 'aether tank',
     body: { radius: 0.45, height: 1.3, mass: 200, solid: false, anchored: true },
@@ -253,7 +260,7 @@ export const THINGS: Record<ThingId, ThingDef> = {
     body: { radius: 0.4, height: 6, mass: 90, solid: false, anchored: true },
     material: 'wood',
     spin: { frames: 6, turn: 3 },
-    smoke: { rise: 3, rate: 60, fx: 'propWake', pace: 6, spread: 2.2 },
+    smoke: { rise: 3, rate: 60, fx: 'propWake', pace: 6, spread: 2.2, seen: 1500 },
     sprite: 'shipPropeller',
   },
   launchPlank: {

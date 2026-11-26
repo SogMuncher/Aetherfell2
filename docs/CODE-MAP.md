@@ -40,7 +40,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `fineSmoke.ts` (64) FINE CELLS: a 3D cell split into 2 x 2 x 2 half-metre cells; the shape palette, splitting, standing, saving, f
 - `doorSmoke.ts` (70) DOORS: one rule for a door tile on the ground and a door leaf in a wall of the 3D layer: open, shut, burn, fre
 - `hullTight.ts` (74) Is a swept hull tight? Fills its fine cells' real shapes at an eighth of a metre and floods the outside air: n
-- `shipSmoke.ts` (282) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
+- `shipSmoke.ts` (295) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
 - `glideSmoke.ts` (77) GLIDERS: each cloth flies its own way (data): burlap only slows your fall, wyvern hide soars, dives and climbs
 
 ## src/audio/
@@ -121,7 +121,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (470) building recipes for the 3D layer (D)
 - `surfaces.ts` (241) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
-- `things.ts` (290) entity archetypes by trait (D)
+- `things.ts` (297) entity archetypes by trait (D)
 - `tileCodes.ts` (18) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (204) all tile kinds + code assignment from the ledger
 - `validate.ts` (268) validateContent: every reference must point at something that exists
@@ -135,8 +135,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `handling.ts` (87) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
 - `bodyPlans.ts` (172) Body plans as reusable parts (two legs, four legs, hopper, antlers): segmented limbs on joints, roles for body
 - `moves.ts` (78) Body moves seen from outside: how arms, torso, head (or a beast's neck) turn through each swing direction and
-- `crafts.ts` (162) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
-- `shipProps.ts` (194) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
+- `crafts.ts` (165) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
+- `shipProps.ts` (196) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
 - `shapeTable.ts` (124) The shape palette of the 3D layer as data: every shape a cell (1 m) or a fine cell (half a metre) can take
 - `hullSweep.ts` (64) Curved hulls as fine cells: every half-metre cell inside a solid is kept where it shows, shaped by which sides
 
@@ -207,7 +207,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuPost.ts` (142) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (65) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (96) shader/texture helpers, camera basis and view-projection
-- `gpuFrameShade.ts` (109) Shadows of moving frames (an airship): each frame's cells as a small 1 m grid the light rays march through, tu
+- `gpuFrameShade.ts` (125) Shadows of moving frames (an airship): each frame's cells as a small 1 m grid the light rays march through, tu
 - `gpuSpeedLines.ts` (81) Speed lines: thin streaks hanging still in the air around the eye, each drawn stretched along how fast the eye
 
 ## src/render/materials/
@@ -241,7 +241,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `fireEmitter.ts` (47) Where fire's motes go: the particle system draws them from the palette in the fire rules.
 - `glow.ts` (86) Light painted straight over the frame: glows, lines, specks. Shared by the held item and its sparks.
 - `spellEmitters.ts` (161) Spell motes: the bloom of a bolt bursting, cones, novas, wards, the casting hand and a bolt's trail, all from
-- `thingEmitters.ts` (60) Motes things give off every frame: flames on what burns with firelight, smoke and trails, a held torch, burnin
+- `thingEmitters.ts` (62) Motes things give off every frame: flames on what burns with firelight, smoke and trails, a held torch, burnin
 - `glideTrails.ts` (44) Light trails behind open gliders: a line of glowing motes left hanging in the air from each wingtip (the glide
 
 ## src/settings/
@@ -375,7 +375,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (202) surface, biome, water and world-generation defs
 - `art.ts` (203) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
-- `craft.ts` (114) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
+- `craft.ts` (116) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
 
 ## src/types/defs/
 - `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population
@@ -391,6 +391,6 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/sim/craft/
 - `craftBuild.ts` (45) Makes a craft: its hull cells written into a quiet corner of the 3D layer and its fittings set aboard
 - `craftMotion.ts` (124) Moves every craft by its own speed and turn, carrying whoever stands on it, and keeps its frame in the 3D laye
-- `craftSystem.ts` (218) Crafts: stations taken and fed, horn calls answered, and flight worked out from the stations' channels, wind a
+- `craftSystem.ts` (219) Crafts: stations taken and fed, horn calls answered, and flight worked out from the stations' channels, wind a
 - `index.ts` (3) The craft system (airships): stations, calls, flight, and the motion shared with a guest's foresight
 - `tether.ts` (92) Chains from a loose thing to a point aboard a craft (the anchor's): never longer than the chain; lying still o

@@ -62,7 +62,8 @@
   `Fitting.loose` = lies aboard and rides like anyone on deck (crates, barrels and lanterns are fixed fittings);
   `Fitting.tie` + `ThingDef.chain` = a chained thing (the anchor, carried and thrown with G): `Entity.tether`,
   `sim/craft/tether.ts` keeps it within the chain, a taut chain to one lying still holds the craft and swings its bow
-  round; climbing any hanging chain is `sim/player/climbing.ts` (forward climbs, looking down climbs down, jump lets go,
+  round; `CraftDef.weigh` names a channel (the anchor winch lever) that, pushed hard over, hauls it back aboard (`haulIn`, as a
+  horn call does); climbing any hanging chain is `sim/player/climbing.ts` (forward climbs, looking down climbs down, jump lets go,
   forward at the top steps onto a floor). A fixed fitting with a `tie` (the rope ladder) only hangs, never holds the
   craft; `ThingDef.links` = what its line is drawn with (rungs). A horn call hauls loose chained things back aboard
   (`haulIn`). `ThingDef.vane` = a fitting that points downwind (windsock); `spin` = frames turned through with the

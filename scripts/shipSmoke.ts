@@ -234,6 +234,19 @@ run(2);
 const fa = cd.fittings.find((f) => f.thing === 'shipAnchor')?.at ?? [0, 0, 0];
 const back = al(anchor);
 check('called away, the ship hauls its anchor back aboard', out0 && Math.hypot(back.x - fa[0], back.y - fa[1]) < 0.5 && Math.abs(anchor.z - ship.z - fa[2]) < 0.2, `${back.x.toFixed(1)}, ${back.y.toFixed(1)}, ${(anchor.z - ship.z).toFixed(2)}`);
+// Thrown down again, the winch lever beside it hauls it back in from on board: take it (E) and push it hard forward.
+const winch = of('anchorWinch');
+anchor.pos.x = ship.pos.x + 30;
+anchor.z = sim.tiles.ground(anchor.pos.x, anchor.pos.y);
+delete anchor.aboard;
+run(2);
+const out1 = anchor.aboard !== ship.id;
+const wl = cd.fittings.find((f) => f.thing === 'anchorWinch')?.at ?? [0, 0, 0];
+stand(wl[0], wl[1], wl[2]);
+s.queues.use.push({ player: me.id, tileX: 0, tileY: 0, entity: winch.id });
+run(30, () => ({ forward: 1 }));
+const wb = al(anchor);
+check('working the anchor winch forward hauls the anchor back aboard', out1 && me.player?.station === winch.id && Math.hypot(wb.x - fa[0], wb.y - fa[1]) < 0.5, `${wb.x.toFixed(1)}, ${wb.y.toFixed(1)}`);
 
 // Only what is over the ship's own cells comes aboard: a crate in the air under the envelope's overhang (a house's
 // furniture the box sweeps past) stays behind and falls.
