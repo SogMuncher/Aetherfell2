@@ -8,7 +8,7 @@ allocate in hot loops. Look is **sprites + procedural textures**; perspective on
 - `viewport.ts` low-res frame size scaled cleanly. `lighting.ts` gathers the lights (and a 1 m grid for the held item). A thing's light sits `LightDef.at` m above it, its height
   interpolated like its sprite; `flame: false` = no flame motes. `vfx/`: `particles.ts` + `thingEmitters.ts` (motes things give off) + `spellEmitters.ts`.
 - `raycaster/` (CPU helpers the GPU reads): far cached LOD blocks (`terrainLod.ts`, `lodLooks.ts`, ~7 km), `tileBillboards.ts`,
-  `cloudShadow.ts`, `camera.ts`. Clouds and ground mist follow the world's moisture (`airMoisture` in `content/skyField.ts`, set by `Simulation`; layer `wet`).
+  `cloudShadow.ts`, `camera.ts`. Clouds and ground mist follow the world's moisture (`airMoisture` in `content/skyField.ts`, set by `Simulation`; layer `wet`). Stepping sideways leans the view gently into the step (`LEAN` in renderer.ts, setting "Strafe tilt"): `Camera.roll` turns the GPU camera basis (`camBasis` roll) and `toScreen`; billboards stay upright.
 - LOD blocks of every level (incl. the 1 m one the GPU textured levels fade into) get changed tiles painted over them (`terrainLodPaint.paintChunk`); the GPU refills its fine levels when `lod.painted` moves.
 - `materials/` paints surfaces into textures.
 - Sky, air cells, clouds, mist, smoke, fog: **docs/RENDER-SKY.md**. Sprites, gear on bodies, held item: **docs/RENDER-SPRITES.md**.

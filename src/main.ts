@@ -11,9 +11,9 @@ import { Simulation, createState, loadFromBrowser, saveToBrowser } from './sim';
 import { NetSession } from './net';
 import { GameAudio } from './audio';
 import { Renderer, GameUI } from './render';
-import { AdaptiveRes } from './render/adaptiveRes';
 import type { MenuAction } from './render';
 import { SettingsStore } from './settings';
+import { SettingsLink } from './settingsLink';
 import type { BodyRegionId, CheatValue, Command, EntitySnapshot, ItemId, RuneId, SimEvent, ThrowAim } from './types';
 import { startTicker } from './clock';
 import { TICK_DT } from './types';
@@ -85,39 +85,11 @@ function replaceSim(next: Simulation): void {
   sim = next;
   renderer.dispose();
   renderer = new Renderer(canvas as HTMLCanvasElement, sim.sampler, sim.tiles);
-  applySettings();
+  settingsLink.apply();
 }
 
-/** Hands the remembered settings to sound, view and controls (on start and on every change). */
-const adaptiveRes = new AdaptiveRes();
-function applySettings(): void {
-  audio.setMix({
-    master: settings.num('masterVolume') / 100,
-    music: settings.num('musicVolume') / 100,
-    effects: settings.num('effectsVolume') / 100,
-    ambience: settings.num('ambienceVolume') / 100,
-  });
-  const mood = settings.str('musicMood');
-  audio.setMusicMood(mood === 'follow' ? null : mood);
-  renderer.options = {
-    shake: settings.bool('screenShake'),
-    bob: settings.bool('headBob'),
-    fovDegrees: settings.num('fieldOfView'),
-    colourLevels: settings.num('colours') || 24,
-    lights: settings.num('lightsPerPixel') || 4,
-  };
-  applyResolution(0);
-  input.mouse.sensitivity = 0.0022 * (settings.num('mouseSensitivity') / 100);
-  input.mouse.invertY = settings.bool('invertMouse');
-  input.turnSpeed = settings.num('turnSpeed') / 100;
-  ui.setDebug(settings.bool('showFps'));
-  audio.setPresent(!settings.bool('muteInBackground') || (document.visibilityState === 'visible' && document.hasFocus()));
-}
-settings.onChange(() => applySettings());
-applySettings();
-for (const ev of ['blur', 'focus', 'visibilitychange'] as const) {
-  (ev === 'visibilitychange' ? document : window).addEventListener(ev, () => applySettings());
-}
+const settingsLink = new SettingsLink(settings, audio, input, ui, () => renderer);
+settingsLink.apply();
 
 /**
  * Debug cheats from the settings menu. They are commands like everything else: solo and host
@@ -286,17 +258,10 @@ startTicker(stepWorld);
 /** Guest: when we last forgot far-away land (ms). */
 let trimmedAt = 0;
 
-/** Pixel size: the chosen detail, lowered on the fly when frames run slow (setting 'adaptive' = wished fps, 0 = off). */
-function applyResolution(dt: number): void {
-  const maxLines = settings.num('resolution') || 200;
-  const lines = adaptiveRes.update(dt, maxLines, settings.num('adaptive'));
-  if (renderer.viewport.height !== lines) renderer.viewport.setTargetHeight(lines);
-}
-
 function frame(now: number): void {
   const dt = Math.min(0.1, (now - last) / 1000);
   last = now;
-  if (running) applyResolution(dt);
+  if (running) settingsLink.resolution(dt);
   fps = fps * 0.95 + (1 / Math.max(0.001, dt)) * 0.05;
   input.dialogueOpen = (() => {
     const id = localEntityId();

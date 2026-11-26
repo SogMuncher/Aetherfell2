@@ -9,6 +9,8 @@ export interface Camera {
   /** Small screen bob/shake offsets in pixels. */
   shakeX: number;
   shakeY: number;
+  /** Lean of the view to the right (radians), about the middle of the screen. */
+  roll?: number;
 }
 
 /** Per-frame projection values derived from a camera and the viewport size. */
@@ -54,5 +56,14 @@ export function toScreen(p: Projection, x: number, y: number, z: number, out: { 
   out.depth = fwd;
   out.sx = p.W * 0.5 + (p.F * right) / fwd + p.cam.shakeX;
   out.sy = p.HOR - (p.F * (z - p.cam.z)) / fwd;
+  const r = p.cam.roll ?? 0;
+  if (r !== 0) {
+    const ox = out.sx - p.W * 0.5;
+    const oy = out.sy - p.H * 0.5;
+    const c = Math.cos(r);
+    const s = Math.sin(r);
+    out.sx = p.W * 0.5 + ox * c + oy * s;
+    out.sy = p.H * 0.5 - ox * s + oy * c;
+  }
   return true;
 }

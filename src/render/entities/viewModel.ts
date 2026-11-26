@@ -30,6 +30,8 @@ export interface ViewFrame {
   alpha: number;
   dt: number;
   time: number;
+  /** The wind where you are (m/s). */
+  wind: { readonly x: number; readonly y: number };
 }
 
 export class ViewModel {

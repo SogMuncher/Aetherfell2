@@ -102,6 +102,7 @@ export const SETTINGS: readonly SettingDef[] = [
   },
   { id: 'screenShake', group: 'Video', label: 'Screen shake', help: 'The view jolts when you are hit or land hard.', kind: 'toggle', value: true },
   { id: 'headBob', group: 'Video', label: 'Head bob', help: 'The view bobs a little as you walk.', kind: 'toggle', value: true },
+  { id: 'strafeTilt', group: 'Video', label: 'Strafe tilt', help: 'The view leans a little into the way you step sideways.', kind: 'toggle', value: true },
   {
     id: 'lightsPerPixel',
     group: 'Video',
