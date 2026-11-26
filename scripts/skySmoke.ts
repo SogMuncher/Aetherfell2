@@ -229,6 +229,10 @@ for (const l of SKY.layers) {
   check('old air cells are not rebuilt while the weather holds', air.filled === calm, `${air.filled - calm} cells`);
   air.update({ ...w, cloud: (w.cloud ?? 0) + 0.2 }, 5000 + SKY.air.cell * (air.n / 8 + 1), 3000, 300, 500, 2e5);
   check('they are rebuilt when the weather changes', air.filled > calm);
+  const wet = { ...w, cloud: (w.cloud ?? 0) + 0.4 }, ex = 5000 + SKY.air.cell * (air.n / 4 + 2);
+  air.update(wet, ex - SKY.air.cell * (air.n / 8 + 1), 3000, 300, 1e4, 1000);
+  air.update(wet, ex, 3000, 300, 1e4, air.n * air.tall * (air.n / 8 + 2) / SKY.air.rush);
+  check('a level the eye left behind catches up first, ahead of a weather refill', lv0?.ox === Math.floor((ex - (w.drift?.x ?? 0)) / SKY.air.cell) - air.n / 2);
   // Weather: rain falls only under storm cloud, and the air above holds that cloud.
   const storm = weather(0.9, 0.9);
   let rainy = 0;

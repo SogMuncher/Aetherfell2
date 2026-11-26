@@ -33,6 +33,6 @@ export const SKY: SkyDef = {
   aurora: { colour: [40, 190, 120], edge: [0, 0, 60] },
   cloudRange: 40000,
   haze: 6,
-  air: { cell: 1, count: 96, tall: 32, lod: 18, ext: 0.05, budget: 5000, refresh: 8, change: 0.02, blend: 1.5 },
+  air: { cell: 1, count: 96, tall: 32, lod: 18, ext: 0.05, budget: 5000, rush: 3, refresh: 8, change: 0.02, blend: 2 },
   smoke: { cell: 1, count: 64, tall: 48, step: 0.1, rise: 0.8, spread: 0.006, fade: 0.03, ext: 1, colour: [52, 50, 48] },
 };

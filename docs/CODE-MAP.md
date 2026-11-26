@@ -20,7 +20,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `settlementSmoke.ts` (373) Settlements and cities in the 3D layer: villages raise real buildings with furniture inside,
 - `simSmoke.ts` (26) Headless smoke test: run the sim for a while and report what happened.
 - `bootSmoke.mjs` (46) Boots the bundled game in a real browser (`npm run check:boot`, needs Playwright): no load errors, journey starts, a world swap keeps one view canvas
-- `skySmoke.ts` (297) Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
+- `skySmoke.ts` (301) Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
 - `torchSmoke.ts` (94) Headless checks for torches: the wall-mounted kind in buildings and halls, and the one you hold
 - `viewmodelShot.ts` (150) renders held-weapon PNGs (owned by the viewmodel thread)
 - `volumeSmoke.ts` (295) The 3D layer: shapes, the brick store, standing on stairs and ramps, bumping heads, buildings
@@ -160,7 +160,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `env.ts` (144) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
 - `lighting.ts` (136) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); lights the held item in 3D (`sample`); `poseBetween` = a craft drawn between ticks; re-exports Env
 - `airSmoke.ts` (170) smoke: the live level of the air cells; burning spots feed it, it rises, spreads and thins in steps
-- `airCells.ts` (228) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
+- `airCells.ts` (253) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
 - `stateLooks.ts` (68) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
@@ -203,7 +203,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuParticles.ts` (155) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (61) held item buffer composited on top
 - `gpuSky.ts` (82) full-screen sky: gradient, sun, moon, stars, aurora
-- `gpuClouds.ts` (306) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
+- `gpuClouds.ts` (312) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
 - `gpuPost.ts` (142) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (65) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (96) shader/texture helpers, camera basis and view-projection
@@ -366,7 +366,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matter.ts` (102) MATTER — one way to talk about "the stuff at a place", whatever holds it.
 - `net.ts` (53) co-op message types
 - `palettes.ts` (22) Colour as data. Pictures are never painted in fixed colours: every part of a creature, tree,
-- `sky.ts` (95) RGB, 0..255.
+- `sky.ts` (96) RGB, 0..255.
 - `state.ts` (136) SimState and queues
 - `structures.ts` (179) StructureDef, planned structures, house geometry
 - `tiles.ts` (217) tile/chunk types, TileInfo, keys

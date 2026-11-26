@@ -8,7 +8,8 @@
  * Cells are kept in the wind's drifting frame (clouds move with the wind without a refill) and stored wrapped around
  * (a cell's slot is its grid position modulo the level size), so when the eye moves only the cells that came into reach
  * are filled; nothing else is touched. A level is also refilled whole when it is older than `air.refresh` × (level + 1)
- * seconds (the weather changed; far levels less often). At most `air.budget` cells are filled per frame; a finished job
+ * seconds (the weather changed; far levels less often). At most `air.budget` cells are filled per frame (`air.rush` ×
+ * that while a level the eye left behind catches up, nearest first, ahead of any weather refill); a finished job
  * bumps the level's `version` and only then moves its window, so a drawer always sees a whole, consistent level.
  * Render-side data only: the sim never sees it.
  */
@@ -46,6 +47,8 @@ interface Job {
   oy: number;
   oz: number;
   full: boolean;
+  /** The level is empty or the eye left it behind: it goes before weather refills and gets `air.rush` × the budget. */
+  urgent: boolean;
   w: WeatherState;
   covers: number[];
 }
@@ -67,6 +70,8 @@ export class AirCells {
   /** Cells filled since the start (tests and the debug readout). */
   filled = 0;
   private job: Job | null = null;
+  /** A weather refill set aside while a level the eye left behind catches up. */
+  private waiting: Job | null = null;
   private readonly dens: Float32Array;
   private readonly lite: Float32Array;
 
@@ -90,14 +95,22 @@ export class AirCells {
     return [w.drift?.x ?? 0, w.drift?.y ?? 0];
   }
 
-  /** Spends up to `budget` cells on the level that needs it most. `time` in seconds. */
+  /** Spends up to `budget` cells (`air.rush` × that while a level catches up with the eye) on the level that needs it
+   * most. A weather refill never holds up a level the eye left behind: it waits, or is dropped if it is that level. */
   update(weather: WeatherState, ex: number, ey: number, ez: number, time: number, budget = this.sky.air.budget): void {
-    let left = budget;
-    while (left > 0) {
-      this.job ??= this.pick(weather, ex, ey, ez, time);
+    if (this.job && !this.job.urgent) {
+      const m = this.pick(weather, ex, ey, ez, time);
+      if (m?.urgent) {
+        this.waiting = m.lv === this.job.lv ? null : this.job;
+        this.job = m;
+      }
+    }
+    let spent = 0;
+    while (spent < (this.job?.urgent ? budget * this.sky.air.rush : budget)) {
+      this.job ??= this.next(weather, ex, ey, ez, time);
       const j = this.job;
       if (!j) return;
-      left -= this.fillColumn(j);
+      spent += this.fillColumn(j);
       if (j.bi >= j.boxes.length) {
         const lv = j.lv;
         lv.ox = j.ox;
@@ -111,6 +124,18 @@ export class AirCells {
         this.job = null;
       }
     }
+  }
+
+  /** The next job: an urgent one first, else the refill that was set aside, else whatever is due. */
+  private next(w: WeatherState, ex: number, ey: number, ez: number, time: number): Job | null {
+    const j = this.pick(w, ex, ey, ez, time);
+    const wait = this.waiting;
+    if (j?.urgent || !wait) {
+      if (j && wait?.lv === j.lv) this.waiting = null;
+      return j;
+    }
+    this.waiting = null;
+    return wait;
   }
 
   /** Fills every level now (tests, first frame of a headless shot). */
@@ -173,7 +198,7 @@ export class AirCells {
     const lv = best;
     const [tx, ty, tz] = this.target(lv, w, ex, ey, ez);
     const covers = this.sky.layers.map((l) => layerCover(l, w));
-    const job: Job = { lv, boxes: [], bi: 0, col: 0, ox: tx, oy: ty, oz: tz, full: false, w: { ...w, drift: { x: w.drift?.x ?? 0, y: w.drift?.y ?? 0 } }, covers };
+    const job: Job = { lv, boxes: [], bi: 0, col: 0, ox: tx, oy: ty, oz: tz, full: false, urgent: score >= 2000, w: { ...w, drift: { x: w.drift?.x ?? 0, y: w.drift?.y ?? 0 } }, covers };
     const whole: Box = [tx, tx + n, ty, ty + n, tz, tz + T];
     const far = !(Math.abs(tx - lv.ox) < n && Math.abs(ty - lv.oy) < n && Math.abs(tz - lv.oz) < T);
     if (score < 2000 || score >= 3000 || far) {
