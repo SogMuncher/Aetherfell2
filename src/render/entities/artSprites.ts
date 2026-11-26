@@ -43,8 +43,13 @@ interface Tracked {
   phase: number;
   /** Its own resting angle, for things that do not walk. */
   spin: number;
+  /** The side shown last (-1 = none yet): it is kept until the view is clearly past the line to the next side. */
+  dir: number;
   last: number;
 }
+
+/** How far past the halfway line between two sides (in sides) the view must go before the picture turns, so it never flickers there. */
+const SIDE_STICK = 0.2;
 
 /**
  * Every entity with an art recipe goes through here. Things with a gait face where they go and
@@ -103,6 +108,7 @@ export class ArtSprites {
         phase: rhash(e.id, 4, 55),
         // Fixed things (stations, furniture) face the way they were set; loose ones lie any which way.
         spin: def.gait || thingDef(CONTENT, e.def).body.anchored ? 0 : rhash(e.id, 2, 211) * Math.PI * 2,
+        dir: -1,
         last: time,
       };
       this.tracked.set(e.id, tr);
@@ -141,7 +147,11 @@ export class ArtSprites {
       const { rx, ry } = sideFrom(p, e.pos.x, e.pos.y);
       const rf = rx * Math.cos(a) + ry * Math.sin(a);
       const rs = -rx * Math.sin(a) + ry * Math.cos(a);
-      dir = Math.round((Math.atan2(rs, rf) / (Math.PI * 2)) * VIEW_DIRS);
+      const v = (Math.atan2(rs, rf) / (Math.PI * 2)) * VIEW_DIRS;
+      let off = v - tr.dir;
+      off -= Math.round(off / VIEW_DIRS) * VIEW_DIRS;
+      if (tr.dir < 0 || Math.abs(off) > 0.5 + SIDE_STICK) tr.dir = ((Math.round(v) % VIEW_DIRS) + VIEW_DIRS) % VIEW_DIRS;
+      dir = tr.dir;
     }
 
     const th = this.throws.get(e.id);

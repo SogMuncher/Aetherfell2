@@ -27,6 +27,9 @@ export interface FrameInput {
   dt: number;
 }
 
+/** Strafe lean (Quake-like, gentle): at most `max` radians, reached at `full` m/s sideways, easing at `rate` per second. */
+const LEAN = { max: 0.03, full: 4, rate: 7 } as const;
+
 /**
  * Read-only renderer: turns sim state into a frame. Holds only visual memory (caches, particles,
  * camera bob, flashes) — nothing here ever writes to the simulation.
@@ -52,12 +55,14 @@ export class Renderer {
   private hurt = 0;
   private shake = 0;
   private bob = 0;
+  /** How far the view leans into a sideways step (radians, right +). */
+  private lean = 0;
   private hitFlash = new Map<number, number>();
   lastProjection: Projection | null = null;
   lastEnv: Env | null = null;
   stats = { gpuMs: 0, totalMs: 0 };
   /** Look options from the settings menu (main.ts keeps these up to date). */
-  options = { shake: true, bob: true, fovDegrees: 60, colourLevels: 24, lights: 4 };
+  options = { shake: true, bob: true, tilt: true, fovDegrees: 60, colourLevels: 24, lights: 4 };
 
   constructor(canvas: HTMLCanvasElement, sampler: WorldSampler, tiles: ReadonlyTiles) {
     this.viewport = new Viewport(canvas, 200);
@@ -126,6 +131,10 @@ export class Renderer {
       if (me.actor?.onGround && speed > 0.5) this.bob += f.dt * speed * 1.9;
       if (this.options.bob) cz += Math.sin(this.bob * 2) * 0.04;
     }
+    // Stepping sideways leans the view a little into the step (eases in and out).
+    const side = me && this.options.tilt && !((me.player?.downed ?? 0) > 0) ? me.vel.y * Math.cos(f.yaw) - me.vel.x * Math.sin(f.yaw) : 0;
+    const want = Math.max(-1, Math.min(1, side / LEAN.full)) * LEAN.max;
+    this.lean += (want - this.lean) * Math.min(1, f.dt * LEAN.rate);
     const cam: Camera = {
       x: cx,
       y: cy,
@@ -134,6 +143,7 @@ export class Renderer {
       pitch: f.pitch,
       shakeX: this.options.shake ? (Math.random() - 0.5) * this.shake : 0,
       shakeY: this.options.shake ? (Math.random() - 0.5) * this.shake : 0,
+      roll: this.lean,
     };
     const p = project(cam, vp.width, vp.height, 0.5 / Math.tan((this.options.fovDegrees * Math.PI) / 360));
     this.lastProjection = p;
@@ -170,8 +180,8 @@ export class Renderer {
     this.particles.update(f.dt);
     const wind = state.weather.wind;
     this.gpu.draw({
-      eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.paintView(s, me, env, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
+      eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, roll: cam.roll, fovDegrees: this.options.fovDegrees,
+      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.paintView(s, me, env, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time, wind }) : null, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;

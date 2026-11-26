@@ -245,7 +245,9 @@ export class GpuSprites {
     gl.uniform1i(u.uPal, 1);
     gl.activeTexture(gl.TEXTURE0);
     gl.uniformMatrix4fv(u.uVP, false, vp);
-    gl.uniform3f(u.uRight, cam.right[0], cam.right[1], 0);
+    // Level right (a leaning view never tips the billboards: they stand upright in the world).
+    const fl = Math.max(1e-6, Math.hypot(cam.fwd[0], cam.fwd[1]));
+    gl.uniform3f(u.uRight, -cam.fwd[1] / fl, cam.fwd[0] / fl, 0);
     gl.uniform3f(u.uEye, eye.x, eye.y, eye.z);
     gl.uniform3f(u.uFog, env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.uniform1f(u.uFogDist, env.fogDist);

@@ -17,14 +17,37 @@ const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 export const smooth = (t: number): number => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 const clamp01 = (t: number): number => (t < 0 ? 0 : t > 1 ? 1 : t);
 
+/**
+ * A HandPose's `lean` is the blade's angle ON SCREEN, as the eye sees it from where the hand is (perspective). A blade
+ * pointing straight ahead from a hand below the eye leans up toward the middle of the view, so a level sweep turns
+ * the picture through "up", never through "down" (reading only the blade's own sideways and up parts flipped it
+ * round halfway through every left/right swing).
+ */
 export function fromHand(p: HandPose): Pose3 {
   const c = Math.cos(p.pitch);
-  return { x: p.x, y: p.y, z: p.z, dx: Math.sin(p.lean) * c, dy: Math.cos(p.lean) * c, dz: Math.sin(p.pitch), roll: p.roll, reach: p.reach };
+  const dz = Math.sin(p.pitch);
+  const hz = Math.max(0.15, p.z);
+  // Find the blade's sideways/up parts (length c) whose screen direction (d·hz − h·dz) points along the lean.
+  const s = Math.sin(p.lean);
+  const co = Math.cos(p.lean);
+  const a = p.x * dz;
+  const b = p.y * dz;
+  const q = a * s + b * co;
+  const t = -q + Math.sqrt(Math.max(0, q * q - (a * a + b * b - c * c * hz * hz)));
+  let dx = (a + t * s) / hz;
+  let dy = (b + t * co) / hz;
+  const l = Math.hypot(dx, dy);
+  if (l > 1e-6) {
+    dx *= c / l;
+    dy *= c / l;
+  }
+  return { x: p.x, y: p.y, z: p.z, dx, dy, dz, roll: p.roll, reach: p.reach };
 }
 
-/** Back to the flat picture's terms: lean in the screen, pitch away from you. */
+/** Back to the flat picture's terms: lean on screen (seen from the eye), pitch away from you. */
 export function toHand(p: Pose3): HandPose {
-  return { x: p.x, y: p.y, z: p.z, lean: Math.atan2(p.dx, p.dy), pitch: Math.atan2(p.dz, Math.hypot(p.dx, p.dy)), roll: p.roll, reach: p.reach };
+  const hz = Math.max(0.15, p.z);
+  return { x: p.x, y: p.y, z: p.z, lean: Math.atan2(p.dx * hz - p.x * p.dz, p.dy * hz - p.y * p.dz), pitch: Math.atan2(p.dz, Math.hypot(p.dx, p.dy)), roll: p.roll, reach: p.reach };
 }
 
 function norm(v: [number, number, number]): [number, number, number] {

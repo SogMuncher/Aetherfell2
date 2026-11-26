@@ -111,11 +111,11 @@ let frame = 0;
 function shot(name: string, night: boolean, warm = true, vm = new ViewModel()): number {
   for (let w = 0; w < 24 && warm; w++) {
     backdrop(surface, night);
-    vm.draw(surface, me, computeEnv(sim.state, 0, me.pos.x, me.pos.y), lm, { yaw: 0.3, pitch: 0, bob: 0, alpha: 0, dt: 1 / 60, time: 0.5 + w / 60 });
+    vm.draw(surface, me, computeEnv(sim.state, 0, me.pos.x, me.pos.y), lm, { yaw: 0.3, pitch: 0, bob: 0, alpha: 0, dt: 1 / 60, time: 0.5 + w / 60, wind: { x: 0, y: 0 } });
   }
   backdrop(surface, night);
   const env = computeEnv(sim.state, 0, me.pos.x, me.pos.y);
-  const f = { yaw: 0.3, pitch: 0, bob: 0, alpha: 0, dt: 1 / 60, time: 1 + frame++ / 60 };
+  const f = { yaw: 0.3, pitch: 0, bob: 0, alpha: 0, dt: 1 / 60, time: 1 + frame++ / 60, wind: { x: 0, y: 0 } };
   vm.draw(surface, me, env, lm, f);
   if (dir) fs.writeFileSync(`${dir}/${name}.png`, png(W, H, surface.pixels, 3));
   let lit = 0;
