@@ -250,10 +250,10 @@ export const THINGS: Record<ThingId, ThingDef> = {
   /** Turns as the ship flies, faster the faster it goes, and leaves a trail of aether behind. */
   shipPropeller: {
     name: 'propeller',
-    body: { radius: 0.4, height: 2.5, mass: 90, solid: false, anchored: true },
+    body: { radius: 0.4, height: 6, mass: 90, solid: false, anchored: true },
     material: 'wood',
     spin: { frames: 6, turn: 3 },
-    smoke: { rise: 1.25, rate: 14, fx: 'propWake', pace: 6 },
+    smoke: { rise: 3, rate: 60, fx: 'propWake', pace: 6, spread: 2.2 },
     sprite: 'shipPropeller',
   },
   launchPlank: {

@@ -7,7 +7,8 @@ export function frameOf(e: Entity, cd: CraftDef): VolumeFrame | null {
   const c = e.craft;
   if (!c) return null;
   const a = c.anchor;
-  return { id: e.id, x0: a.x, y0: a.y, z0: a.z, x1: a.x + cd.size[0], y1: a.y + cd.size[1], z1: a.z + cd.size[2], px: a.x + cd.pivot[0], py: a.y + cd.pivot[1], wx: e.pos.x, wy: e.pos.y, wz: e.z, yaw: e.angle };
+  const [lx, ly] = cd.low ?? [0, 0];
+  return { id: e.id, x0: a.x + lx, y0: a.y + ly, z0: a.z, x1: a.x + cd.size[0], y1: a.y + cd.size[1], z1: a.z + cd.size[2], px: a.x + cd.pivot[0], py: a.y + cd.pivot[1], wx: e.pos.x, wy: e.pos.y, wz: e.z, yaw: e.angle };
 }
 
 /** A point in craft metres (x forward, y across from the box corner) -> the world. */
@@ -27,7 +28,8 @@ function inBox(e: Entity, cd: CraftDef, x: number, y: number): boolean {
   const dy = y - e.pos.y;
   const lx = cd.pivot[0] + dx * c + dy * s;
   const ly = cd.pivot[1] - dx * s + dy * c;
-  return lx >= 0 && lx < cd.size[0] && ly >= 0 && ly < cd.size[1];
+  const [x0, y0] = cd.low ?? [0, 0];
+  return lx >= x0 && lx < cd.size[0] && ly >= y0 && ly < cd.size[1];
 }
 
 /**
@@ -49,12 +51,14 @@ export function craftMotion(ctx: SimContext): void {
     }
     vol.setFrame(f0);
     // Whoever is inside its box, from the keel to a little over its top, is carried with it: standing, climbing stairs,
-    // jumping or falling. Their speed is their own relative to the craft; coming in they lose the craft's speed, and
-    // leaving (a jump over the side, the plank) they keep it.
+    // jumping or falling. Only what is over its own cells comes aboard (never a house's furniture the box sweeps past).
+    // Their speed is their own relative to the craft; coming in they lose the craft's speed, and leaving (a jump over
+    // the side, the plank) they keep it.
     const riders: Entity[] = [];
     for (const o of state.entities.values()) {
       if (o === e || o.dead || o.ride || o.craft || o.heldBy !== null || o.player?.station != null) continue;
-      const inside = o.z >= e.z - 0.1 && o.z < e.z + cd.size[2] + 1.5 && inBox(e, cd, o.pos.x, o.pos.y);
+      const inBody = o.z >= e.z - 0.1 && o.z < e.z + cd.size[2] + 1.5 && inBox(e, cd, o.pos.x, o.pos.y);
+      const inside = inBody && (o.aboard === e.id || vol.floorOn(e.id, o.pos.x, o.pos.y, o.z + 0.1) > -Infinity);
       if (inside === (o.aboard === e.id)) {
         if (inside) riders.push(o);
         continue;

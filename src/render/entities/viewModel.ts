@@ -186,7 +186,7 @@ export class ViewModel {
     const gx = W / 2 + pose.x * sc;
     const gy = H / 2 - pose.y * sc;
     const light = new Float32Array(3);
-    lm.sample(e.pos.x, e.pos.y, light);
+    lm.sample(e.pos.x, e.pos.y, e.z + 1.4, light);
     const flick = held ? 1 - held.flicker * 0.5 + Math.sin(f.time * 17) * held.flicker * 0.25 + Math.sin(f.time * 29) * held.flicker * 0.25 : 1;
     const lit = (amb: number, sun: number, l: number, own: number): number => Math.min(1.5, (Math.max(0.22, amb * 0.8 + l * 0.55) + sun * 0.3 + own * flick * 0.35));
     const warp: Warp = {

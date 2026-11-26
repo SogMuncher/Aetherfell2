@@ -72,7 +72,13 @@
   box (`Entity.aboard`): standing, on stairs, jumping, falling. Entering, a body's speed becomes relative to the craft;
   leaving (over the side, off the plank) it keeps the craft's speed. In the air bodies keep their momentum (air control
   only adds; knockback fades only on the ground). Fire on a ship's cells spreads: `matter.place` gives a spot's world
-  position, so it is never "far from everyone". Ships cast shadows (`render/gpu/gpuFrameShade.ts`). Not yet: view does not turn with it.
+  position, so it is never "far from everyone". Ships cast shadows (`render/gpu/gpuFrameShade.ts`).
+  Only a body over the craft's own cells comes aboard (`volume.floorOn`), so the box sweeping past a house takes nothing.
+  `CraftDef.low` lets the box start before the keel's corner (the envelope overhangs hull on all sides). Ground is
+  sampled every 2 m under the whole box: below it the craft is lifted out at once, ground rising faster than it can
+  climb stops it. Within `still` m of its resting height the wind leaves it be (full share at twice that).
+  Render: frames, chains (their tie follows the drawn craft) and lights use `poseBetween`; on a guest, what it
+  foresees (crafts, fittings, itself) is drawn by its own tick time. Not yet: view does not turn with it.
 
 ## Ruins
 Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with weighted `styles` (ring, street, cross, scatter) over decayed recipes

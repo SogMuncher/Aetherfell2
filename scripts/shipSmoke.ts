@@ -1,4 +1,4 @@
-// THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsock, a call ignores the wind, the anchor and its climbable chain
+// THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsock, a call ignores the wind, the anchor and its climbable chain, only what is on it is carried, never into the ground, still near it
 import { check, failures, world } from './matterKit';
 import { leaks } from './hullTight';
 import { aboard } from '../src/sim/craft/craftMotion';
@@ -234,6 +234,49 @@ run(2);
 const fa = cd.fittings.find((f) => f.thing === 'shipAnchor')?.at ?? [0, 0, 0];
 const back = al(anchor);
 check('called away, the ship hauls its anchor back aboard', out0 && Math.hypot(back.x - fa[0], back.y - fa[1]) < 0.5 && Math.abs(anchor.z - ship.z - fa[2]) < 0.2, `${back.x.toFixed(1)}, ${back.y.toFixed(1)}, ${(anchor.z - ship.z).toFixed(2)}`);
+
+// Only what is over the ship's own cells comes aboard: a crate in the air under the envelope's overhang (a house's
+// furniture the box sweeps past) stays behind and falls.
+const crate = loose[0];
+if (crate) {
+  delete crate.aboard;
+  const at = aboard(ship, cd, -2.5, YC_TEST);
+  crate.pos = { x: at.x, y: at.y };
+  crate.z = ship.z + 2;
+  run(1);
+}
+check('a thing beside the hull, under the overhang, is not carried', !!crate && crate.aboard !== ship.id);
+
+// Never into the ground: sunk below it, it is lifted out at once; flown low at full speed, its keel stays above the land.
+const keelClear = (): number => {
+  let low = Infinity;
+  for (let x = 0; x <= 22; x++) for (let y = -4; y <= 4; y++) low = Math.min(low, ship.z - sim.tiles.ground(aboard(ship, cd, x, YC_TEST + y).x, aboard(ship, cd, x, YC_TEST + y).y));
+  return low;
+};
+moveShip(me.pos.x + 40, me.pos.y, sim.tiles.ground(me.pos.x + 40, me.pos.y) - 2);
+run(1);
+const lifted = keelClear();
+of('altitudeLever').control = { by: null, v: 0 };
+if (throttle.control) throttle.control.v = 1;
+let worst = Infinity;
+for (let i = 0; i < 300; i++) {
+  run(1);
+  worst = Math.min(worst, keelClear());
+}
+check('sunk into the ground it is lifted out, and flying low its keel never goes under the land', lifted > 0 && worst > 0, `${lifted.toFixed(2)} after lifting, ${worst.toFixed(2)} lowest while flying`);
+if (throttle.control) throttle.control.v = 0;
+
+// Low over the ground the wind leaves it be (it does not slide away after landing); high up it drifts.
+s.weather.wind = { x: 9, y: 0 };
+s.weather.windTarget = { x: 9, y: 0 };
+const drift = (over: number): number => {
+  moveShip(ship.pos.x, ship.pos.y, sim.tiles.ground(ship.pos.x, ship.pos.y) + over);
+  run(60);
+  return Math.hypot(ship.craft?.vel.x ?? 0, ship.craft?.vel.y ?? 0);
+};
+const lowDrift = drift(2.5);
+const highDrift = drift(40);
+check('landed or hovering low it does not drift with the wind; high up it does', lowDrift < 0.2 && highDrift > 2, `${lowDrift.toFixed(2)} m/s low, ${highDrift.toFixed(2)} m/s high`);
 
 console.log(failures() === 0 ? 'ship checks passed' : `${failures()} ship checks FAILED`);
 if (failures() > 0) throw new Error('ship checks failed');

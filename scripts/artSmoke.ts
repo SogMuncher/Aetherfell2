@@ -150,7 +150,7 @@ check('content (palettes, prop forms, dress colours) validates', validateContent
       w.vel.y = Math.sin(a) * 1.5;
       const cam = { x: me.pos.x, y: me.pos.y, z: me.z + 1.6, yaw: 0, pitch: 0 } as Camera;
       artPaintBudget(-1); // last frame's painting time is long over
-      const bb = sprites.collect(project(cam, 320, 200), sim.state, sim.tiles, me.id, 1, f / 60, new Map());
+      const bb = sprites.collect(project(cam, 320, 200), sim.state, sim.tiles, me.id, () => 1, f / 60, new Map());
       const mine = bb.find((b) => Math.abs(b.x - w.pos.x) < 0.01 && Math.abs(b.y - w.pos.y) < 0.01);
       if (mine) pics.add(mine.sprite);
     }

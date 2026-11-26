@@ -1,6 +1,6 @@
 import type { Entity, ReadonlyTiles, SimState, ThingDef } from '../../types';
 import { CONTENT, thingDef } from '../../content';
-import { lerp } from '../lighting';
+import { lerp, poseBetween } from '../lighting';
 import { sideFrom, type Projection } from '../raycaster/camera';
 import { TileBillboards } from '../raycaster/tileBillboards';
 import { itemSprite, missingSprite } from './sprites';
@@ -75,7 +75,7 @@ export class SpriteRenderer {
   }
 
   /** Everything to draw this frame (trees, props, creatures, items) as billboards; the GPU path draws them itself. */
-  collect(p: Projection, state: SimState, tiles: ReadonlyTiles, localId: number | null, alpha: number, time: number, hitFlash: Map<number, number>): readonly Billboard[] {
+  collect(p: Projection, state: SimState, tiles: ReadonlyTiles, localId: number | null, alphaOf: (e: Entity) => number, time: number, hitFlash: Map<number, number>): readonly Billboard[] {
     for (const b of this.list) this.pool.push(b);
     this.list.length = 0;
     // One painting budget for the whole frame, opened before anything picks a picture: opened later,
@@ -83,6 +83,7 @@ export class SpriteRenderer {
     artPaintBudget(PAINT_BUDGET_MS);
     for (const e of state.entities.values()) {
       if (e.id === localId) continue;
+      const alpha = alphaOf(e);
       const x = lerp(e.prev.x, e.pos.x, alpha);
       const y = lerp(e.prev.y, e.pos.y, alpha);
       const z = lerp(e.prevZ, e.z, alpha);
@@ -91,6 +92,9 @@ export class SpriteRenderer {
       if (dx * dx + dy * dy > 160 * 160) continue;
       // Creatures, people and props are built from their art recipe: an opened container shows its `…Open` recipe if it has one.
       const def = thingDef(CONTENT, e.def);
+      // A chain or rope ladder hangs from its tie aboard a craft, drawn where the craft is drawn (even with no picture of its own).
+      const tie = e.tether ? tieBetween(state, e.tether, alphaOf) : undefined;
+      if (tie) this.chain(tie, x, y, z, p, def.links);
       let s: Sprite | null;
       let facing = false;
       let scale = 1;
@@ -124,7 +128,6 @@ export class SpriteRenderer {
         else if (st.tint) tint = st.tint;
       }
       this.add(x, y, z - sink, s, p, facing, glow, flash, scale, tint, 1, colours);
-      if (e.tether?.top) this.chain(e.tether.top, x, y, z, p, def.links);
     }
     // Flora last: when a dense forest passes the GPU's billboard cap, trees drop out, never creatures or items.
     this.flora.each(tiles, p.cam.x, p.cam.y, p.FX, p.FY, p.RX, p.RY, (t, fade, burning) => {
@@ -165,6 +168,17 @@ export class SpriteRenderer {
     if (name === 'item') return e.item ? itemSprite(e.item.id) : null;
     return missingSprite();
   }
+}
+
+/** A tether's tie in the world between two ticks, turned and moved with the craft it is made fast to. */
+function tieBetween(state: SimState, t: NonNullable<Entity['tether']>, alphaOf: (e: Entity) => number): { x: number; y: number; z: number } | undefined {
+  const c = state.entities.get(t.craft);
+  const cd = c ? thingDef(CONTENT, c.def).craft : undefined;
+  if (!c || !cd) return t.top;
+  const at = poseBetween(c, alphaOf(c));
+  const dx = t.x - cd.pivot[0];
+  const dy = t.y - cd.pivot[1];
+  return { x: at.x + dx * Math.cos(at.yaw) - dy * Math.sin(at.yaw), y: at.y + dx * Math.sin(at.yaw) + dy * Math.cos(at.yaw), z: at.z + t.z };
 }
 
 /** The picture that shows a thing's state: an opened container's `…Open`, a station's gauge frame `<sprite>N`, a spinning fitting's frame. */

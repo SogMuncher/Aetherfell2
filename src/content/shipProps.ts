@@ -166,13 +166,13 @@ const LADDER_RUNG: ArtDef = {
 export const SPIN_FRAMES = 6;
 /** A three-bladed propeller on a shaft running forward into the stern post, its hub 1.25 m up, turned `turn` degrees. */
 function propeller(turn: number): ArtDef {
-  const H = 1.25;
-  const L = 1.15;
+  const H = 3;
+  const L = 3;
   return prop([
-    { shape: 'box', at: [0.24, H, 0], size: [0.24, 0.05, 0.05], color: 'iron', surface: 'metal' },
-    { shape: 'drum', at: [0.04, H, 0], size: [0.12, 0.08, 0.12], tilt: 90, color: 'brass', surface: 'metal' },
-    ...[0, 120, 240].map((a): ArtPart => ({ shape: 'box', at: [0, H + Math.cos((a + turn) * RAD) * L * 0.55, -Math.sin((a + turn) * RAD) * L * 0.55], size: [0.03, L * 0.45, 0.13], roll: -(a + turn), color: 'wood', surface: 'wood' })),
-    { shape: 'ball', at: [-0.06, H, 0], size: [0.07, 0.07, 0.07], color: 'brass', surface: 'metal' },
+    { shape: 'box', at: [0.5, H, 0], size: [0.5, 0.12, 0.12], color: 'iron', surface: 'metal' },
+    { shape: 'drum', at: [0.08, H, 0], size: [0.3, 0.2, 0.3], tilt: 90, color: 'brass', surface: 'metal' },
+    ...[0, 120, 240].map((a): ArtPart => ({ shape: 'box', at: [0, H + Math.cos((a + turn) * RAD) * L * 0.55, -Math.sin((a + turn) * RAD) * L * 0.55], size: [0.06, L * 0.45, 0.32], roll: -(a + turn), color: 'wood', surface: 'wood' })),
+    { shape: 'ball', at: [-0.14, H, 0], size: [0.17, 0.17, 0.17], color: 'brass', surface: 'metal' },
   ]);
 }
 

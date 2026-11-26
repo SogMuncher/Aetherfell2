@@ -33,7 +33,8 @@ export function emitThings(out: MoteSink, state: SimState, camX: number, camY: n
     }
     // Fires that smoke (hearths, campfires) send it up from their vent, when near enough to see.
     if (d.smoke && dx * dx + dy * dy < 45 * 45 && Math.random() < dt * d.smoke.rate * pace(state, e, d.smoke.pace)) {
-      out.one(fx(d.smoke.fx ?? 'tileSmoke'), e.pos.x + (Math.random() - 0.5) * 0.3, e.pos.y + (Math.random() - 0.5) * 0.3, e.z + d.smoke.rise, wind.x * 0.4, wind.y * 0.4, 1.0, 0.75 + Math.random() * 0.5);
+      const r = d.smoke.spread ?? 0.15;
+      out.one(fx(d.smoke.fx ?? 'tileSmoke'), e.pos.x + (Math.random() - 0.5) * 2 * r, e.pos.y + (Math.random() - 0.5) * 2 * r, e.z + d.smoke.rise + (Math.random() - 0.5) * 2 * r, wind.x * 0.4, wind.y * 0.4, 1.0, 0.75 + Math.random() * 0.5);
     }
     // A torch in someone's hand burns at the end of their arm (your own is drawn with the view model).
     const held = d.actor ? heldLight(CONTENT, e) : undefined;

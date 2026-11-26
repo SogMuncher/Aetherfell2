@@ -15,7 +15,8 @@ export function buildCraft(ctx: SimContext, thing: ThingId, x: number, y: number
   const a = { x: dock.x + (e.id % 64) * spacing, y: dock.y, z: dock.z };
   e.craft = { anchor: a, vel: { x: 0, y: 0 }, vz: 0, spin: 0, prevYaw: yaw, goal: null };
   const vol = ctx.state.volume;
-  for (let cx = 0; cx < cd.size[0]; cx++) for (let cy = 0; cy < cd.size[1]; cy++) for (let cz = 0; cz < cd.size[2]; cz++) vol.set(a.x + cx, a.y + cy, a.z + cz, 0, 0);
+  const [lx, ly] = cd.low ?? [0, 0];
+  for (let cx = lx; cx < cd.size[0]; cx++) for (let cy = ly; cy < cd.size[1]; cy++) for (let cz = 0; cz < cd.size[2]; cz++) vol.set(a.x + cx, a.y + cy, a.z + cz, 0, 0);
   for (const b of cd.hull) {
     const shape = b.shape ? shapeByte(shapeId(b.shape), b.rot ?? 0) : 0;
     const mat = b.shape && b.mat ? tileCode(b.mat) : 0;

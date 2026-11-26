@@ -59,7 +59,7 @@ export class ViewGlider {
     const cx = W / 2;
     // Looking up brings the canopy down into view; it drops in from above as it opens and breathes as you fly.
     const base = H * (C.top + f.pitch * C.look - (1 - fill) * 0.6 + Math.sin(f.time * 1.3) * 0.006);
-    lm.sample(e.pos.x, e.pos.y, this.light);
+    lm.sample(e.pos.x, e.pos.y, e.z + 2, this.light);
     const lit = (amb: number, sun: number, l: number): number => Math.min(1.5, Math.max(0.22, amb * 0.8 + l * 0.55) + sun * 0.45);
     const lr = lit(env.ambR, env.sunR, this.light[0] ?? 0);
     const lg = lit(env.ambG, env.sunG, this.light[1] ?? 0);

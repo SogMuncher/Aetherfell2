@@ -1,4 +1,4 @@
-import type { ReadonlyTiles, SimState } from '../types';
+import type { Entity, ReadonlyTiles, SimState } from '../types';
 import { unpackKey, unpackSpot } from '../types';
 import type { LightDef } from '../types';
 import { CONTENT, heldLight, thingDef, spellFor } from '../content';
@@ -18,24 +18,22 @@ export interface PointLight {
   shadow: boolean;
 }
 
+/** Lights are gathered this far around the eye (m, square); `WALL` = how high walls stand over the ground. */
 export const LM_SIZE = 96;
+const WALL = 4;
 
 /**
  * Gathers every light near the camera from shared data: a thing's `light`, a bolt's spell light, what an actor holds,
  * the realm's carried lamp, and anything burning (the `fire` matter state's `light`, on ground, cells and bodies).
- * `lights` is that list (the GPU lights each pixel from it). It is also splatted into a 1 m grid (`grid`) that lights the held item.
+ * `lights` is that list (the GPU lights each pixel from it); `sample` lights the held item from it.
  */
 export class LightMap {
-  readonly r = new Float32Array(LM_SIZE * LM_SIZE);
-  readonly g = new Float32Array(LM_SIZE * LM_SIZE);
-  readonly b = new Float32Array(LM_SIZE * LM_SIZE);
-  ox = 0;
-  oy = 0;
   readonly lights: PointLight[] = [];
+  private tiles: ReadonlyTiles | null = null;
 
-  build(state: SimState, tiles: ReadonlyTiles, camX: number, camY: number, time: number, alpha: number, grid = true): void {
-    this.ox = Math.floor(camX) - LM_SIZE / 2;
-    this.oy = Math.floor(camY) - LM_SIZE / 2;
+  /** `alphaOf` = how far between its last two ticks each thing is drawn (lights stay with their sprites). */
+  build(state: SimState, tiles: ReadonlyTiles, camX: number, camY: number, time: number, alphaOf: (e: Entity) => number): void {
+    this.tiles = tiles;
     const lights = this.lights;
     lights.length = 0;
     const fire = CONTENT.matterStates.fire.light;
@@ -51,6 +49,7 @@ export class LightMap {
       const L = e.projectile ? spellFor(CONTENT, e.projectile.spell)?.light : d.light ?? held;
       const burning = (e.status.burning ?? 0) > 0;
       if (!L && !(burning && fire)) continue;
+      const alpha = alphaOf(e);
       const x = lerp(e.prev.x, e.pos.x, alpha);
       const y = lerp(e.prev.y, e.pos.y, alpha);
       if (!near(x, y, 10)) continue;
@@ -64,7 +63,7 @@ export class LightMap {
     if (glow) {
       for (const pid of Object.values(state.players)) {
         const e = state.entities.get(pid);
-        if (e) add(glow, 1, lerp(e.prev.x, e.pos.x, alpha), lerp(e.prev.y, e.pos.y, alpha), e.z + 1.4, e.id, true);
+        if (e) add(glow, 1, lerp(e.prev.x, e.pos.x, alphaOf(e)), lerp(e.prev.y, e.pos.y, alphaOf(e)), e.z + 1.4, e.id, true);
       }
     }
     let n = 0;
@@ -86,79 +85,50 @@ export class LightMap {
         n++;
       }
     }
-    if (!grid) return;
-    this.r.fill(0);
-    this.g.fill(0);
-    this.b.fill(0);
-    for (const l of lights) this.splat(l, tiles);
   }
 
-  private splat(l: PointLight, tiles: ReadonlyTiles): void {
-    const R = Math.ceil(l.radius);
-    const cx = Math.floor(l.x);
-    const cy = Math.floor(l.y);
-    for (let j = -R; j <= R; j++) {
-      const gy = cy + j - this.oy;
-      if (gy < 0 || gy >= LM_SIZE) continue;
-      for (let i = -R; i <= R; i++) {
-        const gx = cx + i - this.ox;
-        if (gx < 0 || gx >= LM_SIZE) continue;
-        const dx = cx + i + 0.5 - l.x;
-        const dy = cy + j + 0.5 - l.y;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d > l.radius) continue;
-        if (l.shadow && d > 1.5 && !this.visible(tiles, l.x, l.y, cx + i + 0.5, cy + j + 0.5)) continue;
-        const f = 1 - d / l.radius;
-        const k = f * f;
-        const idx = gy * LM_SIZE + gx;
-        this.r[idx] = (this.r[idx] ?? 0) + l.r * k;
-        this.g[idx] = (this.g[idx] ?? 0) + l.g * k;
-        this.b[idx] = (this.b[idx] ?? 0) + l.b * k;
-      }
+  /**
+   * Light at a world point from every light in reach (the held item): nearer is brighter, and a light that casts
+   * shadows is hidden by walls only where both stand down among them, never across the open air (an airship's lamps).
+   */
+  sample(x: number, y: number, z: number, out: Float32Array): void {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+    const tiles = this.tiles;
+    for (const l of this.lights) {
+      const d = Math.hypot(l.x - x, l.y - y, l.z - z);
+      if (d > l.radius) continue;
+      if (tiles && l.shadow && d > 1.5 && l.z - tiles.ground(l.x, l.y) < WALL && z - tiles.ground(x, y) < WALL && !visible(tiles, l.x, l.y, x, y)) continue;
+      const f = 1 - d / l.radius;
+      out[0] += l.r * f * f;
+      out[1] += l.g * f * f;
+      out[2] += l.b * f * f;
     }
   }
+}
 
-  private visible(tiles: ReadonlyTiles, x0: number, y0: number, x1: number, y1: number): boolean {
-    const dx = x1 - x0;
-    const dy = y1 - y0;
-    const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 1.5);
-    for (let s = 1; s < steps; s++) {
-      const t = s / steps;
-      const x = x0 + dx * t;
-      const y = y0 + dy * t;
-      if (Math.floor(x) === Math.floor(x1) && Math.floor(y) === Math.floor(y1)) return true;
-      const inf = tiles.info(x, y);
-      if (inf.shape === 'block' || (inf.shape === 'door' && tiles.door(x, y) < 128)) return false;
-    }
-    return true;
+/** Is the straight line between two spots on the ground free of walls and shut doors? */
+function visible(tiles: ReadonlyTiles, x0: number, y0: number, x1: number, y1: number): boolean {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const steps = Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 1.5);
+  for (let s = 1; s < steps; s++) {
+    const t = s / steps;
+    const x = x0 + dx * t;
+    const y = y0 + dy * t;
+    if (Math.floor(x) === Math.floor(x1) && Math.floor(y) === Math.floor(y1)) return true;
+    const inf = tiles.info(x, y);
+    if (inf.shape === 'block' || (inf.shape === 'door' && tiles.door(x, y) < 128)) return false;
   }
+  return true;
+}
 
-  /** Bilinear light at a world point; writes into out[0..2]. */
-  sample(x: number, y: number, out: Float32Array): void {
-    const fx = x - this.ox - 0.5;
-    const fy = y - this.oy - 0.5;
-    const ix = Math.floor(fx);
-    const iy = Math.floor(fy);
-    if (ix < 0 || iy < 0 || ix >= LM_SIZE - 1 || iy >= LM_SIZE - 1) {
-      out[0] = 0;
-      out[1] = 0;
-      out[2] = 0;
-      return;
-    }
-    const tx = fx - ix;
-    const ty = fy - iy;
-    const i = iy * LM_SIZE + ix;
-    const w00 = (1 - tx) * (1 - ty);
-    const w10 = tx * (1 - ty);
-    const w01 = (1 - tx) * ty;
-    const w11 = tx * ty;
-    const R = this.r;
-    const G = this.g;
-    const B = this.b;
-    out[0] = (R[i] ?? 0) * w00 + (R[i + 1] ?? 0) * w10 + (R[i + LM_SIZE] ?? 0) * w01 + (R[i + LM_SIZE + 1] ?? 0) * w11;
-    out[1] = (G[i] ?? 0) * w00 + (G[i + 1] ?? 0) * w10 + (G[i + LM_SIZE] ?? 0) * w01 + (G[i + LM_SIZE + 1] ?? 0) * w11;
-    out[2] = (B[i] ?? 0) * w00 + (B[i + 1] ?? 0) * w10 + (B[i + LM_SIZE] ?? 0) * w01 + (B[i + LM_SIZE + 1] ?? 0) * w11;
-  }
+/** Where a thing is drawn between two ticks: its place and, for a craft, its heading. */
+export function poseBetween(e: Entity, a: number): { x: number; y: number; z: number; yaw: number } {
+  const from = e.craft ? e.craft.prevYaw : e.angle;
+  const turn = Math.atan2(Math.sin(e.angle - from), Math.cos(e.angle - from));
+  return { x: lerp(e.prev.x, e.pos.x, a), y: lerp(e.prev.y, e.pos.y, a), z: lerp(e.prevZ, e.z, a), yaw: from + turn * a };
 }
 
 export function lerp(a: number, b: number, t: number): number {
