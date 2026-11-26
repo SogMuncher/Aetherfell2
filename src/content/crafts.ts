@@ -8,7 +8,7 @@ const Q = Math.PI / 2;
  * The airship, in its own metres: x runs stern (0) to bow (22, the bowsprit beyond), y port to starboard about the
  * keel line YC, z up from the keel. A round-bellied hull with a sharp bow whose keel sweeps up into the stem and a stern
  * that overhangs; below deck a hold (floor 1.5, deck 4.5); a raised stern deck (7) over a cabin; a long sailcloth
- * envelope high overhead on two masts and rope stays.
+ * envelope high overhead on rope stays; a propeller astern; a rope ladder down the port side.
  */
 const L = 22;
 const HB = 4.5;
@@ -18,6 +18,10 @@ const QUARTER = 7;
 const AFT = 6.5;
 /** The envelope: middle (x, z) and half-sizes. */
 const ENV = { x: 11, z: 16.5, rx: 11, ry: 5, rz: 4.5 };
+/** A ship's lantern from its foot to the top of its hook (content/shipProps.ts), to hang it right under a beam. */
+const LAMP_TALL = 0.62;
+/** The rope ladder hangs just outside the widest beam of the port side. */
+const LADDER_Y = YC - HB - 0.45;
 
 /** Width of the deck seen from above, 0..1: a square stern, a long bow drawn to a point. */
 const plan = (x: number): number => (x < 3 ? 0.78 + 0.22 * Math.sqrt(x / 3) : x > L - 10 ? Math.max(0, 1 - ((x - (L - 10)) / 10) ** 2) : 1);
@@ -56,30 +60,37 @@ const box = (from: [number, number, number], to: [number, number, number], shape
 /** A flight of half-metre stair cells, `n` long, rising `dir` (+1 toward the bow, -1 toward the stern). */
 const flight = (x: number, y0: number, y1: number, z: number, n: number, dir: number): HullBox[] =>
   Array.from({ length: n }, (_, k) => box([x + dir * k * 0.5, y0, z + k * 0.5], [x + dir * k * 0.5 + 0.5, y1, z + k * 0.5 + 0.5], 'stair', 'hullPlank', dir > 0 ? 0 : 2));
-/** A mast from the deck up into the envelope's underside. */
-const mast = (x: number): HullBox => box([x, 6, MAIN], [x + 0.5, 6.5, Math.ceil((ENV.z - ENV.rz * Math.sqrt(1 - ((x + 0.25 - ENV.x) / ENV.rx) ** 2)) * 2) / 2 + 0.5], 'columnWide', 'post');
+/** The outermost half-metre column of the deck at `x` on one side (-1 port, 1 starboard): where a stay rises. */
+const edgeY = (x: number, side: number): number => {
+  let y = 6;
+  while (inPlan(x + 0.25, y + 0.25 + side * 0.5)) y += side * 0.5;
+  return y;
+};
 /** Rope stays from the top of the bulwark, both sides, straight up into the envelope. */
 const stays = (x: number): HullBox[] =>
   [-1, 1].map((side) => {
-    let y = 6;
-    while (inPlan(x + 0.25, y + 0.25 + side * 0.5)) y += side * 0.5;
+    const y = edgeY(x, side);
     let z = top(x) + 1;
     while (z < 22 && !inEnvelope(x + 0.25, y + 0.25, z + 0.25)) z += 0.5;
     return box([x, y, top(x) + 1], [x + 0.5, y + 0.5, z + 0.5], 'postThin', 'post');
   });
 
-/** Lanterns: on the masts and the stern rail, under the deck beams in the hold, and in the cabin. */
-const lamps: Fitting[] = ([
-  [8.25, YC + 0.25, MAIN + 1.7, Q],
-  [18.25, YC + 0.25, MAIN + 1.7, Q],
-  [1.2, YC - 2.7, QUARTER + 0.7, Q],
-  [1.2, YC + 2.7, QUARTER + 0.7, -Q],
-  [7.5, YC, 2.95, 0],
-  [13, YC - 1, 2.95, 0],
-  [3.5, YC + 1.5, MAIN + 1.35, 0],
-] as const).map(([x, y, z, face]) => ({ thing: 'shipLamp', at: [x, y, z], face }));
+/** A lantern hung by its hook from a stay (its hook arm reaching back to the rope). */
+const onStay = (x: number, side: number): Fitting => ({ thing: 'shipLamp', at: [x + 0.25, edgeY(x, side) + 0.25 - side * 0.35, MAIN + 1.6], face: side * Q });
+/** Lanterns: hung on the stays, standing on the stern rail, and hanging by their hooks right under the beams of the hold and the cabin. */
+const lamps: Fitting[] = [
+  onStay(9, -1),
+  onStay(16, 1),
+  ...([
+    [0.25, YC - 2.5, QUARTER + 1, 0],
+    [0.25, YC + 2.5, QUARTER + 1, 0],
+    [7.5, YC, MAIN - 0.5 - LAMP_TALL, 0],
+    [13, YC - 1, MAIN - 0.5 - LAMP_TALL, 0],
+    [3.5, YC + 1.5, QUARTER - 0.5 - LAMP_TALL, 0],
+  ] as const).map(([x, y, z, face]): Fitting => ({ thing: 'shipLamp', at: [x, y, z], face })),
+];
 
-/** The hold's goods: crates and barrels along both sides below deck, one crate stacked on another. */
+/** The hold's goods: crates and barrels along both sides below deck, one crate stacked on another. Loose, so they slide, tumble and can be knocked about. */
 const goods: Fitting[] = ([
   ['crate', 8.6, 4.2, 1.5],
   ['crate', 8.6, 4.2, 2.3],
@@ -89,7 +100,7 @@ const goods: Fitting[] = ([
   ['crate', 9.2, 8.3, 1.5],
   ['crate', 10.4, 8.3, 1.5],
   ['barrel', 8, 8.2, 1.5],
-] as const).map(([thing, x, y, z]) => ({ thing, at: [x, y, z], face: x * 1.7 }));
+] as const).map(([thing, x, y, z]) => ({ thing, at: [x, y, z], face: x * 1.7, loose: true }));
 
 export const AIRSHIP: CraftDef = {
   size: [24.5, 15, 22],
@@ -97,14 +108,12 @@ export const AIRSHIP: CraftDef = {
   hull: [
     ...sweep(HULL_SWEEP),
     ...sweep(ENVELOPE_SWEEP),
-    // Keel, bowsprit, two masts and the rope stays holding the envelope up.
+    // Keel, bowsprit and the rope stays holding the envelope up.
     box([3, 6, 0], [17, 6.5, 0.5], 'vee', 'hullPlank'),
     box([21, 6, MAIN], [23, 6.5, MAIN + 0.5], 'cube', 'post'),
     box([23, 6, MAIN + 0.5], [24.5, 6.5, MAIN + 1], 'cube', 'post'),
-    mast(7.5),
-    mast(17.5),
     ...[9, 13, 16].flatMap(stays),
-    // Cut out: the hatch, the cabin door (through both layers of the bulkhead), gaps in the bulwarks for the stairs,
+    // Cut out: the hatch, the cabin door (through both layers of the bulkhead), gaps in the bulwarks for the stairs, the ladder,
     // the plank and the anchor's cathead.
     box([12, 6.5, MAIN - 0.5], [15, 8, MAIN], null),
     box([AFT - 1, 5.5, MAIN], [AFT, 7, MAIN + 2], null),
@@ -113,18 +122,17 @@ export const AIRSHIP: CraftDef = {
     box([9.5, 1.5, MAIN], [11, 2.5, MAIN + 1], null),
     box([11.5, 10, MAIN], [12.5, 11, MAIN + 1], null),
     box([18.5, YC, MAIN], [20, 12, MAIN + 1], null),
-    // Stairs: down the hatch to the hold (toward the stern, landing amidships), up both sides to the stern deck, and up the port side from the ground.
+    // Stairs: down the hatch to the hold (toward the stern, landing amidships) and up both sides to the stern deck.
     ...flight(12, 6.5, 8, 1.5, 6, 1),
     ...flight(8.5, 2.5, 3.5, MAIN, 5, -1),
     ...flight(8.5, 9, 10, MAIN, 5, -1),
-    ...flight(5.5, 1, 2, 0, 9, 1),
     // The launching plank out to starboard: a thin board a metre wide; the cathead, a short beam out over the bow.
     box([11.5, 10.5, MAIN - 0.5], [12.5, 14, MAIN], 'slabHigh', 'hullPlank'),
     box([19, 8, MAIN - 0.5], [19.5, 9.5, MAIN], 'cube', 'post'),
   ],
   fittings: [
     // The helm on the stern deck; the altitude lever on the main deck; the aether tank in the cabin under the stern deck.
-    { thing: 'shipWheel', at: [4.5, YC, QUARTER] },
+    { thing: 'shipWheel', at: [4.5, YC, QUARTER], face: Math.PI },
     { thing: 'throttleLever', at: [4.8, YC - 1.6, QUARTER] },
     { thing: 'windsock', at: [0.9, YC + 2, QUARTER] },
     { thing: 'altitudeLever', at: [10, YC - 1.5, MAIN] },
@@ -134,6 +142,9 @@ export const AIRSHIP: CraftDef = {
     ...goods,
     ...lamps,
     { thing: 'launchPlank', at: [12, 12.5, MAIN], face: Q },
+    // A rope ladder down the port side from the gap in the bulwark, long enough to reach the ground on a slope; the propeller astern, on a shaft from the stern post.
+    { thing: 'ropeLadder', at: [10.25, LADDER_Y, -1.5], tie: [10.25, LADDER_Y + 0.15, MAIN + 0.3] },
+    { thing: 'shipPropeller', at: [-0.45, YC, 2.6] },
     // The anchor lies loose on the foredeck, its chain made fast just past the end of the cathead (clear of it, so a climber's head does not hit it).
     { thing: 'shipAnchor', at: [18.4, YC + 1.2, MAIN], loose: true, tie: [19.25, 9.95, MAIN + 0.3] },
   ],

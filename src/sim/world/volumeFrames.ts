@@ -20,6 +20,20 @@ export function intoFrame(f: VolumeFrame, x: number, y: number): { x: number; y:
   return sx >= f.x0 && sx < f.x1 && sy >= f.y0 && sy < f.y1 ? { x: sx, y: sy } : null;
 }
 
+/** A world point in the store coordinates of every frame whose box it is within `pad` m of (a blast reaching a ship). */
+export function framedPoints(frames: Iterable<VolumeFrame>, x: number, y: number, z: number, pad: number): { x: number; y: number; z: number }[] {
+  const out: { x: number; y: number; z: number }[] = [];
+  for (const f of frames) {
+    const c = Math.cos(f.yaw);
+    const s = Math.sin(f.yaw);
+    const sx = f.px + (x - f.wx) * c + (y - f.wy) * s;
+    const sy = f.py - (x - f.wx) * s + (y - f.wy) * c;
+    const sz = z - f.wz + f.z0;
+    if (sx >= f.x0 - pad && sx < f.x1 + pad && sy >= f.y0 - pad && sy < f.y1 + pad && sz >= f.z0 - pad && sz < f.z1 + pad) out.push({ x: sx, y: sy, z: sz });
+  }
+  return out;
+}
+
 /** Store point of a frame -> world point. */
 export function outOfFrame(f: VolumeFrame, sx: number, sy: number, sz: number): { x: number; y: number; z: number } {
   const c = Math.cos(f.yaw);

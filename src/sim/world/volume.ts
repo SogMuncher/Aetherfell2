@@ -4,7 +4,7 @@ import { SHAPE_FINE } from '../../content/shapes';
 import { refineCell, setFineCell } from './volumeFine';
 import { FIELD_MAX, newMatter, packBrick, unpackFine, unpackMatter, unpackShape } from './brickData';
 import { columnCeiling, columnFloor, columnSolid } from './volumeColumns';
-import { framedCeiling, framedCell, framedFloor, framedPlace, framedSolid, framedTop } from './volumeFrames';
+import { framedCeiling, framedCell, framedFloor, framedPlace, framedPoints, framedSolid, framedTop } from './volumeFrames';
 
 function columnKey(x: number, y: number): number {
   return (x + 1048576) * 2097152 + (y + 1048576);
@@ -35,6 +35,7 @@ export class VolumeStore implements Volume {
   floorOn(frame: number, x: number, y: number, zMax: number): number { const f = this.frames.get(frame); return f ? framedFloor(this, [f], x, y, zMax, Infinity) : -Infinity; }
   cellOf(x: number, y: number, z: number): { x: number; y: number; z: number } { return framedCell(this, this.frames.values(), x, y, z); }
   placeOf(x: number, y: number, z: number): { x: number; y: number; z: number } { return framedPlace(this.frames.values(), x, y, z); }
+  framePoints(x: number, y: number, z: number, pad: number): { x: number; y: number; z: number }[] { return framedPoints(this.frames.values(), x, y, z, pad); }
 
   shapeAt(x: number, y: number, z: number): number {
     const b = this.bricks.get(brickKey(x >> 4, y >> 4, z >> 4));

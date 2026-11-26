@@ -86,6 +86,7 @@ const stand = (lx: number, ly: number, dz: number): void => {
   if (me.player) me.player.downed = 0;
   me.hp = me.maxHp;
 };
+const YC_TEST = cd.pivot[1];
 const al = (o: Entity): { x: number; y: number } => ({ x: o.pos.x - ship.pos.x + cd.pivot[0], y: o.pos.y - ship.pos.y + cd.pivot[1] });
 
 // Pick it up like anything you can carry, and throw it over the side through the gap in the rail.
@@ -175,6 +176,64 @@ me.pos.y = tt.y + Math.sin(far) * (len + 8);
 me.z = sim.tiles.ground(me.pos.x, me.pos.y);
 run(3, () => ({ forward: 1, yaw: far }));
 check('carrying it off you are held at the end of the chain', anchor.heldBy === me.id && chain() < len + 0.6 && chain() > len - 2, `chain ${chain().toFixed(1)} of ${len} m`);
+
+// The hold's crates and barrels are loose: they lie aboard and can be knocked about. The propeller turns astern.
+const loose = [...s.entities.values()].filter((e) => (e.def === 'crate' || e.def === 'barrel') && e.aboard === ship.id && !e.ride);
+check('the crates and barrels below deck are loose things, riding along', loose.length >= 6, `${loose.length} loose`);
+const prop = of('shipPropeller');
+check('a propeller is fitted astern with pictures to turn through', al(prop).x < 0 && !!CONTENT.art.shipPropeller5 && !!thingDef(CONTENT, 'shipPropeller').smoke?.pace);
+
+// A blast on deck burns the ship's own cells, a freezing one frosts them (any area effect reaches a moving frame).
+const blast = (lx: number, ly: number, effects: { type: 'heat' | 'chill'; amount: number }[]): { x: number; y: number; z: number } => {
+  const at = aboard(ship, cd, lx, ly);
+  s.queues.effects.push({ target: { kind: 'area', x: at.x, y: at.y, z: ship.z + 4.6, radius: 1.5 }, effects, source: null, from: null });
+  return s.volume.cellOf(at.x, at.y, ship.z + 4.25);
+};
+const hot = blast(16, YC_TEST, [{ type: 'heat', amount: 400 }]);
+const cold = blast(7, YC_TEST, [{ type: 'chill', amount: 400 }]);
+s.queues.effects.push({ target: { kind: 'cell', ...cold }, effects: [{ type: 'soak', amount: 200 }], source: null, from: null });
+s.queues.effects.push({ target: { kind: 'area', ...aboard(ship, cd, 7, YC_TEST), z: ship.z + 4.6, radius: 1.5 }, effects: [{ type: 'chill', amount: 400 }], source: null, from: null });
+run(6);
+check('a fire blast on deck sets the ship\'s planks alight', s.volume.cellGet('fire', hot.x, hot.y, hot.z) > 0 && hot.x - ship.craft.anchor.x === 16);
+check('a freezing blast on deck frosts them', s.volume.cellGet('frost', cold.x, cold.y, cold.z) > 0, `frost ${s.volume.cellGet('frost', cold.x, cold.y, cold.z)}`);
+
+// The rope ladder: moored, walk up to it from the ground, climb it and step aboard through the gap in the rail.
+const ladder = of('ropeLadder');
+// Somewhere clear of trees and rocks round the foot of the ladder.
+const clear = (): boolean => [-1, 0, 1].every((a) => [-1, 0, 1].every((b) => !sim.tiles.blocked(ladder.pos.x + a, ladder.pos.y + b)));
+const base = { x: me.pos.x + 30, y: me.pos.y };
+for (let k = 0; k < 40 && (k === 0 || !clear()); k++) {
+  moveShip(base.x + (k % 8) * 9, base.y + Math.floor(k / 8) * 9, ship.z);
+  run(1);
+}
+moveShip(ship.pos.x, ship.pos.y, sim.tiles.ground(ladder.pos.x, ladder.pos.y) + 0.3);
+run(2);
+me.pos.x = ladder.pos.x;
+me.pos.y = ladder.pos.y - 0.4;
+me.z = sim.tiles.ground(me.pos.x, me.pos.y);
+me.vz = 0;
+me.vel = { x: 0, y: 0 };
+if (me.player) me.player.holding = null;
+anchor.heldBy = null;
+run(3, () => ({ yaw: Math.PI / 2 }));
+for (let i = 0; i < 400 && !(me.aboard === ship.id && me.actor?.onGround && me.z > ship.z + 4); i++) run(1, () => ({ forward: 1, yaw: Math.PI / 2, pitch: 0.3 }));
+run(5);
+check('you climb the rope ladder from the ground onto the deck', me.aboard === ship.id && Math.abs(me.z - ship.z - 4.5) < 0.1, `${(me.z - ship.z).toFixed(2)} m above the keel`);
+
+// Thrown down, the anchor is hauled back aboard the moment the ship is called away.
+stand(18.4, 9.6, 4.5);
+anchor.pos.x = me.pos.x;
+anchor.pos.y = me.pos.y + 3;
+anchor.z = sim.tiles.ground(anchor.pos.x, anchor.pos.y);
+run(5);
+const out0 = anchor.aboard !== ship.id;
+me.pos.x += 60;
+me.z = sim.tiles.ground(me.pos.x, me.pos.y);
+run(1, () => ({ useItem: 'skyHorn' }));
+run(2);
+const fa = cd.fittings.find((f) => f.thing === 'shipAnchor')?.at ?? [0, 0, 0];
+const back = al(anchor);
+check('called away, the ship hauls its anchor back aboard', out0 && Math.hypot(back.x - fa[0], back.y - fa[1]) < 0.5 && Math.abs(anchor.z - ship.z - fa[2]) < 0.2, `${back.x.toFixed(1)}, ${back.y.toFixed(1)}, ${(anchor.z - ship.z).toFixed(2)}`);
 
 console.log(failures() === 0 ? 'ship checks passed' : `${failures()} ship checks FAILED`);
 if (failures() > 0) throw new Error('ship checks failed');

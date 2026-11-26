@@ -54,19 +54,25 @@ function apply(ctx: SimContext, r: EffectRequest): void {
         }
       }
       // The 3D layer is hit by the very same effect: walls, floors and roofs inside the ball.
-      if (ctx.state.volume.bricks.size > 0) {
-        const cz = Math.floor(t.z);
-        for (let k = -R - 1; k <= R + 1; k++) {
-          for (let j = -R; j <= R; j++) {
-            for (let i = -R; i <= R; i++) {
-              const x = cx + i;
-              const y = cy + j;
-              const z = cz + k;
-              const dx = x + 0.5 - t.x;
-              const dy = y + 0.5 - t.y;
-              const dz = z + 0.5 - t.z;
-              if (dx * dx + dy * dy + dz * dz > rad * rad + 0.75) continue;
-              if (ctx.matter.solid(x, y, z)) applyToSpot(ctx, x, y, z, r);
+      // A ship's cells are hit too: the same ball, turned into each moving frame it reaches.
+      const vol = ctx.state.volume;
+      if (vol.bricks.size > 0) {
+        for (const c of [t, ...vol.framePoints(t.x, t.y, t.z, rad + 1)]) {
+          const bx = Math.floor(c.x);
+          const by = Math.floor(c.y);
+          const bz = Math.floor(c.z);
+          for (let k = -R - 1; k <= R + 1; k++) {
+            for (let j = -R; j <= R; j++) {
+              for (let i = -R; i <= R; i++) {
+                const x = bx + i;
+                const y = by + j;
+                const z = bz + k;
+                const dx = x + 0.5 - c.x;
+                const dy = y + 0.5 - c.y;
+                const dz = z + 0.5 - c.z;
+                if (dx * dx + dy * dy + dz * dz > rad * rad + 0.75) continue;
+                if (ctx.matter.solid(x, y, z)) applyToSpot(ctx, x, y, z, r);
+              }
             }
           }
         }

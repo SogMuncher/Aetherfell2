@@ -54,8 +54,10 @@ export class LightMap {
       const x = lerp(e.prev.x, e.pos.x, alpha);
       const y = lerp(e.prev.y, e.pos.y, alpha);
       if (!near(x, y, 10)) continue;
-      if (L) add(L, 1, x, y, e.z + 1, e.id, !!d.body.anchored || !!held);
-      else if (fire) add(fire, 1, x, y, e.z + 1, e.id, false);
+      // Between ticks like its sprite, so a lamp on a climbing ship stays where it is drawn.
+      const z = lerp(e.prevZ, e.z, alpha);
+      if (L) add(L, 1, x, y, z + (L.at ?? 1), e.id, !!d.body.anchored || !!held);
+      else if (fire) add(fire, 1, x, y, z + 1, e.id, false);
     }
     // Where the sky is rock, every traveller carries a lamp.
     const glow = CONTENT.realms[state.realm]?.glow;

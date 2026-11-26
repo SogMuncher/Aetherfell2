@@ -2,6 +2,8 @@ import { type BurstDef, GROUND_Z, type MoteLook, type ParticleKind, type Readonl
 import { CONTENT, heldLight, itemDef, spellFor, thingDef } from '../../content';
 import type { Env } from '../lighting';
 import { emitFire, type FireSink } from './fireEmitter';
+import { emitThings, type MoteSink } from './thingEmitters';
+import { spellBurst, spellCone, spellHand, spellNova, spellTrail, spellWard, type SpellSink } from './spellEmitters';
 import { KINDS, type KindMote, MAX, type Particle, TAU, fx } from './particleKinds';
 import { TILES } from '../../content/tiles';
 
@@ -17,7 +19,7 @@ export type { ParticleKind };
  * (content/spellcraft.ts composeLook), and the emitters below turn that look plus the spell's
  * delivery (bolt, cone, nova, ward) and power into motes. A new rune needs no code here.
  */
-export class Particles implements FireSink {
+export class Particles implements FireSink, MoteSink, SpellSink {
   private list: Particle[] = [];
   /** The live motes (the GPU draws them). */
   get motes(): readonly Particle[] {
@@ -26,6 +28,12 @@ export class Particles implements FireSink {
   /** Dead motes wait here to be reused, so a long fire makes no garbage. */
   private pool: Particle[] = [];
   private time = 0;
+  get clock(): number {
+    return this.time;
+  }
+  spellTrail(look: SpellLook, id: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, dt: number): void {
+    spellTrail(this, look, id, x, y, z, vx, vy, vz, dt);
+  }
 
   /** A world mote of one of the fixed kinds. */
   spawn(p: KindMote): void {
@@ -56,7 +64,7 @@ export class Particles implements FireSink {
   }
 
   /** A spell mote in the given look, with a random 0.6–1.2 variation of its life. */
-  private mote(m: MoteLook, x: number, y: number, z: number, vx: number, vy: number, vz: number, sizeMul = 1, lifeMul = 1): void {
+  mote(m: MoteLook, x: number, y: number, z: number, vx: number, vy: number, vz: number, sizeMul = 1, lifeMul = 1): void {
     this.push(x, y, z, vx, vy, vz, m.life * lifeMul * (0.6 + Math.random() * 0.6), m.size * sizeMul * (0.7 + Math.random() * 0.6), m.grow, m.core.r, m.core.g, m.core.b, m.edge.r, m.edge.g, m.edge.b, m.glow, m.soft, m.lift, m.drag, m.swirl, m.jitter);
   }
 
@@ -72,7 +80,7 @@ export class Particles implements FireSink {
   }
 
   /** One mote of a content/effects.ts burst, moving as given. */
-  private one(d: BurstDef, x: number, y: number, z: number, vx: number, vy: number, vz: number, lifeMul = 1, sizeMul = 1): void {
+  one(d: BurstDef, x: number, y: number, z: number, vx: number, vy: number, vz: number, lifeMul = 1, sizeMul = 1): void {
     const k = d.colourTo === undefined ? 0 : Math.random();
     const to = d.colourTo ?? d.colour;
     const ch = (sh: number): number => ((d.colour >> sh) & 255) * (1 - k) + ((to >> sh) & 255) * k;
@@ -89,157 +97,6 @@ export class Particles implements FireSink {
 
   // ── Spell emitters: all driven by the spell's look and delivery ─────────
 
-  /**
-   * Motes thrown out from a point. `upward` in the look decides the bloom: a fountain (flames,
-   * splashes), a ball (frost shards) or a flat ring along the ground (dust, wind).
-   */
-  private bloom(m: MoteLook, x: number, y: number, z: number, count: number, speed: number): void {
-    const up = Math.max(-1, Math.min(1, m.upward));
-    for (let i = 0; i < count; i++) {
-      // Random direction on a sphere, then bent by `upward`.
-      const a = Math.random() * TAU;
-      let dz = Math.random() * 2 - 1;
-      let h = Math.sqrt(1 - dz * dz);
-      if (up > 0) {
-        dz = dz * (1 - up) + up * (0.5 + Math.random() * 0.5);
-        h *= 1 - up * 0.55;
-      } else if (up < 0) {
-        dz *= 1 + up;
-        h = h * (1 + up) - up;
-      }
-      const s = speed * (0.35 + Math.random() * 0.65);
-      this.mote(m, x, y, z, Math.cos(a) * h * s, Math.sin(a) * h * s, dz * s);
-    }
-  }
-
-  /** Initial speed that carries a mote `dist` metres in `secs` against its own drag. */
-  private reach(m: MoteLook, dist: number, secs: number): number {
-    const k = m.drag;
-    if (k < 0.05) return dist / secs;
-    return (dist * k) / (1 - Math.exp(-k * secs));
-  }
-
-  /** Where a bolt bursts. Bigger bursts throw more motes further. */
-  private spellBurst(look: SpellLook, x: number, y: number, z: number, radius: number): void {
-    const m = look.motes;
-    const scale = Math.min(2.5, 0.6 + radius * 0.4);
-    this.bloom(m, x, y, z, Math.round(m.density * scale), m.spread * (0.6 + radius * 0.3));
-    if (look.wake) this.bloom(look.wake, x, y, z, Math.round(look.wake.density * scale), look.wake.spread * (0.6 + radius * 0.3));
-    // A brief bright heart where it struck.
-    this.mote(m, x, y, z, 0, 0, 0, 2.6, 0.35);
-  }
-
-  /** A sweep of motes filling a cone in front of the caster, timed to reach its far edge. */
-  private spellCone(look: SpellLook, x: number, y: number, z: number, angle: number, range: number, width: number): void {
-    const m = look.motes;
-    const half = Math.acos(Math.max(-1, Math.min(1, width)));
-    const n = Math.round(m.density * 1.4 * Math.min(2, range / 6));
-    const t = m.life * 0.8;
-    for (let i = 0; i < n; i++) {
-      const a = angle + (Math.random() * 2 - 1) * half;
-      const s = this.reach(m, range * (0.5 + Math.random() * 0.5), t);
-      this.mote(m, x + Math.cos(a) * 0.5, y + Math.sin(a) * 0.5, z + (Math.random() - 0.5) * 0.6, Math.cos(a) * s, Math.sin(a) * s, m.upward * 1.5 + (Math.random() - 0.5));
-    }
-    const w = look.wake;
-    if (!w) return;
-    // The wake settles along the ground the cone swept.
-    const nw = Math.round(w.density * 1.5 * Math.min(2, range / 6));
-    for (let i = 0; i < nw; i++) {
-      const a = angle + (Math.random() * 2 - 1) * half;
-      const d = 1 + Math.random() * range;
-      const s = w.spread * 0.4;
-      this.mote(w, x + Math.cos(a) * d, y + Math.sin(a) * d, z - 1.2 + Math.random() * 0.3, Math.cos(a) * s, Math.sin(a) * s, w.upward > 0 ? w.upward : 0.1, 1, 0.6 + (d / range) * 0.6);
-    }
-  }
-
-  /** A ring rolling out around the caster to the nova's edge. */
-  private spellNova(look: SpellLook, x: number, y: number, z: number, radius: number): void {
-    const m = look.motes;
-    const n = Math.round(m.density * 1.6 + radius * 8);
-    const t = m.life * 0.7;
-    const twist = (look.seed - 0.5) * 2;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * TAU + Math.random() * 0.08;
-      const s = this.reach(m, radius, t) * (0.85 + Math.random() * 0.3);
-      // Each nova has its own little twist so the ring spins one way or the other.
-      const tx = -Math.sin(a) * s * twist * 0.25;
-      const ty = Math.cos(a) * s * twist * 0.25;
-      this.mote(m, x + Math.cos(a) * 0.4, y + Math.sin(a) * 0.4, z + 0.6 + (Math.random() - 0.5) * 0.4, Math.cos(a) * s + tx, Math.sin(a) * s + ty, m.upward * 2);
-    }
-    const w = look.wake;
-    if (!w) return;
-    const nw = Math.round(w.density * 2 + radius * 4);
-    for (let i = 0; i < nw; i++) {
-      const a = Math.random() * TAU;
-      const s = this.reach(w, radius * (0.4 + Math.random() * 0.6), w.life);
-      this.mote(w, x, y, z + 0.1, Math.cos(a) * s, Math.sin(a) * s, Math.max(0, w.upward));
-    }
-  }
-
-  /** A shimmer spiralling around and into the caster's body. */
-  private spellWard(look: SpellLook, x: number, y: number, z: number): void {
-    const m = look.motes;
-    const n = Math.round(m.density * 1.2);
-    const dir = look.seed < 0.5 ? -1 : 1;
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * TAU;
-      const r = 0.9 + Math.random() * 0.3;
-      const s = 1.2 + m.spread * 0.3;
-      // Tangential plus a pull inwards: they wind around you as they close in.
-      const vx = -Math.sin(a) * s * dir - Math.cos(a) * 1.2;
-      const vy = Math.cos(a) * s * dir - Math.sin(a) * 1.2;
-      this.mote(m, x + Math.cos(a) * r, y + Math.sin(a) * r, z + Math.random() * 1.8, vx, vy, 0.3 + Math.max(0, m.upward) * 0.6, 0.8, 0.8);
-    }
-  }
-
-  /** A puff at the caster's hand as the spell leaves it. */
-  private spellHand(look: SpellLook, x: number, y: number, z: number, angle: number): void {
-    const m = look.motes;
-    const hx = x + Math.cos(angle) * 0.55;
-    const hy = y + Math.sin(angle) * 0.55;
-    const n = Math.max(3, Math.round(m.density * 0.2));
-    for (let i = 0; i < n; i++) {
-      const a = angle + (Math.random() - 0.5) * 1.6;
-      const s = 0.5 + Math.random() * 1.5;
-      this.mote(m, hx, hy, z + 1.35, Math.cos(a) * s, Math.sin(a) * s, (Math.random() - 0.3) * 1.2, 0.6, 0.4);
-    }
-  }
-
-  /**
-   * A bolt in flight: a bright body, strands twisting around its path (count, speed and turn
-   * direction come from the look and its seed), loose motes shed behind and the wake trailing.
-   */
-  private spellTrail(look: SpellLook, id: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, dt: number): void {
-    const m = look.motes;
-    // The body: a short-lived mote right on the bolt every frame.
-    this.mote(m, x, y, z, 0, 0, 0, 2.2, 0.15);
-    const sp = Math.hypot(vx, vy, vz) || 1;
-    // A frame perpendicular to the flight path for the strands.
-    const hl = Math.hypot(vx, vy) || 1;
-    const sx = -vy / hl;
-    const sy = vx / hl;
-    const n = look.strands;
-    if (n > 0) {
-      const turn = (look.seed < 0.5 ? -1 : 1) * (7 + look.seed * 8 + m.swirl * 4);
-      const rad = 0.1 + m.size * 0.6;
-      for (let k = 0; k < n; k++) {
-        const ph = this.time * turn + (k / n) * TAU + id * 0.7;
-        const c = Math.cos(ph) * rad;
-        const s = Math.sin(ph) * rad;
-        this.mote(m, x + sx * c, y + sy * c, z + s, -vx * 0.05, -vy * 0.05, -vz * 0.05, 0.6, 0.45);
-      }
-    }
-    // Loose motes shed behind, more for dense looks and faster bolts.
-    let shed = m.density * dt * (2 + sp * 0.08);
-    while (shed > 0) {
-      if (shed < 1 && Math.random() > shed) break;
-      shed -= 1;
-      const j = m.spread * 0.25;
-      this.mote(m, x - vx * dt * Math.random(), y - vy * dt * Math.random(), z - vz * dt * Math.random(), -vx * 0.08 + (Math.random() - 0.5) * j, -vy * 0.08 + (Math.random() - 0.5) * j, (Math.random() - 0.5) * j, 0.8, 0.6);
-    }
-    const w = look.wake;
-    if (w && Math.random() < w.density * dt * 1.5) this.mote(w, x, y, z, -vx * 0.03, -vy * 0.03, 0, 0.6, 0.6);
-  }
 
   onEvent(e: SimEvent, state: SimState): void {
     switch (e.type) {
@@ -290,13 +147,13 @@ export class Particles implements FireSink {
         if (!c) break;
         // A caster gathering a spell shows that spell's own motes at its hand; a fighter gleams as the blow peaks.
         const sp = c.ai?.cast ? spellFor(CONTENT, c.ai.cast.spell) : null;
-        if (sp) this.spellHand(sp.look, c.pos.x, c.pos.y, c.z, c.angle);
+        if (sp) spellHand(this, sp.look, c.pos.x, c.pos.y, c.z, c.angle);
         else if (e.stage === 'full') this.play(fx('chargeGleam'), e.x + Math.cos(c.angle) * 0.6, e.y + Math.sin(c.angle) * 0.6, c.z + 1.2);
         break;
       }
       case 'spellBurst': {
         const d = spellFor(CONTENT, e.spell);
-        if (d) this.spellBurst(d.look, e.x, e.y, e.z, d.burst.radius);
+        if (d) spellBurst(this, d.look, e.x, e.y, e.z, d.burst.radius);
         break;
       }
       case 'spellCast': {
@@ -304,10 +161,10 @@ export class Particles implements FireSink {
         const c = state.entities.get(e.entity);
         if (!d || !c) break;
         const del = d.delivery;
-        if (del.type === 'nova') this.spellNova(d.look, c.pos.x, c.pos.y, c.z, del.radius);
-        else if (del.type === 'self') this.spellWard(d.look, c.pos.x, c.pos.y, c.z);
-        else if (del.type === 'cone') this.spellCone(d.look, c.pos.x, c.pos.y, c.z + 1.3, c.angle, del.range, del.width);
-        if (del.type !== 'self') this.spellHand(d.look, c.pos.x, c.pos.y, c.z, c.angle);
+        if (del.type === 'nova') spellNova(this, d.look, c.pos.x, c.pos.y, c.z, del.radius);
+        else if (del.type === 'self') spellWard(this, d.look, c.pos.x, c.pos.y, c.z);
+        else if (del.type === 'cone') spellCone(this, d.look, c.pos.x, c.pos.y, c.z + 1.3, c.angle, del.range, del.width);
+        if (del.type !== 'self') spellHand(this, d.look, c.pos.x, c.pos.y, c.z, c.angle);
         break;
       }
       case 'trapSprung':
@@ -361,45 +218,8 @@ export class Particles implements FireSink {
 
   /** Feed continuous emitters (burning tiles, burning bodies, torches, projectiles, rain splashes). */
   emit(state: SimState, tiles: ReadonlyTiles, camX: number, camY: number, dt: number, env: Env): void {
-    const wind = state.weather.wind;
     emitFire(this, state, tiles, camX, camY, dt);
-    for (const e of state.entities.values()) {
-      const dx = e.pos.x - camX;
-      const dy = e.pos.y - camY;
-      if (dx * dx + dy * dy > 80 * 80) continue;
-      const d = thingDef(CONTENT, e.def);
-      // Anything that gives off firelight (torches, campfires) has a flame on top.
-      if (d.light && !d.body.ghost && Math.random() < dt * (d.body.radius > 0.3 ? 40 : 20)) {
-        const w = d.body.radius > 0.3 ? 0.5 : 0.12;
-        // A flame in a wall bracket leans out into the room a little.
-        const out = d.mount ? 0.1 : 0;
-        this.one(fx('torchFlame'), e.pos.x + Math.cos(e.angle) * out + (Math.random() - 0.5) * w, e.pos.y + Math.sin(e.angle) * out + (Math.random() - 0.5) * w, e.z + d.body.height * (d.body.radius > 0.3 ? 0.3 : 1) + 0.05, wind.x * 0.05, wind.y * 0.05, 0.8 + Math.random() * 0.6, 1, d.body.radius > 0.3 ? 1.7 : 1);
-      }
-      // Fires that smoke (hearths, campfires) send it up from their vent, when near enough to see.
-      if (d.smoke && dx * dx + dy * dy < 45 * 45 && Math.random() < dt * d.smoke.rate) {
-        this.one(fx('tileSmoke'), e.pos.x + (Math.random() - 0.5) * 0.3, e.pos.y + (Math.random() - 0.5) * 0.3, e.z + d.smoke.rise, wind.x * 0.4, wind.y * 0.4, 1.0, 0.75 + Math.random() * 0.5);
-      }
-      // A torch in someone's hand burns at the end of their arm (your own is drawn with the view model).
-      const held = d.actor ? heldLight(CONTENT, e) : undefined;
-      if (held?.flame && dx * dx + dy * dy > 0.5 && Math.random() < dt * 22) {
-        const c = Math.cos(e.angle);
-        const sn = Math.sin(e.angle);
-        this.one(fx('torchFlame'), e.pos.x + c * 0.5 - sn * 0.2 + (Math.random() - 0.5) * 0.1, e.pos.y + sn * 0.5 + c * 0.2 + (Math.random() - 0.5) * 0.1, e.z + d.body.height * 0.75, wind.x * 0.05, wind.y * 0.05, 0.8 + Math.random() * 0.6);
-      }
-      if ((e.status.burning ?? 0) > 0 && Math.random() < dt * 18) {
-        this.one(fx('burningBody'), e.pos.x + (Math.random() - 0.5) * d.body.radius * 2, e.pos.y + (Math.random() - 0.5) * d.body.radius * 2, e.z + Math.random() * d.body.height, 0, 0, 1.5);
-      }
-      if ((e.status.chilled ?? 0) > 0 && Math.random() < dt * 6) {
-        this.one(fx('chilledBody'), e.pos.x + (Math.random() - 0.5) * d.body.radius * 2, e.pos.y + (Math.random() - 0.5) * d.body.radius * 2, e.z + Math.random() * d.body.height, 0, 0, -0.3);
-      }
-      if (e.projectile) {
-        const sd = spellFor(CONTENT, e.projectile.spell);
-        if (sd) this.spellTrail(sd.look, e.id, e.pos.x, e.pos.y, e.z, e.vel.x, e.vel.y, e.vz, dt);
-      }
-      if (d.mote) {
-        this.one(fx('ember'), e.pos.x, e.pos.y, e.z, 0, 0, 0);
-      }
-    }
+    emitThings(this, state, camX, camY, dt);
     // Rain splashes on the ground around the eye.
     if (env.rain > 0.05) {
       const count = env.rain * 60 * dt * 20;

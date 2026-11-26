@@ -130,8 +130,8 @@ export const THINGS: Record<ThingId, ThingDef> = {
     body: { radius: 0.12, height: 0.5, mass: 2, solid: false, anchored: true },
     material: 'wood',
     health: { hp: 20, armor: 0 },
-    mount: { height: 1.45, flush: 0.1 },
-    light: { r: 1, g: 0.62, b: 0.28, radius: 10, flicker: 0.25 },
+    mount: { height: 1.45, flush: 0.065 },
+    light: { r: 1, g: 0.62, b: 0.28, radius: 10, flicker: 0.25, at: 0.5 },
     onImpact: { minSpeed: 2, radius: 0.7, effects: [{ type: 'heat', amount: 1 }], shatter: false },
     onDestroy: { loot: 'wallTorch', radius: 0.8, effects: [{ type: 'heat', amount: 1 }] },
     sprite: 'wallTorch',
@@ -183,7 +183,7 @@ export const THINGS: Record<ThingId, ThingDef> = {
     name: 'ship\'s wheel',
     body: { radius: 0.45, height: 1.4, mass: 120, solid: false, anchored: true },
     material: 'wood',
-    station: { channel: 'helm', axis: 'strafe', rate: 1.2, decay: 1.4, seat: [0.9, 0], text: 'Take the wheel', gauge: 9 },
+    station: { channel: 'helm', axis: 'strafe', rate: 1.2, decay: 1.4, seat: [-0.9, 0], text: 'Take the wheel', gauge: 9 },
     sprite: 'shipWheel',
   },
   throttleLever: {
@@ -205,7 +205,7 @@ export const THINGS: Record<ThingId, ThingDef> = {
     body: { radius: 0.45, height: 1.3, mass: 200, solid: false, anchored: true },
     material: 'metal',
     station: { channel: 'fuel', text: 'Feed it a rune shard', feed: { item: 'runeShard', amount: 300, max: 1500 }, gauge: 9 },
-    light: { r: 0.4, g: 0.9, b: 0.85, radius: 4, flicker: 0.15 },
+    light: { r: 0.4, g: 0.9, b: 0.85, radius: 4, flicker: 0.05, flame: false, at: 0.9 },
     sprite: 'fuelTank',
   },
   shipHold: {
@@ -219,7 +219,7 @@ export const THINGS: Record<ThingId, ThingDef> = {
     name: 'ship\'s lantern',
     body: { radius: 0.15, height: 0.5, mass: 3, solid: false, anchored: true },
     material: 'metal',
-    light: { r: 1, g: 0.72, b: 0.38, radius: 8, flicker: 0.12 },
+    light: { r: 1, g: 0.72, b: 0.38, radius: 8, flicker: 0.04, flame: false, at: 0.25 },
     sprite: 'shipLamp',
   },
   windsock: {
@@ -233,17 +233,35 @@ export const THINGS: Record<ThingId, ThingDef> = {
     name: 'anchor',
     body: { radius: 0.4, height: 0.9, mass: 55, solid: false },
     material: 'metal',
-    // Carry it (G) and throw it over the side: lying on the ground it holds the ship; its chain can be climbed.
+    // Carry it (G) and throw it over the side: lying on the ground it holds the ship; its chain can be climbed. A horn call hauls it back aboard.
     carry: true,
     chain: 40,
     sprite: 'shipAnchor',
+  },
+  /** A rope ladder over the side, made fast to the deck: climbed like any hanging chain, its rungs drawn along it. */
+  ropeLadder: {
+    name: 'rope ladder',
+    body: { radius: 0.3, height: 0.3, mass: 8, solid: false, anchored: true },
+    material: 'wood',
+    chain: 8,
+    links: { art: 'ladderRung', every: 0.3 },
+    sprite: null,
+  },
+  /** Turns as the ship flies, faster the faster it goes, and leaves a trail of aether behind. */
+  shipPropeller: {
+    name: 'propeller',
+    body: { radius: 0.4, height: 2.5, mass: 90, solid: false, anchored: true },
+    material: 'wood',
+    spin: { frames: 6, turn: 3 },
+    smoke: { rise: 1.25, rate: 14, fx: 'propWake', pace: 6 },
+    sprite: 'shipPropeller',
   },
   launchPlank: {
     name: 'plank',
     body: { radius: 1.6, height: 0.1, mass: 80, solid: false, anchored: true },
     material: 'wood',
     // Jump from it to be flung out along it and up (open a glider to sail down).
-    onJump: [{ type: 'push', force: 70, lift: 9 }],
+    onJump: [{ type: 'push', force: 10, lift: 9 }],
     sprite: null,
   },
   looseItem: {

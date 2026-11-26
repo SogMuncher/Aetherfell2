@@ -1,4 +1,4 @@
-// Airship fittings as art: wheel, levers and aether tank in pictures that show their state (gauge frames), lantern, windsock, anchor, chain
+// Airship fittings as art: wheel, levers and aether tank in pictures that show their state (gauge frames), propeller, lantern, windsock, anchor, chain, ladder
 import type { ArtDef, ArtId, ArtPart } from '../types';
 
 const COLORS = {
@@ -15,6 +15,7 @@ const COLORS = {
   pane: ['#d08a3c'],
   sockA: ['#c03828'],
   sockB: ['#e8e0d0'],
+  rope: ['#9a8458', '#8a7448'],
 };
 /** Pictures per gauge: the station's `gauge` (content/things.ts) must match. */
 export const PROP_FRAMES = 9;
@@ -152,8 +153,32 @@ const ANCHOR: ArtDef = prop([
 /** One link of chain (drawn many times along a chain), the same from every side. */
 const CHAIN_LINK: ArtDef = { ...prop([{ shape: 'drum', at: [0, 0.08, 0], size: [0.05, 0.016, 0.08], tilt: 90, color: 'iron', surface: 'metal' }], 1), ppm: 40 };
 
+/** A rope ladder's rung (drawn every 0.3 m along it): a wooden step with its two ropes. */
+const LADDER_RUNG: ArtDef = {
+  ...prop([
+    { shape: 'box', at: [0, 0.03, 0], size: [0.03, 0.025, 0.28], color: 'wood', surface: 'wood' },
+    ...[-1, 1].map((s): ArtPart => ({ shape: 'box', at: [0, 0.15, s * 0.3], size: [0.015, 0.15, 0.015], color: 'rope', surface: 'cloth' })),
+  ], 1),
+  ppm: 40,
+};
+
+/** Frames of the propeller's turn: three blades a third of a turn apart, so `SPIN_FRAMES` pictures cover 120°. */
+export const SPIN_FRAMES = 6;
+/** A three-bladed propeller on a shaft running forward into the stern post, its hub 1.25 m up, turned `turn` degrees. */
+function propeller(turn: number): ArtDef {
+  const H = 1.25;
+  const L = 1.15;
+  return prop([
+    { shape: 'box', at: [0.24, H, 0], size: [0.24, 0.05, 0.05], color: 'iron', surface: 'metal' },
+    { shape: 'drum', at: [0.04, H, 0], size: [0.12, 0.08, 0.12], tilt: 90, color: 'brass', surface: 'metal' },
+    ...[0, 120, 240].map((a): ArtPart => ({ shape: 'box', at: [0, H + Math.cos((a + turn) * RAD) * L * 0.55, -Math.sin((a + turn) * RAD) * L * 0.55], size: [0.03, L * 0.45, 0.13], roll: -(a + turn), color: 'wood', surface: 'wood' })),
+    { shape: 'ball', at: [-0.06, H, 0], size: [0.07, 0.07, 0.07], color: 'brass', surface: 'metal' },
+  ]);
+}
+
 /** Every picture: `<name><frame>` for frame 0 (the low end) to PROP_FRAMES - 1, and the bare name for the middle (or empty tank). */
-export const SHIP_PROPS: Record<ArtId, ArtDef> = { shipLamp: LANTERN, windsock: WINDSOCK, shipAnchor: ANCHOR, chainLink: CHAIN_LINK };
+export const SHIP_PROPS: Record<ArtId, ArtDef> = { shipLamp: LANTERN, windsock: WINDSOCK, shipAnchor: ANCHOR, chainLink: CHAIN_LINK, ladderRung: LADDER_RUNG };
+for (let i = 0; i < SPIN_FRAMES; i++) SHIP_PROPS[`shipPropeller${i}`] = propeller((i * 120) / SPIN_FRAMES);
 for (let i = 0; i < PROP_FRAMES; i++) {
   const t = i / (PROP_FRAMES - 1);
   SHIP_PROPS[`shipWheel${i}`] = wheel((t * 2 - 1) * 120);
@@ -166,3 +191,4 @@ SHIP_PROPS.shipWheel = SHIP_PROPS[`shipWheel${mid}`] as ArtDef;
 SHIP_PROPS.throttleLever = SHIP_PROPS[`throttleLever${mid}`] as ArtDef;
 SHIP_PROPS.altitudeLever = SHIP_PROPS[`altitudeLever${mid}`] as ArtDef;
 SHIP_PROPS.fuelTank = SHIP_PROPS.fuelTank0 as ArtDef;
+SHIP_PROPS.shipPropeller = SHIP_PROPS.shipPropeller0 as ArtDef;

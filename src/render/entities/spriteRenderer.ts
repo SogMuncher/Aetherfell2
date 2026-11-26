@@ -38,6 +38,8 @@ export interface Billboard {
  */
 export class SpriteRenderer {
   private flora = new TileBillboards();
+  /** Turn so far of each spinning fitting (a propeller) and when it was last drawn. */
+  private spins = new Map<number, { turn: number; at: number }>();
   private list: Billboard[] = [];
   private pool: Billboard[] = [];
   private art = new ArtSprites();
@@ -94,7 +96,7 @@ export class SpriteRenderer {
       let scale = 1;
       let sink = 0;
       let colours: Uint32Array | null = null;
-      const artId = def.sprite === null ? undefined : stateArt(def, e, def.sprite);
+      const artId = def.sprite === null ? undefined : stateArt(def, e, def.sprite, this.spun(state, e, def, time));
       const art = artId !== undefined ? CONTENT.art[artId] : undefined;
       if (art && artId !== undefined) {
         const c = this.art.pick(e, artId, art, p, time);
@@ -122,7 +124,7 @@ export class SpriteRenderer {
         else if (st.tint) tint = st.tint;
       }
       this.add(x, y, z - sink, s, p, facing, glow, flash, scale, tint, 1, colours);
-      if (e.tether?.top) this.chain(e.tether.top, x, y, z, p);
+      if (e.tether?.top) this.chain(e.tether.top, x, y, z, p, def.links);
     }
     // Flora last: when a dense forest passes the GPU's billboard cap, trees drop out, never creatures or items.
     this.flora.each(tiles, p.cam.x, p.cam.y, p.FX, p.FY, p.RX, p.RY, (t, fade, burning) => {
@@ -132,17 +134,28 @@ export class SpriteRenderer {
   }
 
   /** A chain from its tie aboard down to the ring of the thing at (x, y, z): links every 0.15 m, sagging a little when slack. */
-  private chain(top: { x: number; y: number; z: number }, x: number, y: number, z: number, p: Projection): void {
-    const link = this.art.still('chainLink');
+  private chain(top: { x: number; y: number; z: number }, x: number, y: number, z: number, p: Projection, look?: { art: string; every: number }): void {
+    const link = this.art.still(look?.art ?? 'chainLink');
     if (!link) return;
     const bz = z + 0.5;
     const len = Math.hypot(x - top.x, y - top.y, bz - top.z);
-    const n = Math.min(400, Math.ceil(len / 0.15));
+    const n = Math.min(400, Math.ceil(len / (look?.every ?? 0.15)));
     const sag = Math.min(1.5, Math.hypot(x - top.x, y - top.y) * 0.04);
     for (let i = 0; i <= n; i++) {
       const t = i / n;
       this.add(top.x + (x - top.x) * t, top.y + (y - top.y) * t, top.z + (bz - top.z) * t - sag * 4 * t * (1 - t) - 0.08, link.sprite, p, false, 0, 0, 1, null, 1, link.colours);
     }
+  }
+
+  /** A spinning fitting's turn so far (frames), run on by the speed of the craft it is fitted to since the last picture. */
+  private spun(state: SimState, e: Entity, def: ThingDef, time: number): number {
+    if (!def.spin) return 0;
+    const c = e.ride ? state.entities.get(e.ride.craft)?.craft : undefined;
+    const s = this.spins.get(e.id) ?? { turn: 0, at: time };
+    s.turn += Math.hypot(c?.vel.x ?? 0, c?.vel.y ?? 0) * def.spin.turn * Math.max(0, Math.min(0.25, time - s.at));
+    s.at = time;
+    this.spins.set(e.id, s);
+    return Math.floor(s.turn);
   }
 
   /** Loose items (painted from their definitions), or the missing-picture checks for an unknown sprite name. */
@@ -154,8 +167,12 @@ export class SpriteRenderer {
   }
 }
 
-/** The picture that shows a thing's state: an opened container's `…Open`, a station's gauge frame `<sprite>N`. */
-function stateArt(def: ThingDef, e: Entity, sprite: string): string {
+/** The picture that shows a thing's state: an opened container's `…Open`, a station's gauge frame `<sprite>N`, a spinning fitting's frame. */
+function stateArt(def: ThingDef, e: Entity, sprite: string, spun: number): string {
+  if (def.spin) {
+    const id = `${sprite}${spun % def.spin.frames}`;
+    if (CONTENT.art[id]) return id;
+  }
   const st = def.station;
   if (st?.gauge && e.control) {
     const f = st.feed ? e.control.v / st.feed.max : (e.control.v + 1) / 2;
