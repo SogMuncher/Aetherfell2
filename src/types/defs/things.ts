@@ -204,6 +204,8 @@ export interface ThingDef {
   despawn?: number;
   /** Procedural sprite; null = drawn only by particles (bolts, sparks). */
   sprite: SpriteId | null;
+  /** Drawn out to this many metres (default 160). A craft's picture shows only where its cells fade out, cross-fading. */
+  far?: number;
   /** Creature voice for growls and death cries. */
   voice?: 'howl' | 'bleat' | 'grunt';
   /** Bleeds when hit (blood particles). */

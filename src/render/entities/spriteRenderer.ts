@@ -7,6 +7,13 @@ import { itemSprite, missingSprite } from './sprites';
 import type { Sprite } from './sprites';
 import { ArtSprites } from './artSprites';
 import { artPaintBudget } from './assembler';
+import { GPU_STRUCT } from '../gpu/gpuStructures';
+
+/** 0 where the 3D layer's cells are fully drawn, 1 where they have faded out (gpuStructShader's `away`). */
+function farFade(d: number): number {
+  const t = Math.min(1, Math.max(0, (d - (GPU_STRUCT.range - GPU_STRUCT.fade)) / GPU_STRUCT.fade));
+  return t * t * (3 - 2 * t);
+}
 
 /** Time each frame may spend painting pictures it has not drawn before (creatures first, then trees). */
 const PAINT_BUDGET_MS = 4;
@@ -89,9 +96,13 @@ export class SpriteRenderer {
       const z = lerp(e.prevZ, e.z, alpha);
       const dx = x - p.cam.x;
       const dy = y - p.cam.y;
-      if (dx * dx + dy * dy > 160 * 160) continue;
       // Creatures, people and props are built from their art recipe: an opened container shows its `…Open` recipe if it has one.
       const def = thingDef(CONTENT, e.def);
+      const far = def.far ?? 160;
+      if (dx * dx + dy * dy > far * far) continue;
+      // A craft is drawn as its cells up close; its picture dithers in over the same band its cells dither out.
+      const fade = def.craft ? farFade(Math.hypot(dx, dy)) : 1;
+      if (fade <= 0) continue;
       // A chain or rope ladder hangs from its tie aboard a craft, drawn where the craft is drawn (even with no picture of its own).
       const tie = e.tether ? tieBetween(state, e.tether, alphaOf) : undefined;
       if (tie) this.chain(tie, x, y, z, p, def.links);
@@ -127,7 +138,7 @@ export class SpriteRenderer {
         if (st.light) glow = 0.4;
         else if (st.tint) tint = st.tint;
       }
-      this.add(x, y, z - sink, s, p, facing, glow, flash, scale, tint, 1, colours);
+      this.add(x, y, z - sink, s, p, facing, glow, flash, scale, tint, fade, colours);
     }
     // Flora last: when a dense forest passes the GPU's billboard cap, trees drop out, never creatures or items.
     this.flora.each(tiles, p.cam.x, p.cam.y, p.FX, p.FY, p.RX, p.RY, (t, fade, burning) => {
