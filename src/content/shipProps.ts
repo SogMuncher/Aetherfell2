@@ -177,7 +177,27 @@ function propeller(turn: number): ArtDef {
 }
 
 /** Every picture: `<name><frame>` for frame 0 (the low end) to PROP_FRAMES - 1, and the bare name for the middle (or empty tank). */
-export const SHIP_PROPS: Record<ArtId, ArtDef> = { shipLamp: LANTERN, windsock: WINDSOCK, shipAnchor: ANCHOR, chainLink: CHAIN_LINK, ladderRung: LADDER_RUNG };
+/**
+ * The whole airship as one picture, seen from afar where its cells fade out (content/crafts.ts measures): hull bowl, rail
+ * and quarterdeck, rope stays, the envelope and its tail fins. Its origin is the craft's pivot at the keel.
+ */
+const AIRSHIP_FAR: ArtDef = {
+  ppm: 3,
+  variants: 1,
+  colors: { ...COLORS, canvas: ['#c8b48c'] },
+  parts: [
+    { shape: 'ball', at: [0, 3.5, 0], size: [11, 3, 4.5], color: 'wood', surface: 'wood' },
+    { shape: 'box', at: [0, 5.6, 0], size: [9.5, 0.6, 4.3], color: 'dark', surface: 'wood' },
+    { shape: 'box', at: [-7.5, 6.8, 0], size: [2.5, 1.2, 4], color: 'wood', surface: 'wood' },
+    { shape: 'box', at: [12.5, 5, 0], size: [1.8, 0.2, 0.2], color: 'dark', surface: 'wood' },
+    ...[-3, 2, 5].flatMap((f): ArtPart[] => [-3.5, 3.5].map((y): ArtPart => ({ shape: 'drum', at: [f, 9.5, y], size: [0.12, 3.5, 0.12], color: 'dark', surface: 'wood' }))),
+    { shape: 'ball', at: [1, 18, 0], size: [14.5, 6, 7], color: 'canvas', surface: 'cloth' },
+    { shape: 'box', at: [-13, 18, 0], size: [1.5, 3, 0.2], color: 'canvas', surface: 'cloth' },
+    { shape: 'box', at: [-13, 18, 0], size: [1.5, 0.2, 3], color: 'canvas', surface: 'cloth' },
+  ],
+};
+
+export const SHIP_PROPS: Record<ArtId, ArtDef> = { airshipFar: AIRSHIP_FAR, shipLamp: LANTERN, windsock: WINDSOCK, shipAnchor: ANCHOR, chainLink: CHAIN_LINK, ladderRung: LADDER_RUNG };
 for (let i = 0; i < SPIN_FRAMES; i++) SHIP_PROPS[`shipPropeller${i}`] = propeller((i * 120) / SPIN_FRAMES);
 for (let i = 0; i < PROP_FRAMES; i++) {
   const t = i / (PROP_FRAMES - 1);

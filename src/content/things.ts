@@ -177,7 +177,8 @@ export const THINGS: Record<ThingId, ThingDef> = {
     body: { radius: 1, height: 1, mass: 5000, solid: false, ghost: true },
     material: 'wood',
     craft: AIRSHIP,
-    sprite: null,
+    sprite: 'airshipFar',
+    far: 1500,
   },
   shipWheel: {
     name: 'ship\'s wheel',

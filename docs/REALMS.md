@@ -50,6 +50,8 @@
   every frame, `cellOf` maps a world point to the frame's cell, `placeOf` maps a cell back (fire light/smoke/sound). So
   standing, bumping, blows, fire, frost and rain work per cell with no craft code. GPU draws each frame by turning the
   eye into its cells (`gpuStructures.draw` views). Frames are set each tick from the craft entity (pos, z, angle).
+  Far off (past `GPU_STRUCT.range - fade`) the cells dither out while the craft's own art picture (`airshipFar`, origin
+  = pivot at the keel) dithers in over the same band; `ThingDef.far` keeps that picture drawn out to 1.5 km.
 - `CraftDef` = hull boxes (`fine: true` = half-metre grid; the airship's curved hull and envelope are swept by
   `content/hullSweep.ts`, which keeps the shell of a solid and shapes each cell by which sides face the air: bilge,
   rounded slope, rounded corner) + fittings (`fill` = a station's starting value, the tank starts with fuel) + what each

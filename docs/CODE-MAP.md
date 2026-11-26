@@ -121,7 +121,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (470) building recipes for the 3D layer (D)
 - `surfaces.ts` (241) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
-- `things.ts` (297) entity archetypes by trait (D)
+- `things.ts` (298) entity archetypes by trait (D)
 - `tileCodes.ts` (18) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (204) all tile kinds + code assignment from the ledger
 - `validate.ts` (268) validateContent: every reference must point at something that exists
@@ -136,7 +136,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `bodyPlans.ts` (172) Body plans as reusable parts (two legs, four legs, hopper, antlers): segmented limbs on joints, roles for body
 - `moves.ts` (78) Body moves seen from outside: how arms, torso, head (or a beast's neck) turn through each swing direction and
 - `crafts.ts` (165) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
-- `shipProps.ts` (196) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
+- `shipProps.ts` (216) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
 - `shapeTable.ts` (124) The shape palette of the 3D layer as data: every shape a cell (1 m) or a fine cell (half a metre) can take
 - `hullSweep.ts` (64) Curved hulls as fine cells: every half-metre cell inside a solid is kept where it shows, shaped by which sides
 
@@ -171,7 +171,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
 - `bodyPaint.ts` (293) ray-intersect solids into colour-region pixels
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
-- `spriteRenderer.ts` (197) gathers billboards (trees, creatures, props, items) for the GPU
+- `spriteRenderer.ts` (208) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (272) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
@@ -385,7 +385,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `rules.ts` (231) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (146) SiteDef, layouts, city, districts
 - `social.ts` (62) quests, trade, roles, factions
-- `things.ts` (211) MaterialDef, ThingDef, RealmDef, light, weapon stats
+- `things.ts` (213) MaterialDef, ThingDef, RealmDef, light, weapon stats
 - `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
 
 ## src/sim/craft/
