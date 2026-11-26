@@ -184,11 +184,13 @@ for (let i = 0; i < PROP_FRAMES; i++) {
   SHIP_PROPS[`shipWheel${i}`] = wheel((t * 2 - 1) * 120);
   SHIP_PROPS[`throttleLever${i}`] = lever((t * 2 - 1) * 35, 'brass');
   SHIP_PROPS[`altitudeLever${i}`] = lever((t * 2 - 1) * 35, 'red');
+  SHIP_PROPS[`anchorWinch${i}`] = lever((t * 2 - 1) * 35, 'iron');
   SHIP_PROPS[`fuelTank${i}`] = tank(t);
 }
 const mid = Math.floor(PROP_FRAMES / 2);
 SHIP_PROPS.shipWheel = SHIP_PROPS[`shipWheel${mid}`] as ArtDef;
 SHIP_PROPS.throttleLever = SHIP_PROPS[`throttleLever${mid}`] as ArtDef;
 SHIP_PROPS.altitudeLever = SHIP_PROPS[`altitudeLever${mid}`] as ArtDef;
+SHIP_PROPS.anchorWinch = SHIP_PROPS[`anchorWinch${mid}`] as ArtDef;
 SHIP_PROPS.fuelTank = SHIP_PROPS.fuelTank0 as ArtDef;
 SHIP_PROPS.shipPropeller = SHIP_PROPS.shipPropeller0 as ArtDef;

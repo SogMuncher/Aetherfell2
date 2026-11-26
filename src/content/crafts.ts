@@ -148,10 +148,13 @@ export const AIRSHIP: CraftDef = {
     { thing: 'shipPropeller', at: [-0.7, YC, 1.4] },
     // The anchor lies loose on the foredeck, its chain made fast just past the end of the cathead (clear of it, so a climber's head does not hit it).
     { thing: 'shipAnchor', at: [18.4, YC + 1.2, MAIN], loose: true, tie: [19.25, 9.95, MAIN + 0.3] },
+    // Beside it the winch lever: worked hard forward it hauls the anchor back aboard from wherever it lies.
+    { thing: 'anchorWinch', at: [17, YC - 1.2, MAIN] },
   ],
   thrust: { channel: 'throttle', speed: 9, accel: 0.5 },
   turn: { channel: 'helm', rate: 0.35 },
   climb: { channel: 'lift', rate: 4 },
+  weigh: 'weigh',
   fuel: 'fuel',
   sink: 0.8,
   wind: 0.7,

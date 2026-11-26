@@ -44,6 +44,8 @@ export interface CraftDef {
   thrust: { channel: string; speed: number; accel: number };
   turn: { channel: string; rate: number };
   climb: { channel: string; rate: number };
+  /** Channel that, worked hard over (a winch lever), hauls its chained things (the anchor) back aboard. */
+  weigh?: string;
   /** Channel holding the fuel (seconds of powered flight). It burns while thrust, turn or climb is used. */
   fuel: string;
   /** Sinks this fast with no fuel. */

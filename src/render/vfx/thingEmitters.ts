@@ -22,8 +22,10 @@ export function emitThings(out: MoteSink, state: SimState, camX: number, camY: n
   for (const e of state.entities.values()) {
     const dx = e.pos.x - camX;
     const dy = e.pos.y - camY;
-    if (dx * dx + dy * dy > 80 * 80) continue;
     const d = thingDef(CONTENT, e.def);
+    // Most motes are only given off near the eye; smoke that says how far it is seen (a propeller's trail) is given off from there.
+    const seen = d.smoke?.seen ?? 45;
+    if (dx * dx + dy * dy > Math.max(80, seen) ** 2) continue;
     // Anything that gives off firelight (torches, campfires) has a flame on top.
     if (d.light && d.light.flame !== false && !d.body.ghost && Math.random() < dt * (d.body.radius > 0.3 ? 40 : 20)) {
       const w = d.body.radius > 0.3 ? 0.5 : 0.12;
@@ -32,7 +34,7 @@ export function emitThings(out: MoteSink, state: SimState, camX: number, camY: n
       out.one(fx('torchFlame'), e.pos.x + Math.cos(e.angle) * lean + (Math.random() - 0.5) * w, e.pos.y + Math.sin(e.angle) * lean + (Math.random() - 0.5) * w, e.z + d.body.height * (d.body.radius > 0.3 ? 0.3 : 1) + 0.05, wind.x * 0.05, wind.y * 0.05, 0.8 + Math.random() * 0.6, 1, d.body.radius > 0.3 ? 1.7 : 1);
     }
     // Fires that smoke (hearths, campfires) send it up from their vent, when near enough to see.
-    if (d.smoke && dx * dx + dy * dy < 45 * 45 && Math.random() < dt * d.smoke.rate * pace(state, e, d.smoke.pace)) {
+    if (d.smoke && dx * dx + dy * dy < seen * seen && Math.random() < dt * d.smoke.rate * pace(state, e, d.smoke.pace)) {
       const r = d.smoke.spread ?? 0.15;
       out.one(fx(d.smoke.fx ?? 'tileSmoke'), e.pos.x + (Math.random() - 0.5) * 2 * r, e.pos.y + (Math.random() - 0.5) * 2 * r, e.z + d.smoke.rise + (Math.random() - 0.5) * 2 * r, wind.x * 0.4, wind.y * 0.4, 1.0, 0.75 + Math.random() * 0.5);
     }
