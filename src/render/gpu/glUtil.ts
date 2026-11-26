@@ -53,30 +53,42 @@ export interface CamBasis {
 /**
  * Camera basis matching the CPU view: yaw about z, and the CPU's pitch (a screen shear of pitch*0.62 screen heights)
  * turned into the equivalent real tilt. `focal` is the CPU projection's focal length in screen heights.
+ * `roll` (radians) leans the view to the right about the look direction.
  */
-export function camBasis(yaw: number, pitch: number, fovDegrees: number, aspect: number): CamBasis {
+export function camBasis(yaw: number, pitch: number, fovDegrees: number, aspect: number, roll = 0): CamBasis {
   const tanY = Math.tan((fovDegrees * Math.PI) / 360);
   const tilt = Math.atan((pitch * 0.62) * 2 * tanY);
   const cp = Math.cos(tilt);
   const sp = Math.sin(tilt);
   const c = Math.cos(yaw);
   const s = Math.sin(yaw);
-  return { fwd: [c * cp, s * cp, sp], right: [-s, c, 0], up: [-c * sp, -s * sp, cp], tanY, aspect };
+  const right: [number, number, number] = [-s, c, 0];
+  const up: [number, number, number] = [-c * sp, -s * sp, cp];
+  if (roll === 0) return { fwd: [c * cp, s * cp, sp], right, up, tanY, aspect };
+  const cr = Math.cos(roll);
+  const sr = Math.sin(roll);
+  return {
+    fwd: [c * cp, s * cp, sp],
+    right: [right[0] * cr - up[0] * sr, right[1] * cr - up[1] * sr, -up[2] * sr],
+    up: [up[0] * cr + right[0] * sr, up[1] * cr + right[1] * sr, up[2] * cr],
+    tanY,
+    aspect,
+  };
 }
 
 /** Column-major view-projection (z-up world). */
 export function viewProj(e: { x: number; y: number; z: number }, b: CamBasis, near: number, far: number): Float32Array {
   const [fx, fy, fz] = b.fwd;
-  const [rx, ry] = b.right;
+  const [rx, ry, rz] = b.right;
   const [ux, uy, uz] = b.up;
   const f = 1 / b.tanY;
   const A = (far + near) / (near - far);
   const B = (2 * far * near) / (near - far);
-  const tx = -(rx * e.x + ry * e.y);
+  const tx = -(rx * e.x + ry * e.y + rz * e.z);
   const ty = -(ux * e.x + uy * e.y + uz * e.z);
   const tz = -(fx * e.x + fy * e.y + fz * e.z);
   const fa = f / b.aspect;
-  return new Float32Array([fa * rx, f * ux, A * -fx, fx, fa * ry, f * uy, A * -fy, fy, 0, f * uz, A * -fz, fz, fa * tx, f * ty, -A * tz + B, tz]);
+  return new Float32Array([fa * rx, f * ux, A * -fx, fx, fa * ry, f * uy, A * -fy, fy, fa * rz, f * uz, A * -fz, fz, fa * tx, f * ty, -A * tz + B, tz]);
 }
 
 export function loc(gl: WebGL2RenderingContext, p: WebGLProgram, name: string): WebGLUniformLocation | null {

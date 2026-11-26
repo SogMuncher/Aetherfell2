@@ -147,7 +147,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `quickSlots.ts` (37) The quick-use keys 1..4 (H and G still work as keys 1 and 2). Each holds an item id, or
 
 ## src/
-- `main.ts` (348) the only wiring: input -> sim (or guest replica) -> net/audio/render
+- `main.ts` (313) the only wiring: input -> sim (or guest replica) -> net/audio/render
+- `settingsLink.ts` (58) Hands the remembered settings to sound, view and controls (on start and on every change), and sizes the view's
 
 ## src/net/
 - `messages.ts` (200) validate and shape every co-op message
@@ -163,7 +164,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `stateLooks.ts` (68) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
-- `renderer.ts` (200) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `renderer.ts` (210) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
 
 ## src/render/entities/
@@ -172,28 +173,28 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
 - `spriteRenderer.ts` (197) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
-- `viewModel.ts` (270) held weapon as small 3D scene (being replaced by sprites)
+- `viewModel.ts` (272) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
 - `artGrow.ts` (264) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
-- `artSprites.ts` (156) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
+- `artSprites.ts` (166) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
 - `assembler.ts` (246) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
 - `itemLook.ts` (93) What an item looks like, worked out from its definition: base shape, colours, size, gear parts (no item ids)
 - `gearArt.ts` (96) Worn armour and the held item laid onto any creature's art recipe: shells over the parts each slot covers, the
 - `viewFx.ts` (109) Motes over the held item: flames at a burning head, sparks, drops and puffs, advanced and painted each frame.
-- `viewPose.ts` (129) Held-item motion: poses as a hand position + blade direction, swing paths along arcs, and smooth settling betw
+- `viewPose.ts` (152) Held-item motion: poses as a hand position + blade direction, swing paths along arcs, and smooth settling betw
 - `itemCard.ts` (46) An item's bag picture as a card a body holds: where its grip is and which way it points on the picture
 - `paintFinish.ts` (112) Last touches on a painted body picture: dark outlines, and flat item pictures (held items) stamped facing the
-- `viewGlider.ts` (134) Your own open glider in first person: a cloth canopy that snaps open overhead, ripples with your speed and ban
+- `viewGlider.ts` (235) Your own open glider in first person: a cloth canopy that snaps open overhead, ripples with your speed and ban
 
 ## src/render/gpu/
-- `gpuRenderer.ts` (209) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
+- `gpuRenderer.ts` (211) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
 - `gpuTerrain.ts` (274) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (63) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
 - `gpuStructures.ts` (280) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
 - `gpuStructShader.ts` (161) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (159) tile walls/doors/windows as boxes from tile data, with their matter states
-- `gpuSprites.ts` (254) billboards: sprite atlas + instanced quads
+- `gpuSprites.ts` (256) billboards: sprite atlas + instanced quads
 - `gpuLight.ts` (195) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
 - `gpuCasters.ts` (125) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
 - `gpuFarShade.ts` (86) cloud shade + sun rays over terrain height levels far from the eye
@@ -205,7 +206,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuClouds.ts` (306) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
 - `gpuPost.ts` (142) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (65) floating air motes from `AirDef` (biome/realm data)
-- `glUtil.ts` (84) shader/texture helpers, camera basis and view-projection
+- `glUtil.ts` (96) shader/texture helpers, camera basis and view-projection
 - `gpuFrameShade.ts` (109) Shadows of moving frames (an airship): each frame's cells as a small 1 m grid the light rays march through, tu
 - `gpuSpeedLines.ts` (81) Speed lines: thin streaks hanging still in the air around the eye, each drawn stretched along how fast the eye
 
@@ -213,7 +214,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `textures.ts` (197) tileable procedural textures from surface layers
 
 ## src/render/raycaster/
-- `camera.ts` (58) per-frame projection values
+- `camera.ts` (69) per-frame projection values
 - `cloudShadow.ts` (78) cloud shadows on the land
 - `lodLooks.ts` (57) far colours of biomes
 - `terrainLod.ts` (263) cached LOD pyramid for far land (C)
@@ -244,7 +245,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `glideTrails.ts` (44) Light trails behind open gliders: a line of glowing motes left hanging in the air from each wingtip (the glide
 
 ## src/settings/
-- `settings.ts` (222) settings as data + localStorage store
+- `settings.ts` (223) settings as data + localStorage store
 
 ## src/sim/ai/
 - `aiSystem.ts` (173) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is

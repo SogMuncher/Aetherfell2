@@ -42,6 +42,8 @@ export interface GpuFrame {
   eye: { x: number; y: number; z: number };
   yaw: number;
   pitch: number;
+  /** Lean of the view to the right (radians). */
+  roll?: number;
   fovDegrees: number;
   env: Env;
   weather: WeatherState;
@@ -158,7 +160,7 @@ export class GpuRenderer {
       this.query = gl.createQuery();
       if (this.query) gl.beginQuery(this.timer.TIME_ELAPSED_EXT, this.query);
     }
-    const cam = camBasis(f.yaw, f.pitch, f.fovDegrees, w / h);
+    const cam = camBasis(f.yaw, f.pitch, f.fovDegrees, w / h, f.roll ?? 0);
     const vp = viewProj(f.eye, cam, NEAR, FAR);
     this.terrain.update(f.eye.x, f.eye.y);
     this.light.upload(f.lightmap.lights, f.eye.x, f.eye.y);
