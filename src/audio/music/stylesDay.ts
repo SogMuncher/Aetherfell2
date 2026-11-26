@@ -69,6 +69,41 @@ export const STYLES_DAY = {
     energy: (s) => c(0.25 + s.wonder * 0.35 + s.soaring * 0.3 + s.vista * 0.15 + s.company * 0.1),
   },
 
+  /** Aboard the airship: the world's own theme played easy and warm, heroic but unhurried, like a long ride under open sky. */
+  voyage: {
+    name: 'Voyage',
+    tempo: [76, 92],
+    meters: ['four', 'sixEight', 'four', 'three'],
+    modes: ['ionian', 'lydian', 'mixolydian', 'ionian'],
+    roots: [48, 50, 53, 55, 45],
+    progressions: [[0, 4, 5, 3], [0, 3, 4, 0], [0, 5, 3, 4], [3, 4, 0, 0], [0, 6, 3, 4]],
+    chordBars: [1, 2, 2, 4],
+    colors: { add9: 2, sus2: 1.5, triad: 2, sus4: 1, seventh: 1 },
+    swing: 0.05,
+    rest: 0.15,
+    silence: 0.1,
+    sectionBars: [8, 16],
+    melody: { cells: SLOW_CELLS, leap: 3, space: 0.3, theme: true },
+    layers: [
+      { role: 'drone', instrument: 'windDrone', lo: 36, hi: 48, level: 0.3, enter: 0, chance: 0.5, bright: 0.3 },
+      { role: 'pad', instrument: 'warmPad', lo: 48, hi: 67, level: 0.5, enter: 0, voices: 4, bright: 0.4 },
+      { role: 'bass', instrument: 'pluckBass', lo: 36, hi: 50, level: 0.5, enter: 0.1 },
+      { role: 'arp', instrument: 'harp', lo: 55, hi: 79, level: 0.45, enter: 0.15, rate: 4, shape: 'up', echo: 0.5, pan: -0.3 },
+      { role: 'melody', instrument: 'flute', lo: 60, hi: 81, level: 0.6, enter: 0.2, echo: 0.4, pan: 0.1, harmony: 0.35 },
+      { role: 'perc', instrument: 'frameDrum', lo: 0, hi: 0, level: 0.3, enter: 0.3, hits: 3, on: 'euclid', chance: 0.8, pan: -0.2 },
+      { role: 'arp', instrument: 'lute', lo: 52, hi: 72, level: 0.35, enter: 0.4, rate: 4, shape: 'random', chance: 0.6, echo: 0.4, pan: 0.35 },
+      { role: 'perc', instrument: 'shaker', lo: 0, hi: 0, level: 0.18, enter: 0.5, hits: 5, on: 'euclid', chance: 0.6, pan: 0.3 },
+      { role: 'counter', instrument: 'horn', lo: 50, hi: 67, level: 0.35, enter: 0.6, bright: 0.3, pan: -0.1 },
+      { role: 'perc', instrument: 'timpani', lo: 0, hi: 0, level: 0.3, enter: 0.7, on: 'down', chance: 0.3 },
+    ],
+    leads: ['flute', 'horn', 'fiddle', 'lyre'],
+    mix: { level: 0.9, hall: 0.7, cave: 0, echo: 0.5, tone: 9000 },
+    enter: 'sweep',
+    minBars: 8,
+    affinity: (s) => s.voyage * Math.max(0, 1.6 - s.threat * 0.8 - s.danger * 0.6),
+    energy: (s) => c(0.35 + s.speed * 0.25 + s.soaring * 0.15 + s.company * 0.15 + s.wind * 0.1),
+  },
+
   /** Under the trees: old, watchful woods with something in them. */
   forest: {
     name: 'Deep woods',

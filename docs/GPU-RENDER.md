@@ -28,7 +28,7 @@ sim never sees GPU types. The old CPU (Classic) renderer is gone. F3 shows `gpu`
 4. Sprites: instanced billboards, discard on alpha (dithered), depth-tested, tinted by light + hit flash.
 5. Particles, rain streaks: instanced additive/alpha quads, depth-tested no write.
 6. Held item: sprite quad drawn with depth cleared (always on top), same lighting.
-7. Fog + ambient air: depth-based fog in each shader (`1-exp(-d/fogDist)`, colour from `Env`); **air motes** (dust, pollen, ash) as particles in a camera-local box, count/colour/drift from data per biome and realm (`RealmDef`, biome tables), cheap depth cue.
+7. Fog + ambient air: depth-based fog in each shader (`1-exp(-d/fogDist)`, colour from `Env`); **air motes** (dust, pollen, ash) as particles in a camera-local box, count/colour/drift from data per biome and realm (`RealmDef`, biome tables), cheap depth cue. **Speed lines** (`gpuSpeedLines.ts`): world-fixed streaks in the same kind of box, stretched by the eye's own measured speed (glider, airship, falling).
 8. Post: quantise/dither/vignette, then present. HTML HUD (`ui/`) stays DOM on top.
 
 ## Fallback

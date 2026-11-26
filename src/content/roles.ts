@@ -39,7 +39,9 @@ export const ROLES: Record<RoleId, RoleDef> = {
       { id: 'gear:sword:iron:fine', count: 1 },
       { id: 'gear:axe:iron:common', count: 1 },
       { id: 'gear:spear:bronze:common', count: 1 },
+      { id: 'burlapGlider', count: 1 },
       { id: 'glider', count: 1 },
+      { id: 'silkGlider', count: 1 },
     ],
     trade: {
       label: 'Sharpen my blade (5c)',

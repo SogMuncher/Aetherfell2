@@ -26,6 +26,7 @@ export const LOOT: Record<LootId, LootDef> = {
   },
   crate: {
     entries: [
+      { item: 'burlapGlider', min: 1, max: 1, chance: 0.04 },
       { item: 'torch', min: 1, max: 2, chance: 0.2 },
       { item: 'bread', min: 1, max: 3, chance: 0.25 },
       { item: 'oilFlask', min: 1, max: 2, chance: 0.2 },
@@ -58,6 +59,8 @@ export const LOOT: Record<LootId, LootDef> = {
   ruinChest: {
     entries: [
       { item: 'coin', min: 10, max: 40, chance: 1 },
+      { item: 'silkGlider', min: 1, max: 1, chance: 0.08 },
+      { item: 'wyvernGlider', min: 1, max: 1, chance: 0.03 },
       { item: 'healingDraught', min: 1, max: 3, chance: 0.8 },
       { item: 'manaTonic', min: 1, max: 2, chance: 0.6 },
       { item: 'runeShard', min: 1, max: 1, chance: 0.7 },
