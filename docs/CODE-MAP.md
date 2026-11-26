@@ -41,7 +41,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `doorSmoke.ts` (70) DOORS: one rule for a door tile on the ground and a door leaf in a wall of the 3D layer: open, shut, burn, fre
 - `hullTight.ts` (74) Is a swept hull tight? Fills its fine cells' real shapes at an eighth of a metre and floods the outside air: n
 - `shipSmoke.ts` (239) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
-- `glideSmoke.ts` (62) GLIDERS: each cloth flies its own way (data): burlap only slows your fall, wyvern hide soars, dives and climbs
+- `glideSmoke.ts` (77) GLIDERS: each cloth flies its own way (data): burlap only slows your fall, wyvern hide soars, dives and climbs
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
@@ -92,16 +92,16 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `biomes.ts` (102) Kinds of landscape. Each point of land takes the first biome (in this order) whose `when` fits
 - `cheats.ts` (72) Every debug cheat, as data. The Debug cheats menu builds one row per entry (in this order, under
 - `day.ts` (41) The one day-and-night clock. Times are a share of the day: 0 is midnight, 0.25 six in the
-- `effects.ts` (39) Bursts of motes for things that happen in the world (not spells: those have their own look in
+- `effects.ts` (40) Bursts of motes for things that happen in the world (not spells: those have their own look in
 - `forms.ts` (187) trees, bushes, rocks, stones, plants as pieces (D)
-- `gear.ts` (62) gear as data: body parts, hand slot, forms (garments + weapons), materials, qualities, enchantments
+- `gear.ts` (63) gear as data: body parts, hand slot, forms (garments + weapons), materials, qualities, enchantments
 - `gearItems.ts` (164) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
 - `gearCheck.ts` (60) gearProblems: the gear tables are sound
-- `itemDefs.ts` (107) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
+- `itemDefs.ts` (117) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (102) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
 - `index.ts` (87) collects every table into CONTENT, re-exports helpers, runs validation
-- `items.ts` (109) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
+- `items.ts` (112) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
 - `living.ts` (128) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (175) creature looks as solid parts (D)
 - `loot.ts` (113) Drop tables: each entry rolls on its own.
@@ -110,7 +110,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `props.ts` (232) Props as forms: barrels, crates, chests, urns, torches, campfires and trap plates are put
 - `realms.ts` (67) The spaces the world is made of. A realm is a place with its own ground, light and sky; the whole
 - `roles.ts` (110) Villager jobs: what they add to a greeting, what they keep on the rack, the trouble they ask
-- `rules.ts` (129) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
+- `rules.ts` (128) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
 - `shapes.ts` (268) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
 - `sites.ts` (364) named places: odds, layout, population (D)
@@ -163,7 +163,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `stateLooks.ts` (68) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
-- `renderer.ts` (188) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `renderer.ts` (197) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
 
 ## src/render/entities/
@@ -183,9 +183,10 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `viewPose.ts` (129) Held-item motion: poses as a hand position + blade direction, swing paths along arcs, and smooth settling betw
 - `itemCard.ts` (46) An item's bag picture as a card a body holds: where its grip is and which way it points on the picture
 - `paintFinish.ts` (112) Last touches on a painted body picture: dark outlines, and flat item pictures (held items) stamped facing the
+- `viewGlider.ts` (134) Your own open glider in first person: a cloth canopy that snaps open overhead, ripples with your speed and ban
 
 ## src/render/gpu/
-- `gpuRenderer.ts` (206) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
+- `gpuRenderer.ts` (209) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
 - `gpuTerrain.ts` (274) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (63) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
@@ -203,7 +204,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuSky.ts` (82) full-screen sky: gradient, sun, moon, stars, aurora
 - `gpuClouds.ts` (306) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
 - `gpuPost.ts` (142) low-res colour+depth target and the dither/vignette/tint finish
-- `gpuAir.ts` (56) floating air motes from `AirDef` (biome/realm data)
+- `gpuAir.ts` (65) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (84) shader/texture helpers, camera basis and view-projection
 - `gpuFrameShade.ts` (109) Shadows of moving frames (an airship): each frame's cells as a small 1 m grid the light rays march through, tu
 - `gpuSpeedLines.ts` (81) Speed lines: thin streaks hanging still in the air around the eye, each drawn stretched along how fast the eye
@@ -235,11 +236,12 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/render/vfx/
 - `particleKinds.ts` (90) particle kinds, physics, mote look tables
-- `particles.ts` (278) Particles: visual effects from events and state (C)
+- `particles.ts` (280) Particles: visual effects from events and state (C)
 - `fireEmitter.ts` (47) Where fire's motes go: the particle system draws them from the palette in the fire rules.
 - `glow.ts` (86) Light painted straight over the frame: glows, lines, specks. Shared by the held item and its sparks.
 - `spellEmitters.ts` (161) Spell motes: the bloom of a bolt bursting, cones, novas, wards, the casting hand and a bolt's trail, all from
 - `thingEmitters.ts` (59) Motes things give off every frame: flames on what burns with firelight, smoke and trails, a held torch, burnin
+- `glideTrails.ts` (44) Light trails behind open gliders: a line of glowing motes left hanging in the air from each wingtip (the glide
 
 ## src/settings/
 - `settings.ts` (222) settings as data + localStorage store
@@ -290,7 +292,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `spatialHash.ts` (41) Uniform grid of entities, rebuilt once per tick. Answers "what is near here?" cheaply.
 
 ## src/sim/player/
-- `playerSystem.ts` (261) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
+- `playerSystem.ts` (252) First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
 - `climbing.ts` (82) Holding on to a chain (an anchor's): touch one off the ground and you hold it; forward climbs the way you look
 - `gliding.ts` (32) Gliding as data: how a glider's cloth turns your heading and look into flight, from a gentle drift down to a s
 
@@ -377,7 +379,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/types/defs/
 - `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population
 - `ids.ts` (23) id string types
-- `items.ts` (114) ItemDef, ItemLook
+- `items.ts` (116) ItemDef, ItemLook
 - `magic.ts` (194) SpellDef, RuneDef, StatusDef and spell look
 - `rules.ts` (231) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (146) SiteDef, layouts, city, districts

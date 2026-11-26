@@ -91,6 +91,16 @@ export function heldLight(c: Content, e: Entity): HeldLightDef | undefined {
   return w ? itemDef(c, w)?.light : undefined;
 }
 
+/** The glider worn on the body, if any (the one that soars best, should several be worn). */
+export function wornGlider(c: ItemContent, e: Entity): ItemDef | undefined {
+  let best: ItemDef | undefined;
+  for (const id of Object.values(e.worn ?? {})) {
+    const d = itemDef(c, id);
+    if (d?.glide && !(best?.glide && best.glide.soar >= d.glide.soar)) best = d;
+  }
+  return best;
+}
+
 /** Total weight of what is worn (kg). */
 export function wornWeight(c: ItemContent, worn: Readonly<Record<BodyRegionId, ItemId>> | undefined): number {
   let w = 0;

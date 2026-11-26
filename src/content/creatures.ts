@@ -2,7 +2,7 @@
 import type { BodyRegionId, ThingDef, ThingId, WeaponStats } from '../types';
 
 /** The body parts that people (and anything else built like them) can wear armour on. */
-const HUMANOID: BodyRegionId[] = ['head', 'torso', 'arms', 'legs'];
+const HUMANOID: BodyRegionId[] = ['head', 'torso', 'arms', 'legs', 'back'];
 
 /** A creature's own weapon (fangs, fists, a staff). Unless told otherwise it only lunges (thrusts). */
 export function natural(name: string, damage: number, kind: WeaponStats['kind'], reach: number, more: Partial<WeaponStats> = {}): WeaponStats {

@@ -31,6 +31,7 @@ export const EFFECTS: Record<string, BurstDef> = {
   tileFlame: { kind: 'flame', count: 1, speed: 0, colour: 0xff7828, colourTo: 0xffd228, glow: true, life: 0.7, size: 0.18 },
   tileSmoke: { kind: 'smoke', count: 1, speed: 0, colour: 0x464240, life: 4, size: 0.5 },
   propWake: { kind: 'magic', count: 1, speed: 0, colour: 0x5fdccd, colourTo: 0xd2fff6, glow: true, life: 1.8, size: 0.16 },
+  glideTrail: { kind: 'magic', count: 1, speed: 0, colour: 0x3cf0ff, colourTo: 0xc8ffff, glow: true, life: 1.6, size: 0.24 },
   torchFlame: { kind: 'flame', count: 1, speed: 0, colour: 0xff9632, colourTo: 0xffdc32, glow: true, life: 0.35, size: 0.14 },
   burningBody: { kind: 'flame', count: 1, speed: 0, colour: 0xff8c28, glow: true, life: 0.5, size: 0.22 },
   chilledBody: { kind: 'frost', count: 1, speed: 0, colour: 0xd2f0ff, glow: true, life: 0.6, size: 0.06 },

@@ -43,7 +43,7 @@ export { MAX_SPELL_RUNES, composeSpell, describeSpell, effectWords, spellFor, sp
 export type { Composed } from './spellcraft';
 export { GEAR } from './gear';
 export { gearEffect, gearId, gearItem, parseGear, pickRegion, rollGear, rollOutfit } from './gearItems';
-export { breakOf, gearCondition, heldLight, itemDef, itemWeapon, mended, takeBlows, weaponStats, withWear, wornWeight } from './itemDefs';
+export { breakOf, gearCondition, heldLight, itemDef, itemWeapon, mended, takeBlows, weaponStats, withWear, wornGlider, wornWeight } from './itemDefs';
 export { gearProblems } from './gearCheck';
 export { actorHandling, chargeTicks, handlingOf, thrownDamage, tunedValue, tuneHeld } from './handling';
 
