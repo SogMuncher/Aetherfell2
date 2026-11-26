@@ -121,6 +121,8 @@ export interface ReadonlyVolume {
   floorOn(frame: number, x: number, y: number, zMax: number): number;
   /** Where a cell's middle is in the world (moved and turned with its frame, if it is on one). */
   placeOf(x: number, y: number, z: number): { x: number; y: number; z: number };
+  /** A world point in the store coordinates of each frame within `pad` m of it, so a blast reaches a ship's own cells. */
+  framePoints(x: number, y: number, z: number, pad: number): { x: number; y: number; z: number }[];
 }
 
 /**

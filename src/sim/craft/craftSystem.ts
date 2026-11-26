@@ -4,7 +4,7 @@ import { bagOf, countItem, removeItem } from '../../types';
 import { itemDef, thingDef } from '../../content';
 import { aboard, craftMotion } from './craftMotion';
 import { buildCraft } from './craftBuild';
-import { holdChains } from './tether';
+import { haulIn, holdChains } from './tether';
 
 /**
  * A craft (the airship) flies from whatever its stations say: each station writes one named channel, the craft's
@@ -92,6 +92,9 @@ function answer(ctx: SimContext, call: { thing: ThingId; x: number; y: number; b
   }
   if (best?.craft) {
     best.craft.goal = { x: call.x, y: call.y };
+    // Called away, it weighs anchor.
+    const cd = thingDef(ctx.content, best.def).craft;
+    if (cd) haulIn(ctx, best, cd);
     ctx.emit({ type: 'answer', entity: best.id, x: best.pos.x, y: best.pos.y });
     ctx.emit({ type: 'notice', player: call.by, text: `Far off, the ${thingDef(ctx.content, best.def).name} turns toward the call.` });
   }

@@ -5,7 +5,8 @@
 allocate in hot loops. Look is **sprites + procedural textures**; perspective on held items is a sprite transform.
 
 - `adaptiveRes.ts` lowers/raises the line count to hold the wished fps (setting 'Keep it smooth'; numbers in `ADAPTIVE`).
-- `viewport.ts` low-res frame size scaled cleanly. `lighting.ts` gathers the lights (and a 1 m grid for the held item).
+- `viewport.ts` low-res frame size scaled cleanly. `lighting.ts` gathers the lights (and a 1 m grid for the held item). A thing's light sits `LightDef.at` m above it, its height
+  interpolated like its sprite; `flame: false` = no flame motes. `vfx/`: `particles.ts` + `thingEmitters.ts` (motes things give off) + `spellEmitters.ts`.
 - `raycaster/` (CPU helpers the GPU reads): far cached LOD blocks (`terrainLod.ts`, `lodLooks.ts`, ~7 km), `tileBillboards.ts`,
   `cloudShadow.ts`, `camera.ts`. Clouds and ground mist follow the world's moisture (`airMoisture` in `content/skyField.ts`, set by `Simulation`; layer `wet`).
 - LOD blocks of every level (incl. the 1 m one the GPU textured levels fade into) get changed tiles painted over them (`terrainLodPaint.paintChunk`); the GPU refills its fine levels when `lod.painted` moves.

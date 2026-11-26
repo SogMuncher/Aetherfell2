@@ -37,6 +37,10 @@ export interface LightDef {
   b: number;
   radius: number;
   flicker: number;
+  /** false = a glow with no fire (a lantern behind glass, an aether tank): no flame motes on top. */
+  flame?: boolean;
+  /** Height of the light above the thing's base (default 1 m), so a lamp lights from its flame, not from above it. */
+  at?: number;
 }
 
 /** Light given off by something carried in the hand. `flame` = real fire (it throws flame motes and can be told apart from a glow). */
@@ -170,8 +174,12 @@ export interface ThingDef {
   /** Effects on whoever jumps while standing on it (a launching plank), pushed away from it. */
   onJump?: Effect[];
   light?: LightDef;
-  /** A fire that smokes: grey puffs rise from `rise` metres above it (a hearth's smoke leaves by the chimney, above the roof), about `rate` a second, only seen when near. */
-  smoke?: { rise: number; rate: number };
+  /** A fire that smokes: grey puffs rise from `rise` metres above it (a hearth's smoke leaves by the chimney, above the roof), about `rate` a second, only seen when near. `fx` = another burst (content/effects.ts); `pace` = only at full rate once the craft it is fitted to flies this fast (m/s; a propeller's trail). */
+  smoke?: { rise: number; rate: number; fx?: string; pace?: number };
+  /** Pictures `<sprite>0..frames-1` turned through in order as the craft it is fitted to flies, `turn` frames a metre (a propeller). */
+  spin?: { frames: number; turn: number };
+  /** What its chain is drawn with: a picture every `every` metres (default chain links; a rope ladder's rungs). */
+  links?: { art: string; every: number };
   /** Can be used when you press interact in front of it (a bed to rest on): the effects land on the user, then it rests for `cooldown` ticks. */
   use?: { effects: Effect[]; text: string; cooldown: number };
   /** Effects when it hits something hard; shattering destroys it. */

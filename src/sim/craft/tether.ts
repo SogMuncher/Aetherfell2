@@ -1,5 +1,5 @@
-// Chains from a loose thing to a point aboard a craft (the anchor's): never longer than the chain; lying still on the ground it holds the craft
-import type { SimContext } from '../../types';
+// Chains from a loose thing to a point aboard a craft (the anchor's): never longer than the chain; lying still on the ground it holds the craft; a call hauls it in
+import type { CraftDef, Entity, SimContext } from '../../types';
 import { thingDef } from '../../content';
 import { aboard } from './craftMotion';
 
@@ -24,6 +24,8 @@ export function holdChains(ctx: SimContext): void {
     const at = aboard(e, cd, t.x, t.y);
     const top = { x: at.x, y: at.y, z: e.z + t.z };
     t.top = top;
+    // A fixed fitting's line (a rope ladder) only hangs there: it never holds the craft.
+    if (o.ride) continue;
     const dx = o.pos.x - top.x;
     const dy = o.pos.y - top.y;
     const dz = o.z - top.z;
@@ -67,5 +69,24 @@ export function holdChains(ctx: SimContext): void {
       b.vel.y -= uy * out;
       if (!holder) b.vz -= uz * out;
     }
+  }
+}
+
+/** Hauls every loose chained thing of a craft (the anchor) back aboard to where it was fitted, out of anyone's hands. */
+export function haulIn(ctx: SimContext, e: Entity, cd: CraftDef): void {
+  for (const o of ctx.state.entities.values()) {
+    if (o.dead || o.tether?.craft !== e.id || o.ride) continue;
+    const f = cd.fittings.find((g) => g.thing === o.def && g.tie);
+    if (!f) continue;
+    const holder = o.heldBy !== null ? ctx.state.entities.get(o.heldBy) : undefined;
+    if (holder?.player?.holding === o.id) holder.player.holding = null;
+    o.heldBy = null;
+    const at = aboard(e, cd, f.at[0], f.at[1]);
+    o.pos.x = o.prev.x = at.x;
+    o.pos.y = o.prev.y = at.y;
+    o.z = o.prevZ = e.z + f.at[2];
+    o.vel.x = o.vel.y = o.vz = 0;
+    o.aboard = e.id;
+    o.angle = e.angle + (f.face ?? 0);
   }
 }

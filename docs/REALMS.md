@@ -63,7 +63,11 @@
   `Fitting.tie` + `ThingDef.chain` = a chained thing (the anchor, carried and thrown with G): `Entity.tether`,
   `sim/craft/tether.ts` keeps it within the chain, a taut chain to one lying still holds the craft and swings its bow
   round; climbing any hanging chain is `sim/player/climbing.ts` (forward climbs, looking down climbs down, jump lets go,
-  forward at the top steps onto a floor). `ThingDef.vane` = a fitting that points downwind (windsock).
+  forward at the top steps onto a floor). A fixed fitting with a `tie` (the rope ladder) only hangs, never holds the
+  craft; `ThingDef.links` = what its line is drawn with (rungs). A horn call hauls loose chained things back aboard
+  (`haulIn`). `ThingDef.vane` = a fitting that points downwind (windsock); `spin` = frames turned through with the
+  craft's speed (propeller), `smoke.fx/pace` = its trail. Crates and barrels in the hold are loose. Area effects
+  (blasts) reach frame cells too (`volume.framePoints`), so a fireball or frost spell burns or freezes the ship.
 - `craftMotion` (host and a guest's foresight, `sim/foresight.ts`) moves the craft and carries every body inside its
   box (`Entity.aboard`): standing, on stairs, jumping, falling. Entering, a body's speed becomes relative to the craft;
   leaving (over the side, off the plank) it keeps the craft's speed. In the air bodies keep their momentum (air control

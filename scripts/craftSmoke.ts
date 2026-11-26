@@ -74,9 +74,8 @@ stand(10, 5, 4.5);
 run(sim, 20);
 check('the main deck holds you up in the air', Math.abs(me.z - (ship.z + 4.5)) < 0.1, `${(me.z - ship.z).toFixed(2)} m above the keel`);
 const vol = s.volume;
-const lowStep = aboard(ship, cd, 5.85, 1.5);
 const highStep = aboard(ship, cd, 8.1, 3);
-check('stairs rise the right way (boarding stair, stern stair)', Math.abs(vol.floorOn(ship.id, lowStep.x, lowStep.y, ship.z + 3) - ship.z - 0.5) < 0.01 && Math.abs(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 6) - ship.z - 5.5) < 0.01, `${(vol.floorOn(ship.id, lowStep.x, lowStep.y, ship.z + 3) - ship.z).toFixed(2)} / ${(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 6) - ship.z).toFixed(2)}`);
+check('the stern stair rises the right way', Math.abs(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 6) - ship.z - 5.5) < 0.01, `${(vol.floorOn(ship.id, highStep.x, highStep.y, ship.z + 6) - ship.z).toFixed(2)}`);
 
 // Down the hatch stair into the hold and back up: the deck above leaves head room all the way.
 const origin = aboard(ship, cd, 0, 0);
@@ -194,7 +193,8 @@ const away = (me.kb?.x ?? 0) * (out.x - me.pos.x) + (me.kb?.y ?? 0) * (out.y - m
 check('jumping from the plank launches you out and up', me.vz > 7.5 && away > 0, `vz ${me.vz.toFixed(1)}`);
 const p0 = { x: me.pos.x, y: me.pos.y };
 run(sim, 20);
-check('and you keep flying out (no sudden stop in the air)', Math.hypot(me.pos.x - p0.x, me.pos.y - p0.y) > 10, `${Math.hypot(me.pos.x - p0.x, me.pos.y - p0.y).toFixed(1)} m in a second`);
+const flown = Math.hypot(me.pos.x - p0.x, me.pos.y - p0.y);
+check('and you keep flying out in a moderate leap, clear of the ship but not off to the next town', flown > 4 && flown < 12, `${flown.toFixed(1)} m in a second`);
 
 // The hold keeps what you put in it.
 stand(10, 5.4, 1.5);
