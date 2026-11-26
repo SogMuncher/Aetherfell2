@@ -1,4 +1,4 @@
-// GLIDERS: each cloth flies its own way (data): burlap only slows your fall, wyvern hide soars, dives and climbs; off ground and off a 3D cell
+// GLIDERS: worn on the back like gear (only then they open); each cloth flies its own way: burlap drifts, wyvern hide soars; ground and 3D cell
 import type { Entity } from '../src/types';
 import { bagOf, shapeByte } from '../src/types';
 import { SHAPE_CUBE } from '../src/content/shapes';
@@ -8,10 +8,10 @@ import { check, failures, run, world } from './smokeKit';
 
 const TIERS = ['burlapGlider', 'glider', 'silkGlider', 'wyvernGlider'];
 
+/** Wears the glider on the back, with nothing else worn or carried. */
 function carry(me: Entity, id: string): void {
-  const bag = bagOf(me);
-  bag.length = 0;
-  bag.push({ id, count: 1 });
+  bagOf(me).length = 0;
+  me.worn = { back: id };
 }
 
 /** Fly a glider high over open ground: level, then a dive, then a pull-up. */
@@ -38,6 +38,21 @@ check('every glider opens and slows the fall', f.every((x) => x.sink > 0 && x.si
 check('burlap only drifts: a dive gains little and pulling up never climbs', f[0].dive < 12 && f[0].climb < 0);
 check('wyvern hide soars: a dive builds real speed and pulling up turns it into height', f[3].dive > 25 && f[3].climb > 3);
 check('each better cloth dives faster', f.every((x, i) => i === 0 || x.dive > f[i - 1].dive));
+
+// Only a worn glider opens: one in the bag does nothing, and putting it on (the paperdoll) puts it on the back.
+{
+  const { sim, me } = world();
+  me.worn = {};
+  bagOf(me).length = 0;
+  bagOf(me).push({ id: 'glider', count: 1 });
+  me.z = me.prevZ = sim.tiles.ground(me.pos.x, me.pos.y) + 200;
+  me.vz = -1;
+  run(sim, 30, { jumpHeld: true, forward: 1 });
+  const packed = !me.player?.gliding;
+  run(sim, 2, { wear: { do: 'wear', item: 'glider' } });
+  run(sim, 10, { jumpHeld: true, forward: 1 });
+  check('a glider in the bag stays shut; worn on the back it opens', packed && me.worn?.back === 'glider' && !!me.player?.gliding, `packed ${packed}, back ${me.worn?.back}, gliding ${me.player?.gliding}`);
+}
 
 // Off a 3D cell: step off a high stone ledge with jump held and the glider carries you out.
 {

@@ -125,7 +125,7 @@ function questProgress(ctx: SimContext): void {
 
 /**
  * Using an item does whatever its definition says: drink or eat it (effects on you), throw it
- * (it flies and bursts), or wield it (swap weapons). Gliders and keys work just by being carried.
+ * (it flies and bursts), wear it (armour, a glider on the back) or wield it (swap weapons). Keys work just by being carried.
  */
 function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): void {
   // '@throwable' means "whatever I can throw".
@@ -135,6 +135,7 @@ function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): voi
   // Armour is worn, not used up; weapons go into the hands (anything else can be put there on the paperdoll).
   if (def.armour) {
     putOn(ctx, e, id);
+    if (def.glide && Object.values(e.worn ?? {}).includes(id)) ctx.emit({ type: 'notice', player: e.id, text: 'Jump, then hold Space in the air to open the glider. Fires below lift you.' });
     return;
   }
   if (def.weapon) {
@@ -172,8 +173,7 @@ function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): voi
     ctx.emit({ type: 'notice', player: e.id, text: `You blow the ${def.name.toLowerCase()}.` });
     return;
   }
-  if (def.glide) ctx.emit({ type: 'notice', player: e.id, text: 'Jump, then hold Space in the air to open the glider. Fires below lift you.' });
-  else if (def.category === 'key') ctx.emit({ type: 'notice', player: e.id, text: 'Keys work by themselves: open the lock it fits with E.' });
+  if (def.category === 'key') ctx.emit({ type: 'notice', player: e.id, text: 'Keys work by themselves: open the lock it fits with E.' });
   else ctx.emit({ type: 'notice', player: e.id, text: `You can't use the ${def.name.toLowerCase()} like that.` });
 }
 

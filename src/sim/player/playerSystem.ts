@@ -1,6 +1,6 @@
-import type { Entity, GlideDef, SimContext, SimSystem } from '../../types';
+import type { Entity, SimContext, SimSystem } from '../../types';
 import { GROUND_Z, bagOf, unpackSpot } from '../../types';
-import { composeSpell, isDisabled, moveFactor, stackWeight, thingDef, wornWeight } from '../../content';
+import { composeSpell, isDisabled, moveFactor, stackWeight, thingDef, wornGlider, wornWeight } from '../../content';
 import { climbChain } from './climbing';
 import { glideStep } from './gliding';
 
@@ -79,8 +79,8 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
     if (load > carryLimit) speed *= 0.55;
     speed *= moveFactor(content, e.status);
 
-    // Gliding: hold jump while falling to open the glider. Wind carries you; fires below lift you.
-    const glide = gliderOf(ctx, bagOf(e));
+    // Gliding: hold jump while falling to open the glider worn on your back. Wind carries you; fires below lift you.
+    const glide = wornGlider(content, e)?.glide ?? null;
     const climbing = !manning && climbChain(ctx, e, input, a.onGround, speed);
     const wantGlide = !!glide && !manning && !climbing && input.jumpHeld && !a.onGround && !swimming && (p.gliding || e.vz < 0) && !isDisabled(content, e.status);
     if (wantGlide !== p.gliding) {
@@ -180,15 +180,6 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
     }
   }
 };
-
-function gliderOf(ctx: SimContext, inv: readonly { id: string }[]): GlideDef | null {
-  let best: GlideDef | null = null;
-  for (const s of inv) {
-    const g = ctx.content.items[s.id]?.glide;
-    if (g && (!best || g.soar > best.soar)) best = g;
-  }
-  return best;
-}
 
 /** Rising heat: burning ground below (within ~25 m) pushes a glider up. */
 function updraft(ctx: SimContext, e: Entity): number {

@@ -16,6 +16,7 @@ export const GEAR: GearTables = {
     head: { name: 'Head', cover: 0.2, aim: { overhead: 2.4, left: 0.8, right: 0.8, thrust: 0.9 }, at: [{ x: 0.34, y: 0.02, w: 0.32, h: 0.2 }], fit: { grow: [1.12, 0.82, 1.14], shift: [-0.04, 0.42, 0], hides: ['hat'] } },
     torso: { name: 'Torso', cover: 0.45, aim: { thrust: 1.5, overhead: 0.8 }, at: [{ x: 0.28, y: 0.24, w: 0.44, h: 0.34 }], fit: { grow: [1.2, 1.04, 1.1], shift: [0, 0.02, 0] } },
     arms: { name: 'Arms', cover: 0.15, aim: { left: 1.7, right: 1.7, thrust: 0.6, overhead: 0.5 }, at: [{ x: 0.08, y: 0.25, w: 0.18, h: 0.34 }, { x: 0.74, y: 0.25, w: 0.18, h: 0.34 }], fit: { grow: [1.45, 0.62, 1.45], shift: [0, -0.3, 0] } },
+    back: { name: 'Back', cover: 0.05, aim: { thrust: 1.4 }, at: [{ x: 0.02, y: 0.02, w: 0.26, h: 0.2 }], fit: { grow: [1, 1, 1], shift: [0, 0, 0] } },
     legs: { name: 'Legs', cover: 0.2, aim: { left: 1.3, right: 1.3, thrust: 0.9 }, at: [{ x: 0.3, y: 0.6, w: 0.18, h: 0.38 }, { x: 0.52, y: 0.6, w: 0.18, h: 0.38 }], fit: { grow: [1.3, 0.88, 1.3], shift: [0, 0.1, 0] } },
   },
   hand: { name: 'Hands', at: [{ x: 0.74, y: 0.62, w: 0.22, h: 0.22 }], hold: { tilt: 62, length: 1, grip: 0.12 } },

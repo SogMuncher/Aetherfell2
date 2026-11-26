@@ -35,6 +35,9 @@ import { camBasis, viewProj } from './glUtil';
 const NEAR = 0.3;
 const FAR = 20000;
 
+/** No wind, where the air is still. */
+const STILL = { x: 0, y: 0 } as const;
+
 export interface GpuFrame {
   eye: { x: number; y: number; z: number };
   yaw: number;
@@ -179,7 +182,7 @@ export class GpuRenderer {
     gl.viewport(0, 0, w, h);
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;
-    this.air.draw(vp, f.eye, air, f.time, 0.35 + 0.65 * f.env.day);
+    this.air.draw(vp, f.eye, air, f.time, 0.35 + 0.65 * f.env.day, f.env.open ? f.weather.wind : STILL);
     this.speedLines.draw(vp, f.eye, f.time, 0.35 + 0.65 * f.env.day);
     this.fx.drawMotes(vp, cam, f.eye, f.env, f.motes, f.time, h);
     this.fx.drawRain(f.env, w, h, f.windSide, f.time);

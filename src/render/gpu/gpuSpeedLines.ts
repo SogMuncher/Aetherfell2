@@ -5,7 +5,7 @@
 import { compile, loc } from './glUtil';
 
 /** All numbers live here. Speeds in m/s; `trail` is how many seconds of travel each streak shows. */
-export const SPEED_LINES = { count: 260, box: 56, start: 11, full: 34, trail: 0.07, maxTrail: 5, alpha: 0.32, colour: [225, 232, 245], teleport: 200 } as const;
+export const SPEED_LINES = { count: 260, box: 56, start: 7, full: 15, trail: 0.07, maxTrail: 5, alpha: 0.32, colour: [225, 232, 245], teleport: 200 } as const;
 
 const VS = `#version 300 es
 uniform mat4 uVP; uniform vec3 uEye; uniform vec3 uVel; uniform float uBox, uCount, uTrail;

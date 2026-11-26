@@ -30,7 +30,7 @@ import { check, failures, hit, makeRng, nextSeq, run, spawner, world } from './s
   const rolled = Array.from({ length: 80 }, () => rollGear(CONTENT.gear, rng, {}));
   check('random gear always names real things', rolled.every((id) => id !== null && itemDef(CONTENT, id) !== undefined));
   const kinds = new Set(rolled.map((id) => (id ? CONTENT.gear.forms[parseGear(CONTENT.gear, id)?.form ?? '']?.slot : '')));
-  check('random gear covers every body part and the hands', kinds.size === Object.keys(CONTENT.gear.regions).length + 1, [...kinds].join(','));
+  check('random gear covers every slot some gear is made for', kinds.size === new Set(Object.values(CONTENT.gear.forms).map((f) => f.slot)).size, [...kinds].join(','));
   const onlyLeather = Array.from({ length: 20 }, () => rollGear(CONTENT.gear, rng, { region: 'torso', materials: ['leather'], qualities: ['fine'] }));
   check('a roll can be steered', onlyLeather.every((id) => id !== null && gearItem(CONTENT.gear, id)?.name.startsWith('Fine leather')));
 }
