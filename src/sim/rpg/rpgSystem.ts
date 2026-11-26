@@ -168,6 +168,7 @@ function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): voi
   }
   if (def.calls) {
     ctx.state.queues.calls.push({ thing: def.calls, x: e.pos.x, y: e.pos.y, by: e.id });
+    ctx.emit({ type: 'call', entity: e.id, x: e.pos.x, y: e.pos.y });
     ctx.emit({ type: 'notice', player: e.id, text: `You blow the ${def.name.toLowerCase()}.` });
     return;
   }

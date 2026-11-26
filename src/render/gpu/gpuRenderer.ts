@@ -14,6 +14,7 @@ import type { CloudShadow } from '../raycaster/cloudShadow';
 import type { Particle } from '../vfx/particleKinds';
 import type { Surface } from '../vfx/glow';
 import { GpuAir } from './gpuAir';
+import { GpuSpeedLines } from './gpuSpeedLines';
 import { GpuClouds } from './gpuClouds';
 import { GpuOverlay } from './gpuOverlay';
 import { GpuParticles } from './gpuParticles';
@@ -84,6 +85,7 @@ export class GpuRenderer {
   private readonly sky: GpuSky;
   private readonly clouds: GpuClouds;
   private readonly air: GpuAir;
+  private readonly speedLines: GpuSpeedLines;
   private readonly post: GpuPost;
   private readonly timer: TimerExt | null;
   private query: WebGLQuery | null = null;
@@ -111,6 +113,7 @@ export class GpuRenderer {
     this.sky = new GpuSky(gl);
     this.clouds = new GpuClouds(gl);
     this.air = new GpuAir(gl);
+    this.speedLines = new GpuSpeedLines(gl);
     this.post = new GpuPost(gl);
     this.timer = gl.getExtension('EXT_disjoint_timer_query_webgl2') as TimerExt | null;
     host.insertAdjacentElement('afterend', this.canvas);
@@ -177,6 +180,7 @@ export class GpuRenderer {
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;
     this.air.draw(vp, f.eye, air, f.time, 0.35 + 0.65 * f.env.day);
+    this.speedLines.draw(vp, f.eye, f.time, 0.35 + 0.65 * f.env.day);
     this.fx.drawMotes(vp, cam, f.eye, f.env, f.motes, f.time, h);
     this.fx.drawRain(f.env, w, h, f.windSide, f.time);
     const hand = this.overlay.begin(w, h);

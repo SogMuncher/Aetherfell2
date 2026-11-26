@@ -4,7 +4,9 @@
 **Never:** hard-code a sound per creature/spell id. Sounds derive from traits (material sound class, body, brain, effects).
 
 - `engine.ts`: oscillator + filtered noise + envelope, through reverb and limiter. `gameAudio.ts` `GameAudio`: listens to
-  events (steps, voices, spells, music hookup). `ambience.ts`: the ambient bed + one-shots from `ambientSounds.ts` (data:
+  events (music hookup; `bodySounds.ts` + `worldSounds.ts` play each event's effect; `craftSounds.ts` = airship hum,
+  rigging wind and creaks by speed, lever notches, `station`/`call`/`answer` events). Aboard, signal `voyage` picks the
+  `voyage` style (the world theme, easy and warm). `ambience.ts`: the ambient bed + one-shots from `ambientSounds.ts` (data:
   each sound is `where: 'sky'|'deep'`, day/night, needs trees/water/wind/dry…). Sky sounds, wind, rain and thunder only play
   in a realm with `sky`; the deep has cave air, drips, rumbles, moans.
 - `sfx/`: `materials.ts` (strikes/steps per sound class), `voices.ts` (from body/brain), `spells.ts` (from effects),

@@ -4,6 +4,8 @@
 **Never:** name a creature/item/skill in a system (use traits and `content/rules.ts`); use `Math.random()`.
 
 - `player/playerSystem.ts`: first-person movement, swim, glide, carry/throw, runebook preparing, "poke" -> use request.
+  Gliders are items with `glide: GlideDef` (`player/gliding.ts`): `soar` 0 drifts (burlap), 1 flies where you look and trades
+  dive speed for height (wyvern hide); the best-soaring one carried opens. Check: `glideSmoke`.
 - `rpg/rpgSystem.ts`: skills grow by doing, pick up/use/drop/wear items, shared party quest log. Bag layout is UI-only.
   The bag is `actor.inventory` (players and creatures alike, `bagOf(e)`); a thing's `carries` loot fills it at spawn and
   all of it drops on death (plus `onDestroy.loot`). Creatures ask for the player's pick-up/throw via `actor.wantPick/wantThrow`.

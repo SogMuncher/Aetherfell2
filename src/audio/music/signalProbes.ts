@@ -15,6 +15,7 @@ export const SMOOTH: Partial<Record<SignalName, [number, number]>> = {
   triumph: [0.3, 3],
   speed: [1.2, 2.5],
   soaring: [1.5, 3],
+  voyage: [3, 6],
   depth: [1.5, 3],
   ruin: [2, 4],
 };
@@ -179,6 +180,7 @@ export const playerProbe: SignalProbe = ({ me }, o) => {
     if (p.gliding) o.soaring = Math.max(o.soaring, 0.7);
   }
   o.speed = clamp01(Math.hypot(me.vel.x, me.vel.y) / 7);
+  o.voyage = me.aboard != null ? 1 : 0;
 };
 
 /** Mood that grows out of other moods — read after the probes. */

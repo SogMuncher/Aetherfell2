@@ -1,7 +1,8 @@
-import type { Entity, SimContext, SimSystem } from '../../types';
+import type { Entity, GlideDef, SimContext, SimSystem } from '../../types';
 import { GROUND_Z, bagOf, unpackSpot } from '../../types';
 import { composeSpell, isDisabled, moveFactor, stackWeight, thingDef, wornWeight } from '../../content';
 import { climbChain } from './climbing';
+import { glideStep } from './gliding';
 
 const JUMP_SPEED = 7.2;
 const STRIDE = 1.7;
@@ -89,13 +90,7 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
     if (climbing) {
       // On a chain: the climbing rules set the speed.
     } else if (p.gliding && glide) {
-      const w = state.weather.wind;
-      const tx = cos * glide.speed * Math.max(0.35, 1 + input.forward * 0.4) + w.x * 0.8;
-      const ty = sin * glide.speed * Math.max(0.35, 1 + input.forward * 0.4) + w.y * 0.8;
-      e.vel.x += (tx - e.vel.x) * 0.06;
-      e.vel.y += (ty - e.vel.y) * 0.06;
-      const lift = updraft(ctx, e);
-      e.vz += (-glide.sink + lift - e.vz) * (lift > 0 ? 0.15 : 0.08);
+      glideStep(e, glide, cos, sin, input.pitch, input.forward, state.weather.wind, updraft(ctx, e), dt);
     } else if (a.onGround || swimming) {
       e.vel.x = mx * speed;
       e.vel.y = my * speed;
@@ -186,12 +181,13 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
   }
 };
 
-function gliderOf(ctx: SimContext, inv: readonly { id: string }[]): { sink: number; speed: number } | null {
+function gliderOf(ctx: SimContext, inv: readonly { id: string }[]): GlideDef | null {
+  let best: GlideDef | null = null;
   for (const s of inv) {
     const g = ctx.content.items[s.id]?.glide;
-    if (g) return g;
+    if (g && (!best || g.soar > best.soar)) best = g;
   }
-  return null;
+  return best;
 }
 
 /** Rising heat: burning ground below (within ~25 m) pushes a glider up. */
