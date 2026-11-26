@@ -10,11 +10,11 @@ export const MATTER_STATES: Readonly<Record<ShownState, StateLookDef>> = {
   // Scorch marks left by fire on whatever did not burn away.
   soot: { shade: [0.3, 0.3, 0.3] },
   // Puddles, splashes and rain: darker and a touch cooler.
-  wet: { shade: [0.72, 0.72, 0.75], rain: 1 },
+  wet: { shade: [0.72, 0.72, 0.75], rain: 1, shine: 0.55 },
   // Lamp oil: a brown film with a sheen.
-  oil: { cover: { amount: 0.6, colour: '#43321e' }, glint: { share: 0.1, amount: 0.24 } },
+  oil: { cover: { amount: 0.6, colour: '#43321e' }, glint: { share: 0.1, amount: 0.24 }, shine: 0.4 },
   // The wetness in it, frozen: rime over the stuff, glittering, and slick underfoot.
-  frost: { cover: { amount: 0.8, surface: 'frost' }, glint: { share: 0.04, amount: 0.3 }, slide: 0.3 },
+  frost: { cover: { amount: 0.8, surface: 'frost' }, glint: { share: 0.04, amount: 0.3 }, slide: 0.3, shine: 0.15 },
   // Flames make what burns glow.
   fire: { glow: [1.4, 0.6, 0.15], smoke: 0.7, light: { r: 1.1, g: 0.55, b: 0.18, radius: 5, flicker: 0.4 } },
 };

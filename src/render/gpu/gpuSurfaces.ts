@@ -21,10 +21,10 @@ const SLOT_ROWS = (32 + Math.ceil(STATE_SURFACES.length / 16)) * TEX;
 const DRIFT_W = 16 * TEX;
 const SLOTS = STATE_SURFACE_BASE + STATE_SURFACES.length;
 
-/** A surface's drift packed in one texel: hue (degrees * 4), sat, light (shares * 255), and whether it may spin per cell. */
+/** A surface's drift packed in one texel: hue (degrees * 4), sat, light (shares * 255); alpha = may spin per cell (128) + shine (0..127). */
 function driftTexel(id: string): number[] {
   const d = { ...SURFACE_DRIFT, ...SURFACES[id]?.drift };
-  return [Math.min(255, d.hue * 4), Math.min(255, d.sat * 255), Math.min(255, d.light * 255), SURFACES[id]?.spin ? 255 : 0].map(Math.round);
+  return [Math.min(255, d.hue * 4), Math.min(255, d.sat * 255), Math.min(255, d.light * 255), (SURFACES[id]?.spin ? 128 : 0) + Math.min(1, SURFACES[id]?.shine ?? 0) * 127].map(Math.round);
 }
 
 export function makeSurfaceAtlas(gl: WebGL2RenderingContext): WebGLTexture {
@@ -64,8 +64,8 @@ export function makeSurfaceAtlas(gl: WebGL2RenderingContext): WebGLTexture {
  */
 export const SURFACE_OUT = `
 layout(location = 1) out vec4 oAlb; layout(location = 2) out vec4 oNrm;
-void surfaceOut(vec3 albedo, vec3 n, float kind){ oAlb = vec4(clamp(albedo, 0.0, 1.0), kind); oNrm = vec4(n * 0.5 + 0.5, 1.0); }
-void spriteOut(vec3 albedo, int id){ oAlb = vec4(clamp(albedo, 0.0, 1.0), 0.5); oNrm = vec4(float((id + 1) & 255) / 255.0, float((id + 1) >> 8) / 255.0, 0.0, 1.0); }`;
+void surfaceOut(vec3 albedo, vec3 n, float kind, float shine){ oAlb = vec4(clamp(albedo, 0.0, 1.0), kind); oNrm = vec4(n * 0.5 + 0.5, shine); }
+void spriteOut(vec3 albedo, int id){ oAlb = vec4(clamp(albedo, 0.0, 1.0), 0.5); oNrm = vec4(float((id + 1) & 255) / 255.0, float((id + 1) >> 8) / 255.0, 0.0, 0.0); }`;
 
 /** Atlas slot of a tile code's surface: code*2 (floor) or code*2+1 (wall); 16 per row, TEX pixels each. */
 export const SURFACE_SHADER = `
@@ -74,6 +74,8 @@ uniform sampler2D uSurf;
 // surfaces show their average instead of shimmering. A pass sets it once per pixel from its texel footprint. Near each
 // switch the next level fades in over a band (surfLodT), so levels never meet in a hard line.
 int surfLod = 0; float surfLodT = 0.0;
+// How shiny what this pixel shows is (the most of any surface or state blended into it); written beside its normal.
+float surfShine = 0.0;
 void surfLodFrom(vec2 texelsPerPixel){
   float y = log2(max(max(texelsPerPixel.x, texelsPerPixel.y), 1.0)) + 0.2;
   surfLod = min(int(floor(y)), ${SURFACE_MIX.lods}); surfLodT = surfLod < ${SURFACE_MIX.lods} ? smoothstep(0.6, 1.0, fract(y)) : 0.0;
@@ -92,7 +94,8 @@ vec3 surf(int mat, bool wall, vec2 uv, ivec3 key){
   int idx = mat * 2 + (wall ? 1 : 0);
   vec4 d = texelFetch(uSurf, ivec2(idx % ${DRIFT_W}, ${SLOT_ROWS} + idx / ${DRIFT_W}), 0) * vec4(255.0 / 4.0, 1.0, 1.0, 1.0);
   ivec2 p = ivec2(floor(uv)) & ${TEX - 1};
-  if (d.a > 0.5) { uint b = surfPcg(uvec3(key + 7)).x; if ((b & 4u) != 0u) p.x = ${TEX - 1} - p.x; for (uint q = 0u; q < (b & 3u); q++) p = ivec2(${TEX - 1} - p.y, p.x); }
+  float sa = floor(d.a * 255.0 + 0.5); surfShine = max(surfShine, mod(sa, 128.0) / 127.0);
+  if (sa >= 128.0) { uint b = surfPcg(uvec3(key + 7)).x; if ((b & 4u) != 0u) p.x = ${TEX - 1} - p.x; for (uint q = 0u; q < (b & 3u); q++) p = ivec2(${TEX - 1} - p.y, p.x); }
   vec4 t = surfMip(idx, p); float region = surfLod > 0 ? 0.0 : floor(surfAt(idx, p, 0).a * 255.0 + 0.5);
   vec3 r = surfRand(ivec3(key.xy, key.z * 64 + int(region))) - 0.5;
   if (region > 0.0 && surfLodT > 0.0) r = mix(r, surfRand(ivec3(key.xy, key.z * 64)) - 0.5, surfLodT); // regions merge as detail fades

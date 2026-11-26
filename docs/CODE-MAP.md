@@ -120,7 +120,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (470) building recipes for the 3D layer (D)
-- `surfaces.ts` (241) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
+- `surfaces.ts` (244) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
 - `things.ts` (298) entity archetypes by trait (D)
 - `tileCodes.ts` (18) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (204) all tile kinds + code assignment from the ledger
@@ -148,7 +148,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/
 - `main.ts` (313) the only wiring: input -> sim (or guest replica) -> net/audio/render
-- `settingsLink.ts` (58) Hands the remembered settings to sound, view and controls (on start and on every change), and sizes the view's
+- `settingsLink.ts` (66) Hands the remembered settings to sound, view and controls (on start and on every change), and sizes the view's
 
 ## src/net/
 - `messages.ts` (200) validate and shape every co-op message
@@ -161,10 +161,10 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `lighting.ts` (136) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); lights the held item in 3D (`sample`); `poseBetween` = a craft drawn between ticks; re-exports Env
 - `airSmoke.ts` (170) smoke: the live level of the air cells; burning spots feed it, it rises, spreads and thins in steps
 - `airCells.ts` (253) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
-- `stateLooks.ts` (68) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
+- `stateLooks.ts` (70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
-- `renderer.ts` (210) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `renderer.ts` (211) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
 
 ## src/render/entities/
@@ -187,20 +187,20 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `viewGlider.ts` (235) Your own open glider in first person: a cloth canopy that snaps open overhead, ripples with your speed and ban
 
 ## src/render/gpu/
-- `gpuRenderer.ts` (211) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
+- `gpuRenderer.ts` (215) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
 - `gpuTerrain.ts` (274) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
-- `gpuStates.ts` (63) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
+- `gpuStates.ts` (65) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
 - `gpuStructures.ts` (280) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
 - `gpuStructShader.ts` (161) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (159) tile walls/doors/windows as boxes from tile data, with their matter states
 - `gpuSprites.ts` (256) billboards: sprite atlas + instanced quads
-- `gpuLight.ts` (195) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
+- `gpuLight.ts` (253) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
 - `gpuCasters.ts` (125) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
 - `gpuFarShade.ts` (86) cloud shade + sun rays over terrain height levels far from the eye
-- `gpuSolid.ts` (238) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
-- `gpuSurfaces.ts` (113) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
-- `gpuParticles.ts` (155) motes as point sprites and rain streaks
+- `gpuSolid.ts` (240) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
+- `gpuSurfaces.ts` (116) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
+- `gpuParticles.ts` (163) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (61) held item buffer composited on top
 - `gpuSky.ts` (82) full-screen sky: gradient, sun, moon, stars, aurora
 - `gpuClouds.ts` (312) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
@@ -209,6 +209,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `glUtil.ts` (96) shader/texture helpers, camera basis and view-projection
 - `gpuFrameShade.ts` (125) Shadows of moving frames (an airship): each frame's cells as a small 1 m grid the light rays march through, tu
 - `gpuSpeedLines.ts` (81) Speed lines: thin streaks hanging still in the air around the eye, each drawn stretched along how fast the eye
+- `gpuLightSpread.ts` (105) Smoothed lighting: light worked out at half or quarter resolution, spread to every pixel only from samples on
+- `gpuReflect.ts` (134) Reflections: shiny surfaces (shine from surface and matter-state data, written beside each pixel's normal) mir
 
 ## src/render/materials/
 - `textures.ts` (197) tileable procedural textures from surface layers
@@ -245,7 +247,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `glideTrails.ts` (44) Light trails behind open gliders: a line of glowing motes left hanging in the air from each wingtip (the glide
 
 ## src/settings/
-- `settings.ts` (223) settings as data + localStorage store
+- `settings.ts` (184) settings as data + localStorage store
+- `videoSettings.ts` (153) Video settings as data: pixel size, view feel, and each part of the lighting with presets that set them all at
 
 ## src/sim/ai/
 - `aiSystem.ts` (173) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is
@@ -363,7 +366,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `input.ts` (96) Letting go of an item from the bag over the view: where the cursor was decides the throw.
 - `items.ts` (48) Inventory helpers shared by every system that touches items.
 - `math.ts` (10) 
-- `matter.ts` (102) MATTER — one way to talk about "the stuff at a place", whatever holds it.
+- `matter.ts` (104) MATTER — one way to talk about "the stuff at a place", whatever holds it.
 - `net.ts` (53) co-op message types
 - `palettes.ts` (22) Colour as data. Pictures are never painted in fixed colours: every part of a creature, tree,
 - `sky.ts` (96) RGB, 0..255.
@@ -373,7 +376,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `vfx.ts` (86) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
 - `volume.ts` (198) 3D layer brick/volume types
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
-- `worldgen.ts` (202) surface, biome, water and world-generation defs
+- `worldgen.ts` (204) surface, biome, water and world-generation defs
 - `art.ts` (203) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
 - `craft.ts` (116) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
 

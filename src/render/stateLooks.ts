@@ -24,6 +24,7 @@ export const LOOKS = {
   glint: new Float32Array(STATE_COUNT * 2),
   glow: new Float32Array(STATE_COUNT * 3),
   rain: new Float32Array(STATE_COUNT),
+  shine: new Float32Array(STATE_COUNT),
 };
 /** Surfaces the states cover things with, in the order the GPU surface atlas holds them after the tiles' own. */
 export const STATE_SURFACES: string[] = [];
@@ -47,6 +48,7 @@ SHOWN_STATES.forEach((id: ShownState, i) => {
   if (d.glint) LOOKS.glint.set([d.glint.share, d.glint.amount], i * 2);
   if (d.glow) LOOKS.glow.set(d.glow, i * 3);
   LOOKS.rain[i] = d.rain ?? 0;
+  LOOKS.shine[i] = d.shine ?? 0;
 });
 
 /** Tints an average far colour (0..255, in place) by the states' strengths `w` (0..1 each, SHOWN_STATES order). Says whether any state showed. */

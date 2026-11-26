@@ -85,28 +85,30 @@ float groundAt(vec2 p){
   vec2 g = p - vec2(uSolid0.xy); if (g.x < 0.0 || g.y < 0.0 || g.x >= ${S}.0 || g.y >= ${S}.0) return -1e9;
   return texture(uGround, (g + 0.5) / ${S + 1}.0).r + float(uSolid0.z); // one filtered fetch: heights are kept relative to the field
 }
-float shadowRay(vec3 o, vec3 d, float len, int steps, bool sprites, int self){
+// How far along the ray the first blocker is (-1: nothing in the way). Reflections use it to know what they mirror.
+float rayHit(vec3 o, vec3 d, float len, int steps, bool sprites, int self){
   if (uFrameN > 0 && frameBlocks(o, d, len)) return 0.0; // a moving frame (an airship) in the way
   ivec3 cell = ivec3(floor(o)); vec3 st = sign(d); vec3 ad = max(abs(d), vec3(1e-5));
   vec3 tMax = (st * (vec3(cell) + 0.5 - o) + 0.5) / ad; vec3 tDelta = 1.0 / ad; float t = 0.0; vec3 e = o + d * len;
   bool newCol = true;
   for (int i = 0; i < steps; i++){
-    if (t >= len) return 1.0;
+    if (t >= len) return -1.0;
     ivec3 q = cell - uSolid0;
-    if (q.x < 0 || q.y < 0 || q.x >= ${S} || q.y >= ${S} || (q.z >= ${H} && d.z >= 0.0)) return 1.0; // left the field: the far land takes over
+    if (q.x < 0 || q.y < 0 || q.x >= ${S} || q.y >= ${S} || (q.z >= ${H} && d.z >= 0.0)) return -1.0; // left the field: the far land takes over
     float tn = min(min(tMax.x, tMax.y), tMax.z);
     vec3 m = o + d * min((t + tn) * 0.5, len);
-    if (t > 0.5 && m.z < groundAt(m.xy) - 0.3) return 0.0; // the drawn land is a mesh over the same heights: allow it a little slack
+    if (t > 0.5 && m.z < groundAt(m.xy) - 0.3) return t; // the drawn land is a mesh over the same heights: allow it a little slack
     int sh = solidShape(cell);
-    if (sh == 255){ if (i > 0) return 0.0; } // a whole block; the first cell is the one the surface lies on
-    else if (sh > 0 && shapeBlocks(sh, o - vec3(cell), d, min(tn, len))) return 0.0;
-    if (sprites && newCol){ float za = o.z + d.z * t, zb = o.z + d.z * min(tn, len); if (castersAt(cell.xy, o, d, len, e, self, min(za, zb), max(za, zb))) return 0.0; }
+    if (sh == 255){ if (i > 0) return t; } // a whole block; the first cell is the one the surface lies on
+    else if (sh > 0 && shapeBlocks(sh, o - vec3(cell), d, min(tn, len))) return t;
+    if (sprites && newCol){ float za = o.z + d.z * t, zb = o.z + d.z * min(tn, len); if (castersAt(cell.xy, o, d, len, e, self, min(za, zb), max(za, zb))) return t; }
     newCol = tMax.z != tn;
     if (tMax.x == tn){ cell.x += int(st.x); tMax.x += tDelta.x; } else if (tMax.y == tn){ cell.y += int(st.y); tMax.y += tDelta.y; } else { cell.z += int(st.z); tMax.z += tDelta.z; }
     t = tn;
   }
-  return 1.0;
-}`;
+  return -1.0;
+}
+float shadowRay(vec3 o, vec3 d, float len, int steps, bool sprites, int self){ return rayHit(o, d, len, steps, sprites, self) < 0.0 ? 1.0 : 0.0; }`;
 
 export class GpuSolid {
   private readonly solid: WebGLTexture;

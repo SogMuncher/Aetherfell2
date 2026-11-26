@@ -47,7 +47,7 @@ void main(){
   else { float across = abs(n.x) > abs(n.y) ? vPos.y : vPos.x; suv = vec2(across * 16.0, -vPos.z * 16.0); col = surf(int(fMat), true, suv, ivec3(floor(vPos - n * 0.01))); }
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2(vInst % ${ST_W}, vInst / ${ST_W}), suv, uRainWet, 0.75 + 0.25 * sin(uTime * 40.0 + vPos.x * 1.7 + vPos.y * 2.3), glow);
-  surfaceOut(col, dot(n, uEye - vPos) < 0.0 ? -n : n, 1.0);
+  surfaceOut(col, dot(n, uEye - vPos) < 0.0 ? -n : n, 1.0, surfShine);
   float f = min(0.97, 1.0 - exp(-length(vPos - uEye) / uFogDist));
   o = vec4(col * glow * (1.0 - f) + uFog * f, 1.0);
 }`;

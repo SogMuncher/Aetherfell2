@@ -1,6 +1,6 @@
 /**
  * GPU effects: the motes `Particles` keeps (fire, smoke, sparks, spell looks) as depth-tested point sprites, and rain streaks.
- * The CPU still simulates and decides colours per mote (they come from effect and rune data); here they are only drawn.
+ * The CPU moves the motes and picks each one's colour of the moment (effect and rune data); the card fades, fogs and lights them.
  */
 import type { Env } from '../lighting';
 import type { Particle } from '../vfx/particleKinds';
@@ -9,16 +9,21 @@ import type { CamBasis } from './glUtil';
 
 /** All numbers live here. */
 export const GPU_FX = { maxMotes: 6000, rainLen: [4, 5, 6, 7], rainSpeed: 420, rainColour: [190, 200, 225], rainStrength: 0.25 } as const;
-const STRIDE = 16;
+const STRIDE = 12;
 
 const VS = `#version 300 es
-uniform mat4 uVP; uniform float uFpx;
-in vec4 aPos; in vec4 aCover; in vec4 aAdd; in vec4 aFlags;
+uniform mat4 uVP; uniform float uFpx, uAmb, uFogDist, uFrame; uniform vec3 uFog;
+in vec4 aPos; in vec4 aCol; in vec4 aLife; // aCol: colour now + glow; aLife: life left (1..0), soft, palette mote, -
 flat out vec4 fCover; flat out vec4 fAdd; flat out vec4 fFlags;
 void main(){
   gl_Position = uVP * vec4(aPos.xyz, 1.0);
   gl_PointSize = max(1.0, aPos.w * uFpx / max(0.1, gl_Position.w));
-  fCover = aCover; fAdd = aAdd; fFlags = aFlags;
+  float t = aLife.x, soft = aLife.y; bool pal = aLife.z > 0.5;
+  float fog = min(0.95, 1.0 - exp(-max(0.0, gl_Position.w) / uFogDist));
+  float k = (pal ? 1.0 : t) * (1.0 - fog) * aCol.w;
+  fCover = vec4(mix(aCol.rgb * uAmb, uFog, fog), max(0.0, (1.0 - aCol.w) * (0.85 + (t * 0.5 - 0.85) * soft)));
+  fAdd = vec4(aCol.rgb * k, soft);
+  fFlags = vec4(pal && t < 0.3 ? 1.0 : 0.0, uFrame, pal ? 1.0 : 0.0, 0.0);
 }`;
 const FS = `#version 300 es
 precision highp float;
@@ -64,7 +69,7 @@ export class GpuParticles {
     gl.bindVertexArray(this.vao);
     this.buf = gl.createBuffer() as WebGLBuffer;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
-    for (const [i, name] of ['aPos', 'aCover', 'aAdd', 'aFlags'].entries()) {
+    for (const [i, name] of ['aPos', 'aCol', 'aLife'].entries()) {
       const a = gl.getAttribLocation(this.prog, name);
       gl.enableVertexAttribArray(a);
       gl.vertexAttribPointer(a, 4, gl.FLOAT, false, STRIDE * 4, i * 16);
@@ -73,42 +78,41 @@ export class GpuParticles {
     this.rainVao = gl.createVertexArray() as WebGLVertexArrayObject;
   }
 
-  /** Motes: colours worked out on the CPU (birth to death fade, palette steps, sky light, fog). */
-  drawMotes(vp: Float32Array, cam: CamBasis, eye: { x: number; y: number; z: number }, env: Env, list: readonly Particle[], time: number, height: number): void {
+  /** Motes: the CPU gives each its colour of the moment; the shader does the fade, sky light and fog. */
+  drawMotes(vp: Float32Array, cam: CamBasis, env: Env, list: readonly Particle[], time: number, height: number): void {
     const n = Math.min(GPU_FX.maxMotes, list.length);
     if (n === 0) return;
     if (this.data.length < n * STRIDE) this.data = new Float32Array(n * STRIDE * 2);
     const d = this.data;
-    const amb = 0.35 + env.day * 0.65;
-    const fx = cam.fwd[0];
-    const fy = cam.fwd[1];
     let count = 0;
     for (let i = 0; i < n; i++) {
       const p = list[i];
       if (!p) continue;
-      const fwd = (p.x - eye.x) * fx + (p.y - eye.y) * fy;
-      if (fwd < 0.2) continue;
       const t = p.life / p.max;
       const u = 1 - t;
       let pr = p.r + (p.r2 - p.r) * u;
       let pg = p.g + (p.g2 - p.g) * u;
       let pb = p.b + (p.b2 - p.b) * u;
       const pal = p.pal;
-      let dither = 0;
       if (pal && pal.length > 0) {
         const c = pal[Math.min(pal.length - 1, Math.floor(u * pal.length))] ?? 0;
         pr = (c >> 16) & 255;
         pg = (c >> 8) & 255;
         pb = c & 255;
-        dither = t < 0.3 ? 1 : 0;
       }
-      const fog = Math.min(0.95, 1 - Math.exp(-fwd / env.fogDist));
-      const k = (pal ? 1 : t) * (1 - fog) * p.glow;
-      const cover = (1 - p.glow) * (0.85 + (t * 0.5 - 0.85) * p.soft);
-      const cr = pr * amb + (env.fog[0] - pr * amb) * fog;
-      const cg = pg * amb + (env.fog[1] - pg * amb) * fog;
-      const cb = pb * amb + (env.fog[2] - pb * amb) * fog;
-      d.set([p.x, p.y, p.z, p.size, cr / 255, cg / 255, cb / 255, Math.max(0, cover), (pr * k) / 255, (pg * k) / 255, (pb * k) / 255, p.soft, dither, Math.floor(time * 14), pal ? 1 : 0, 0], count * STRIDE);
+      const o = count * STRIDE;
+      d[o] = p.x;
+      d[o + 1] = p.y;
+      d[o + 2] = p.z;
+      d[o + 3] = p.size;
+      d[o + 4] = pr / 255;
+      d[o + 5] = pg / 255;
+      d[o + 6] = pb / 255;
+      d[o + 7] = p.glow;
+      d[o + 8] = t;
+      d[o + 9] = p.soft;
+      d[o + 10] = pal && pal.length > 0 ? 1 : 0;
+      d[o + 11] = 0;
       count++;
     }
     if (count === 0) return;
@@ -120,6 +124,10 @@ export class GpuParticles {
     gl.bufferData(gl.ARRAY_BUFFER, d.subarray(0, count * STRIDE), gl.DYNAMIC_DRAW);
     gl.uniformMatrix4fv(loc(gl, pg, 'uVP'), false, vp);
     gl.uniform1f(loc(gl, pg, 'uFpx'), height / (2 * cam.tanY));
+    gl.uniform1f(loc(gl, pg, 'uAmb'), 0.35 + env.day * 0.65);
+    gl.uniform1f(loc(gl, pg, 'uFogDist'), env.fogDist);
+    gl.uniform1f(loc(gl, pg, 'uFrame'), Math.floor(time * 14));
+    gl.uniform3f(loc(gl, pg, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);

@@ -38,7 +38,15 @@ export class SettingsLink {
       tilt: settings.bool('strafeTilt'),
       fovDegrees: settings.num('fieldOfView'),
       colourLevels: settings.num('colours') || 24,
-      lights: settings.num('lightsPerPixel') || 4,
+      light: {
+        scale: settings.num('lightDetail') || 1,
+        sun: ['off', 'near', 'full'].indexOf(settings.str('sunShadows')),
+        sky: settings.str('skyLight') !== 'flat',
+        ao: settings.num('cornerShading'),
+        lights: settings.num('lightsPerPixel') || 4,
+        lampShadows: settings.bool('lampShadows'),
+        reflections: settings.str('reflections') === 'traced' ? 'traced' : settings.str('reflections') === 'screen' ? 'screen' : 'off',
+      },
     };
     this.resolution(0);
     input.mouse.sensitivity = 0.0022 * (settings.num('mouseSensitivity') / 100);
