@@ -1,15 +1,17 @@
 /**
  * What blocks light near the eye, for the per-pixel shadow rays (`gpuLight.ts`): one 1 m solid field around the camera
  * built from the same matter every pass draws: tile walls and closed doors (the boxes `gpuTileBlocks` draws), every
- * filled cell of the 3D layer, and the ground as a height grid (hills shade too). Rebuilt when the eye moves a step,
+ * filled cell of the 3D layer, and the ground as a height grid (hills shade too); moving frames (airships) shade through
+ * their own grid (`gpuFrameShade.ts`). Rebuilt when the eye moves a step,
  * the 3D layer changes, or every few frames (doors, walls burnt away).
  */
-import type { ReadonlyTiles, ReadonlyVolume } from '../../types';
+import type { ReadonlyTiles, ReadonlyVolume, VolumeFrame } from '../../types';
 import { BRICK_SIZE, CHUNK_SIZE } from '../../types';
 import { TILES } from '../../content/tiles';
 import { SHAPE_COUNT, SHAPE_CUBE, SHAPE_FINE, SHAPE_PIECES, SHAPE_START } from '../../content/shapes';
 import { loc, makeTexture } from './glUtil';
 import { GPU_TILE_BLOCKS } from './gpuTileBlocks';
+import { FRAME_SHADER, GpuFrameShade } from './gpuFrameShade';
 
 export const GPU_SOLID = { size: 96, height: 48, step: 8, rebuildEvery: 12 } as const;
 const S = GPU_SOLID.size;
@@ -69,7 +71,8 @@ bool shapeBlocks(int byte, vec3 o, vec3 d, float len){
 /** GLSL uniforms of the field; put them before CASTER_SHADER (gpuCasters.ts) and SOLID_SHADER. */
 export const SOLID_UNIFORMS = `
 uniform highp sampler3D uSolid; uniform highp sampler2D uGround; uniform ivec3 uSolid0;
-${SHAPE_SHADER}`;
+${SHAPE_SHADER}
+${FRAME_SHADER}`;
 
 /**
  * GLSL: `solidShape(cell)` (0 empty, 255 whole block, else the 3D layer's shape byte), `groundAt(xy)` and
@@ -83,6 +86,7 @@ float groundAt(vec2 p){
   return texture(uGround, (g + 0.5) / ${S + 1}.0).r + float(uSolid0.z); // one filtered fetch: heights are kept relative to the field
 }
 float shadowRay(vec3 o, vec3 d, float len, int steps, bool sprites, int self){
+  if (uFrameN > 0 && frameBlocks(o, d, len)) return 0.0; // a moving frame (an airship) in the way
   ivec3 cell = ivec3(floor(o)); vec3 st = sign(d); vec3 ad = max(abs(d), vec3(1e-5));
   vec3 tMax = (st * (vec3(cell) + 0.5 - o) + 0.5) / ad; vec3 tDelta = 1.0 / ad; float t = 0.0; vec3 e = o + d * len;
   bool newCol = true;
@@ -115,8 +119,10 @@ export class GpuSolid {
   private oz = NaN;
   private version = -1;
   private frame = 0;
+  private readonly frames: GpuFrameShade;
 
   constructor(private readonly gl: WebGL2RenderingContext) {
+    this.frames = new GpuFrameShade(gl);
     this.solid = gl.createTexture() as WebGLTexture;
     gl.bindTexture(gl.TEXTURE_3D, this.solid);
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -132,7 +138,8 @@ export class GpuSolid {
     this.shapes = makeShapeTextures(gl);
   }
 
-  update(eye: { x: number; y: number; z: number }, tiles: ReadonlyTiles, vol: ReadonlyVolume): void {
+  update(eye: { x: number; y: number; z: number }, tiles: ReadonlyTiles, vol: ReadonlyVolume, frames: readonly VolumeFrame[] = []): void {
+    this.frames.update(eye, vol, frames);
     const st = GPU_SOLID.step;
     const ox = Math.floor(eye.x / st) * st - S / 2;
     const oy = Math.floor(eye.y / st) * st - S / 2;
@@ -193,6 +200,11 @@ export class GpuSolid {
         cells[(z * S + j) * S + i] = (byte & 63) === SHAPE_CUBE || ((byte & 63) === SHAPE_FINE && fineFill(vol, i + ox, j + oy, z + oz) >= 4) ? 255 : (byte & 63) === SHAPE_FINE ? 0 : byte;
       }
     }
+  }
+
+  /** Binds the moving frames' cells (FRAME_SHADER, part of SOLID_UNIFORMS) on one more texture unit. */
+  bindFrames(p: WebGLProgram, unit: number): void {
+    this.frames.bind(p, unit);
   }
 
   /** Corner of the field (whole metres). */

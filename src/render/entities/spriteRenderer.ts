@@ -122,12 +122,27 @@ export class SpriteRenderer {
         else if (st.tint) tint = st.tint;
       }
       this.add(x, y, z - sink, s, p, facing, glow, flash, scale, tint, 1, colours);
+      if (e.tether?.top) this.chain(e.tether.top, x, y, z, p);
     }
     // Flora last: when a dense forest passes the GPU's billboard cap, trees drop out, never creatures or items.
     this.flora.each(tiles, p.cam.x, p.cam.y, p.FX, p.FY, p.RX, p.RY, (t, fade, burning) => {
       this.add(t.x, t.y, t.z, t.sprite, p, false, burning ? 0.3 : 0, 0, t.scale, t.tint, fade, t.colours);
     });
     return this.list;
+  }
+
+  /** A chain from its tie aboard down to the ring of the thing at (x, y, z): links every 0.15 m, sagging a little when slack. */
+  private chain(top: { x: number; y: number; z: number }, x: number, y: number, z: number, p: Projection): void {
+    const link = this.art.still('chainLink');
+    if (!link) return;
+    const bz = z + 0.5;
+    const len = Math.hypot(x - top.x, y - top.y, bz - top.z);
+    const n = Math.min(400, Math.ceil(len / 0.15));
+    const sag = Math.min(1.5, Math.hypot(x - top.x, y - top.y) * 0.04);
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      this.add(top.x + (x - top.x) * t, top.y + (y - top.y) * t, top.z + (bz - top.z) * t - sag * 4 * t * (1 - t) - 0.08, link.sprite, p, false, 0, 0, 1, null, 1, link.colours);
+    }
   }
 
   /** Loose items (painted from their definitions), or the missing-picture checks for an unknown sprite name. */

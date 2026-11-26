@@ -215,9 +215,32 @@ export const THINGS: Record<ThingId, ThingDef> = {
     store: { slots: 24 },
     sprite: 'chest',
   },
+  shipLamp: {
+    name: 'ship\'s lantern',
+    body: { radius: 0.15, height: 0.5, mass: 3, solid: false, anchored: true },
+    material: 'metal',
+    light: { r: 1, g: 0.72, b: 0.38, radius: 8, flicker: 0.12 },
+    sprite: 'shipLamp',
+  },
+  windsock: {
+    name: 'windsock',
+    body: { radius: 0.2, height: 2.4, mass: 4, solid: false, anchored: true },
+    material: 'cloth',
+    vane: true,
+    sprite: 'windsock',
+  },
+  shipAnchor: {
+    name: 'anchor',
+    body: { radius: 0.4, height: 0.9, mass: 55, solid: false },
+    material: 'metal',
+    // Carry it (G) and throw it over the side: lying on the ground it holds the ship; its chain can be climbed.
+    carry: true,
+    chain: 40,
+    sprite: 'shipAnchor',
+  },
   launchPlank: {
     name: 'plank',
-    body: { radius: 2.2, height: 0.1, mass: 80, solid: false, anchored: true },
+    body: { radius: 1.6, height: 0.1, mass: 80, solid: false, anchored: true },
     material: 'wood',
     // Jump from it to be flung out along it and up (open a glider to sail down).
     onJump: [{ type: 'push', force: 70, lift: 9 }],

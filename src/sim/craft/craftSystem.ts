@@ -4,6 +4,7 @@ import { bagOf, countItem, removeItem } from '../../types';
 import { itemDef, thingDef } from '../../content';
 import { aboard, craftMotion } from './craftMotion';
 import { buildCraft } from './craftBuild';
+import { holdChains } from './tether';
 
 /**
  * A craft (the airship) flies from whatever its stations say: each station writes one named channel, the craft's
@@ -35,6 +36,7 @@ export const craftSystem: SimSystem = (ctx: SimContext) => {
     const cd = e.craft && !e.dead ? thingDef(content, e.def).craft : undefined;
     if (cd) fly(ctx, e, cd, dt);
   }
+  holdChains(ctx);
   craftMotion(ctx);
 };
 
@@ -147,7 +149,8 @@ function fly(ctx: SimContext, e: Entity, cd: CraftDef, dt: number): void {
   const moored = e.z <= rest + 0.05;
   const thin = Math.max(0, Math.min(1, (e.z - cd.air.base) / cd.air.span));
   const speed = cd.thrust.speed * (1 + thin * cd.air.speed);
-  const drift = moored ? 0 : cd.wind * (1 - thin * cd.air.calm);
+  // Answering a call it flies straight in, the wind ignored, until it touches down.
+  const drift = moored || c.goal ? 0 : cd.wind * (1 - thin * cd.air.calm);
   const w = state.weather.wind;
   // Resting on the ground it drags to a stop.
   const k = Math.min(1, (moored ? 4 : 1) * cd.thrust.accel * dt);

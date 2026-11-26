@@ -163,6 +163,10 @@ export interface ThingDef {
   station?: StationDef;
   /** Keeps items put into it (E opens it beside the bag). */
   store?: { slots: number };
+  /** Its chain's greatest length when fitted with a `tie` (an anchor): a chain you can climb. */
+  chain?: number;
+  /** Fitted aboard, it turns to point downwind (a windsock). */
+  vane?: boolean;
   /** Effects on whoever jumps while standing on it (a launching plank), pushed away from it. */
   onJump?: Effect[];
   light?: LightDef;

@@ -24,6 +24,10 @@ export interface Fitting {
   face?: number;
   /** A station's channel when the craft is made (fuel in a tank). */
   fill?: number;
+  /** Not fixed in place: it lies where it is put and can be carried off (an anchor). */
+  loose?: boolean;
+  /** Tied by its chain (`ThingDef.chain` long) to this point aboard, in craft metres. */
+  tie?: readonly [number, number, number];
 }
 
 /**
@@ -89,6 +93,16 @@ export interface RideData {
   y: number;
   z: number;
   face: number;
+}
+
+/** A chain from a thing to a point aboard a craft: at most `len` long. `top` is where that point is in the world now (set each tick). */
+export interface TetherData {
+  craft: number;
+  x: number;
+  y: number;
+  z: number;
+  len: number;
+  top?: { x: number; y: number; z: number };
 }
 
 /** A station's control: the channel's value (-1..1 for levers, fuel seconds for a tank) and who works it. */

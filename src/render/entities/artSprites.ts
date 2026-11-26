@@ -54,6 +54,7 @@ interface Tracked {
 export class ArtSprites {
   private banks = new Map<string, ArtBank>();
   private tracked = new Map<number, Tracked>();
+  private stills = new Map<ArtId, Uint32Array>();
   private lastPrune = 0;
   /** When each thrower let go (NaN until its next picture takes the time). */
   private throws = new Map<number, number>();
@@ -61,6 +62,23 @@ export class ArtSprites {
   /** Someone let an item go (the 'thrown' event): they play the throw from its release. */
   thrown(id: number): void {
     this.throws.set(id, NaN);
+  }
+
+  /** One still picture of a recipe that looks the same from every side (a chain link), in its own colours. */
+  still(id: ArtId): { sprite: Sprite; colours: Uint32Array } | null {
+    const def = CONTENT.art[id];
+    if (!def) return null;
+    let bank = this.banks.get(`still|${id}`);
+    if (!bank) {
+      bank = new ArtBank(assemble(id, def, 0), 1, itemCard);
+      this.banks.set(`still|${id}`, bank);
+    }
+    let colours = this.stills.get(id);
+    if (!colours) {
+      colours = artColours(def, 7);
+      this.stills.set(id, colours);
+    }
+    return { sprite: bank.sprite('idle', 0, 0), colours };
   }
 
   /** Its picture seen by camera `p`, or turned to side `p.dir` (a portrait, like the paperdoll's). */
