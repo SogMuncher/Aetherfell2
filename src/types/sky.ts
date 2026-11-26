@@ -68,9 +68,10 @@ export interface SkyDef {
    * cells twice as wide (the next level; each level dithers into the next over a whole doubling of distance); `ext`: how much a metre of full-density air hides (per metre); `budget`: cells
    * filled per frame; `refresh`: seconds before the finest level is refilled for a change of weather (level k waits
    * (k + 1) times as long), and only when some layer's cover (or the rain) moved by more than `change`; a rebuilt level
-   * dithers in over `blend` seconds. Moving only fills the cells that came into reach.
+   * dithers in over `blend` seconds (every change of a level: new cells fade in over the coarser level beneath them).
+   * Moving only fills the cells that came into reach; while a level lags the eye it gets `rush` × the budget.
    */
-  air: { cell: number; count: number; tall: number; lod: number; ext: number; budget: number; refresh: number; change: number; blend: number };
+  air: { cell: number; count: number; tall: number; lod: number; ext: number; budget: number; rush: number; refresh: number; change: number; blend: number };
   /**
    * Smoke: a live level of air cells (`cell` wide, `count` × `count` × `tall`, round the eye) that burning stuff puts
    * smoke into (matter state look `smoke`). Every `step` seconds smoke rises (`rise` m/s), spreads to its sides

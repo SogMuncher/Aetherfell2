@@ -32,15 +32,17 @@ uniform vec4 uP[${nl}]; // the level's previous build, the same way, while it fa
 uniform float uB[${nl}]; // how far each level has faded from its previous build to its new one (0..1)
 const int N = ${n}; const int T = ${tall}; const float CUT = 0.08; const float BAYER[16] = float[16](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0); const int SN = ${sn}; const int ST = ${st};
 // Density and brightness of the cell holding p (drifting frame) at level k, or at the first coarser level holding it.
-// A rebuilt level dithers in over its previous build (per pixel, by dith), so a rebuild never pops.
+// Every new build of a level dithers in over its previous build (per pixel, by dith); where the previous build did not
+// reach, over the coarser level beneath, so no change of detail ever pops.
 vec2 airAt(vec3 p, int k, float dith, out vec3 c){
   for (; k < ${nl}; k++){
     float w = uCell * exp2(float(k)); c = vec3(w, w, min(w, uCapZ));
     ivec3 g = ivec3(floor(p / c));
     vec4 W = uW[k]; vec4 P = uP[k];
-    if (P.w > 0.5 && dith >= uB[k]){
+    if (dith >= uB[k]){
       ivec3 r = g - ivec3(P.xyz);
-      if (r.x >= 0 && r.y >= 0 && r.z >= 0 && r.x < N && r.y < N && r.z < T) W = P;
+      if (P.w < 0.5 || r.x < 0 || r.y < 0 || r.z < 0 || r.x >= N || r.y >= N || r.z >= T) continue;
+      W = P;
     }
     if (W.w < 0.5) continue;
     ivec3 r = g - ivec3(W.xyz);
@@ -152,6 +154,8 @@ export class GpuClouds {
   private readonly prev: Float32Array;
   private readonly blend: Float32Array;
   private readonly since: Float64Array;
+  /** When the first air arrived (it shows at once). */
+  private first: number | undefined;
   private readonly lo: number;
   private readonly hi: number;
   private readonly capZ: number;
@@ -204,9 +208,11 @@ export class GpuClouds {
         gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, i * n, 0, (slot - 1) * this.air.tall, n, n, this.air.tall, gl.RG, gl.UNSIGNED_BYTE, lv.data);
         this.prev.set(this.win.subarray(i * 4, i * 4 + 4), i * 4);
         this.win.set([lv.ox, lv.oy, lv.oz, slot], i * 4);
+        this.first ??= time;
         this.since[i] = time;
       }
-      this.blend[i] = (this.prev[i * 4 + 3] ?? 0) > 0 ? Math.min(1, (time - (this.since[i] ?? 0)) / CONTENT.sky.air.blend) : 1;
+      // The very first air of all shows at once (nothing to fade from); every later build fades in.
+      this.blend[i] = this.since[i] === this.first ? 1 : Math.min(1, (time - (this.since[i] ?? 0)) / CONTENT.sky.air.blend);
     });
     const sm = this.smoke;
     if (sm.version !== this.smokeVersion && Number.isFinite(sm.ox)) {
