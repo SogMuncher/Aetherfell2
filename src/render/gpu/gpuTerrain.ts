@@ -79,7 +79,7 @@ void main(){
     float glint = d < 900.0 && h2(floor(vPos.xy * 0.5 + vec2(floor(uTime * 2.0), 0.0))) > 0.992 ? (1.4 * uDay + 0.3) * 0.31 : 0.0;
     base = base * 0.75 + uHorizon * 0.25 + glint; // a quarter sky, lit like the ground
   } else if (vA > 0.0) emit += vec3(0.9, 0.38, 0.09) * vA * 2.0 * (0.75 + 0.25 * sin(uTime * 9.0 + vPos.x * 0.7 + vPos.y * 0.3));
-  surfaceOut(base, n, 1.0);
+  surfaceOut(base, n, 1.0, surfShine);
   float f = min(0.97, 1.0 - exp(-d / uFogDist));
   o = vec4(emit * (1.0 - f) + uFog * f, 1.0);
 }`;

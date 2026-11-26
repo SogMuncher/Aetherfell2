@@ -28,6 +28,7 @@ export const SURFACES: Record<string, SurfaceDef> = {
   },
   water: {
     base: [34, 82, 112],
+    shine: 0.6,
     layers: [{ kind: 'waves', freq: 0.39, warp: { salt: 5, cells: 2, amount: 10 }, amount: [18, 24, 26] }],
   },
   sedge: {
@@ -145,6 +146,7 @@ export const SURFACES: Record<string, SurfaceDef> = {
   },
   ice: {
     base: [150, 196, 222],
+    shine: 0.45,
     layers: [
       { kind: 'grain', salt: 23, amount: [26, 22, 16] },
       { kind: 'waves', freq: 0.45, tilt: 0.12, warp: { salt: 24, cells: 3, amount: 14 }, amount: [50, 50, 25], line: 0.06 },
@@ -225,6 +227,7 @@ export const SURFACES: Record<string, SurfaceDef> = {
   // Dressed slate roofing: overlapping rows.
   slate: {
     base: [78, 86, 98],
+    shine: 0.12,
     layers: [
       { kind: 'bricks', w: 8, h: 4, mortar: [40, 44, 52], salt: 45, vary: 22 },
       { kind: 'grain', salt: 46, amount: [16, 16, 20] },

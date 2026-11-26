@@ -18,7 +18,8 @@ import { GpuSpeedLines } from './gpuSpeedLines';
 import { GpuClouds } from './gpuClouds';
 import { GpuOverlay } from './gpuOverlay';
 import { GpuParticles } from './gpuParticles';
-import { GpuLight } from './gpuLight';
+import { GpuLight, type LightQuality } from './gpuLight';
+import { GpuReflect } from './gpuReflect';
 import { GpuSolid } from './gpuSolid';
 import { GpuCasters } from './gpuCasters';
 import { GpuFarShade } from './gpuFarShade';
@@ -51,8 +52,8 @@ export interface GpuFrame {
   /** Moving frames (airships) where they are drawn this frame (between ticks). */
   frames?: readonly VolumeFrame[];
   lightmap: LightMap;
-  /** Lights each pixel takes (setting). */
-  lightsPerPixel: number;
+  /** How the light pass works (Video settings). */
+  light: LightQuality;
   tiles: ReadonlyTiles;
   /** Burning ground spots (smoke sources; the 3D layer's are in `volume`). */
   burning: ReadonlySet<number>;
@@ -81,6 +82,7 @@ export class GpuRenderer {
   private readonly structures: GpuStructures;
   private readonly blocks: GpuTileBlocks;
   private readonly light: GpuLight;
+  private readonly reflect: GpuReflect;
   private readonly solid: GpuSolid;
   private readonly casters: GpuCasters;
   private readonly farShade: GpuFarShade;
@@ -106,6 +108,7 @@ export class GpuRenderer {
     this.gl = gl;
     const surf = makeSurfaceAtlas(gl);
     this.light = new GpuLight(gl);
+    this.reflect = new GpuReflect(gl);
     this.solid = new GpuSolid(gl);
     this.terrain = new GpuTerrain(gl, lod, tiles, surf);
     this.casters = new GpuCasters(gl);
@@ -177,8 +180,9 @@ export class GpuRenderer {
     this.casters.update(this.sprites.casters, this.solid.origin.x, this.solid.origin.y);
     // Every pixel's surface is known now: light all of them in one pass (sky, sun, lights, each with its shadow rays).
     const s = this.post.surfaceTextures;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.litTarget);
-    this.light.draw(cam, f.eye, f.env, f.lightsPerPixel, s.alb, s.nrm, this.post.depthTexture, this.solid, this.casters, this.farShade, w, h, NEAR, FAR);
+    this.light.draw(cam, f.eye, f.env, f.light, s.alb, s.nrm, this.post.depthTexture, this.post.litTarget, this.solid, this.casters, this.farShade, w, h, NEAR, FAR);
+    // Shiny surfaces (wet, ice, polished stuff) mirror the lit scene: from the screen or by a ray through the solid field.
+    if (f.light.reflections !== 'off') this.reflect.draw(f.light.reflections === 'traced', cam, vp, f.eye, f.env, s.alb, s.nrm, this.post.depthTexture, this.post.sceneTarget, this.post.litTarget, this.solid, this.casters, w, h, NEAR, FAR);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.sceneTarget);
     this.clouds.draw(cam, f.eye, f.env, f.weather, f.time, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR, { tiles: f.tiles, burning: f.burning, volume: f.volume });
     gl.viewport(0, 0, w, h);
@@ -186,7 +190,7 @@ export class GpuRenderer {
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;
     this.air.draw(vp, f.eye, air, f.time, 0.35 + 0.65 * f.env.day, f.env.open ? f.weather.wind : STILL);
     this.speedLines.draw(vp, f.eye, f.time, 0.35 + 0.65 * f.env.day);
-    this.fx.drawMotes(vp, cam, f.eye, f.env, f.motes, f.time, h);
+    this.fx.drawMotes(vp, cam, f.env, f.motes, f.time, h);
     this.fx.drawRain(f.env, w, h, f.windSide, f.time);
     const hand = this.overlay.begin(w, h);
     if (f.paintHand) {

@@ -154,7 +154,7 @@ void main(){
   // What has happened to this cell (the same matter states the sim's rules use), blended over its own surface.
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2((slot % 32) * 64 + (cell.z - origin.z & 3) * 16 + (cell.x - origin.x), (slot / 32) * 64 + ((cell.z - origin.z) >> 2) * 16 + (cell.y - origin.y)), suv, open ? uRainWet : 0.0, 0.75 + 0.25 * sin(uTime * 40.0 + float(cell.x) * 1.7 + float(cell.y) * 2.3 + float(cell.z)), glow);
-  surfaceOut(col, vec3(uTurn.x * n.x - uTurn.y * n.y, uTurn.y * n.x + uTurn.x * n.y, n.z), 1.0);
+  surfaceOut(col, vec3(uTurn.x * n.x - uTurn.y * n.y, uTurn.y * n.x + uTurn.x * n.y, n.z), 1.0, surfShine);
   float f = min(0.97, 1.0 - exp(-length(w - uEye) / uFogDist));
   o = vec4(col * glow * (1.0 - f) + uFog * f, 1.0);
   vec4 cp = uVP * vec4(w, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;

@@ -15,7 +15,7 @@ export { STATE_COUNT, STATE_LAYERS };
 export const STATE_SHADER = `
 #define STATES ${STATE_COUNT}
 uniform highp sampler2DArray uState;
-uniform vec3 uStShade[STATES]; uniform vec4 uStCover[STATES]; uniform int uStSurf[STATES]; uniform vec2 uStGlint[STATES]; uniform vec3 uStGlow[STATES]; uniform float uStRain[STATES];
+uniform vec3 uStShade[STATES]; uniform vec4 uStCover[STATES]; uniform int uStSurf[STATES]; uniform vec2 uStGlint[STATES]; uniform vec3 uStGlow[STATES]; uniform float uStRain[STATES]; uniform float uStShine[STATES];
 float stHash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 // Blends every state of the spot over its colour (uv = its surface coordinates, rain = how much rain falls on it) and adds the
 // light the states give off to glow (flick = flame flicker 0..1).
@@ -28,6 +28,7 @@ vec3 blendStates(vec3 col, ivec2 at, vec2 uv, float rain, float flick, inout vec
     if (uStCover[i].a > 0.0) col = mix(col, uStSurf[i] >= 0 ? surfIdx(${STATE_SURFACE_BASE} + uStSurf[i], uv) : uStCover[i].rgb, w * uStCover[i].a);
     if (speck > 1.0 - uStGlint[i].x) col += uStGlint[i].y * w;
     glow += uStGlow[i] * w * flick;
+    surfShine = max(surfShine, uStShine[i] * w);
   }
   return col;
 }`;
@@ -41,6 +42,7 @@ export function bindStateLooks(gl: WebGL2RenderingContext, p: WebGLProgram, unit
   gl.uniform2fv(loc(gl, p, 'uStGlint'), LOOKS.glint);
   gl.uniform3fv(loc(gl, p, 'uStGlow'), LOOKS.glow);
   gl.uniform1fv(loc(gl, p, 'uStRain'), LOOKS.rain);
+  gl.uniform1fv(loc(gl, p, 'uStShine'), LOOKS.shine);
 }
 
 /**

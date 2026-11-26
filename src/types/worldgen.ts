@@ -43,6 +43,8 @@ export interface SurfaceDef {
   readonly drift?: { readonly hue?: number; readonly sat?: number; readonly light?: number };
   /** Each placed cell turns and mirrors the whole picture at random (for looks with no direction: grass, rock, sand). */
   readonly spin?: boolean;
+  /** How much it mirrors its surroundings, 0..1 (ice, polished stone, metal); reflections read it. */
+  readonly shine?: number;
 }
 
 /** When a biome applies: first matching biome (in registry order) wins. Bounds are exclusive. */

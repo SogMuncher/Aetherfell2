@@ -5,6 +5,7 @@
  * builds itself from SETTINGS, so adding a setting is one entry here plus wherever it is used.
  */
 import { STYLES, STYLE_IDS } from '../audio/music';
+import { VIDEO_SETTINGS } from './videoSettings';
 
 export type SettingGroup = 'Sound' | 'Video' | 'Controls' | 'Game' | 'Co-op';
 export const SETTING_GROUPS: readonly SettingGroup[] = ['Sound', 'Video', 'Controls', 'Game', 'Co-op'];
@@ -33,6 +34,8 @@ export interface ChoiceSetting extends SettingBase {
   kind: 'choice';
   value: string;
   options: readonly { value: string; label: string }[];
+  /** A preset: choosing an option sets these other settings too; changing one of them by hand picks 'custom'. */
+  sets?: Readonly<Record<string, Readonly<Record<string, SettingValue>>>>;
 }
 export type SettingDef = SliderSetting | ToggleSetting | ChoiceSetting;
 export type SettingValue = number | boolean | string;
@@ -56,68 +59,7 @@ export const SETTINGS: readonly SettingDef[] = [
   },
   { id: 'muteInBackground', group: 'Sound', label: 'Quiet when in the background', help: 'Fades the sound out while you are in another window or tab.', kind: 'toggle', value: true },
 
-  // Video
-  {
-    id: 'resolution',
-    group: 'Video',
-    label: 'Pixel size',
-    help: 'Bigger pixels look chunkier and run faster.',
-    kind: 'choice',
-    value: '200',
-    options: [
-      { value: '150', label: 'Chunky' },
-      { value: '200', label: 'Classic' },
-      { value: '270', label: 'Fine' },
-      { value: '360', label: 'Very fine (slow)' },
-    ],
-  },
-  {
-    id: 'adaptive',
-    group: 'Video',
-    label: 'Keep it smooth',
-    help: 'Pixels grow chunkier by themselves when the game runs slower than this, and sharpen again when there is room.',
-    kind: 'choice',
-    value: '60',
-    options: [
-      { value: '0', label: 'Off' },
-      { value: '30', label: 'Aim for 30 fps' },
-      { value: '45', label: 'Aim for 45 fps' },
-      { value: '60', label: 'Aim for 60 fps' },
-    ],
-  },
-  { id: 'fieldOfView', group: 'Video', label: 'Field of view', help: 'How wide you see, top to bottom.', kind: 'slider', min: 45, max: 90, step: 1, value: 60, format: (v) => `${Math.round(v)}°` },
-  {
-    id: 'colours',
-    group: 'Video',
-    label: 'Colours',
-    help: 'Fewer colours give the dithered old-computer look.',
-    kind: 'choice',
-    value: '24',
-    options: [
-      { value: '12', label: 'Very retro' },
-      { value: '24', label: 'Retro' },
-      { value: '48', label: 'Rich' },
-      { value: '256', label: 'Smooth' },
-    ],
-  },
-  { id: 'screenShake', group: 'Video', label: 'Screen shake', help: 'The view jolts when you are hit or land hard.', kind: 'toggle', value: true },
-  { id: 'headBob', group: 'Video', label: 'Head bob', help: 'The view bobs a little as you walk.', kind: 'toggle', value: true },
-  { id: 'strafeTilt', group: 'Video', label: 'Strafe tilt', help: 'The view leans a little into the way you step sideways.', kind: 'toggle', value: true },
-  {
-    id: 'lightsPerPixel',
-    group: 'Video',
-    label: 'Lights per pixel',
-    help: 'How many nearby lights (torches, fires, spells) light and shadow each pixel. More is richer and slower.',
-    kind: 'choice',
-    value: '4',
-    options: [
-      { value: '2', label: '2' },
-      { value: '4', label: '4' },
-      { value: '8', label: '8' },
-    ],
-  },
-  { id: 'showFps', group: 'Video', label: 'Show frame rate and details', help: 'The same as pressing F3.', kind: 'toggle', value: false },
-
+  ...VIDEO_SETTINGS,
   // Controls
   { id: 'mouseSensitivity', group: 'Controls', label: 'Mouse sensitivity', kind: 'slider', min: 10, max: 300, step: 5, value: 100, format: pct },
   { id: 'invertMouse', group: 'Controls', label: 'Invert mouse up/down', kind: 'toggle', value: false },
@@ -198,8 +140,27 @@ export class SettingsStore {
     const next = fit(def, v);
     if (this.values.get(id) === next) return;
     this.values.set(id, next);
+    const changed = [id];
+    const preset = def.kind === 'choice' ? def.sets?.[String(next)] : undefined;
+    if (preset) {
+      for (const [k, pv] of Object.entries(preset)) {
+        const d = settingDef(k);
+        if (d) this.values.set(k, fit(d, pv));
+        changed.push(k);
+      }
+    } else {
+      // A setting a preset owns, changed by hand: that preset no longer holds.
+      for (const p of SETTINGS) {
+        if (p.kind !== 'choice' || !p.sets || p.id === id) continue;
+        const chosen = p.sets[this.str(p.id)];
+        if (chosen && id in chosen && chosen[id] !== next) {
+          this.values.set(p.id, 'custom');
+          changed.push(p.id);
+        }
+      }
+    }
     this.save();
-    for (const l of this.listeners) l(id);
+    for (const c of changed) for (const l of this.listeners) l(c);
   }
 
   /** Puts one group (or everything) back to how it started. */
