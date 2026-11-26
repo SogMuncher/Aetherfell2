@@ -4,7 +4,7 @@ import type { InputSnapshot, SwingDir, ThrowAim } from './input';
 import type { BehaviourKind, FactionId, ItemId, RoleId, RuneId, SpellId, StatusId, ThingId } from './defs';
 import type { PlayerCheats } from './cheats';
 import type { BodyRegionId } from './gear';
-import type { ControlData, CraftData, RideData } from './craft';
+import type { ControlData, CraftData, RideData, TetherData } from './craft';
 
 export type SkillId = 'blade' | 'evocation' | 'athletics' | 'speech';
 
@@ -121,6 +121,8 @@ export interface PlayerData {
   downed: number;
   /** Glider open. */
   gliding: boolean;
+  /** Holding on to a chain (an anchor's): no falling; forward climbs, back climbs down, jump lets go. */
+  climbing?: boolean;
   /** The station (entity id) this player is working: they stand at it and their movement keys work it. */
   station?: number | null;
   /** Debug cheats switched on (see content/cheats.ts). Absent = none. */
@@ -239,6 +241,8 @@ export interface Entity {
   aboard?: number;
   /** A station's control. */
   control?: ControlData;
+  /** Chained to a craft (its anchor): it can never be further than the chain from its tie, and resting it holds the craft. */
+  tether?: TetherData;
   /** What is kept in it (a hold, a chest you can fill). */
   stored?: ItemStack[];
 }

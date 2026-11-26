@@ -97,7 +97,10 @@ export function craftMotion(ctx: SimContext): void {
       o.pos.x = at.x;
       o.pos.y = at.y;
       o.z = e.z + o.ride.z;
-      o.angle = e.angle + o.ride.face;
+      // A vane (the windsock) points downwind; anything else faces the way it was set.
+      const w = state.weather.wind;
+      if (!thingDef(content, o.def).vane) o.angle = e.angle + o.ride.face;
+      else if (Math.hypot(w.x, w.y) > 0.2) o.angle = Math.atan2(w.y, w.x);
       o.vel.x = 0;
       o.vel.y = 0;
       o.vz = 0;

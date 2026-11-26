@@ -165,8 +165,8 @@ export const physicsSystem: SimSystem = (ctx: SimContext) => {
 
     // Vertical. Gliders sink slowly; the player system sets their fall speed.
     const floor = floorUnder(tiles, vol, e, d);
-    // Gliders and flyers (a debug cheat) steer their own climb and fall.
-    if (!e.player?.gliding && !e.player?.cheats?.fly) e.vz -= ctx.content.rules.gravity * dt;
+    // Gliders, climbers (on a chain) and flyers (a debug cheat) steer their own climb and fall.
+    if (!e.player?.gliding && !e.player?.climbing && !e.player?.cheats?.fly) e.vz -= ctx.content.rules.gravity * dt;
     e.z += e.vz * dt;
     if (e.vz > 0 && vol.bricks.size > 0) {
       // Heads bump on ceilings, rafters and the undersides of floors above.

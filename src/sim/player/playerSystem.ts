@@ -1,6 +1,7 @@
 import type { Entity, SimContext, SimSystem } from '../../types';
 import { GROUND_Z, bagOf, unpackSpot } from '../../types';
 import { composeSpell, isDisabled, moveFactor, stackWeight, thingDef, wornWeight } from '../../content';
+import { climbChain } from './climbing';
 
 const JUMP_SPEED = 7.2;
 const STRIDE = 1.7;
@@ -8,7 +9,7 @@ const STRIDE = 1.7;
 const AIR_CONTROL = 0.08;
 
 /**
- * First-person control: walking, sprinting, swimming, jumping, gliding, carrying and throwing,
+ * First-person control: walking, sprinting, swimming, jumping, gliding, climbing chains, carrying and throwing,
  * preparing a spell from the runebook, and poking at things (which becomes a use request for other systems).
  */
 export const playerSystem: SimSystem = (ctx: SimContext) => {
@@ -38,6 +39,7 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
       e.vel.x = 0;
       e.vel.y = 0;
       p.gliding = false;
+      p.climbing = false;
       p.downed--;
       if (p.downed === 0) wake(ctx, e);
       continue;
@@ -78,12 +80,15 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
 
     // Gliding: hold jump while falling to open the glider. Wind carries you; fires below lift you.
     const glide = gliderOf(ctx, bagOf(e));
-    const wantGlide = !!glide && !manning && input.jumpHeld && !a.onGround && !swimming && (p.gliding || e.vz < 0) && !isDisabled(content, e.status);
+    const climbing = !manning && climbChain(ctx, e, input, a.onGround, speed);
+    const wantGlide = !!glide && !manning && !climbing && input.jumpHeld && !a.onGround && !swimming && (p.gliding || e.vz < 0) && !isDisabled(content, e.status);
     if (wantGlide !== p.gliding) {
       p.gliding = wantGlide;
       ctx.emit({ type: 'glide', entity: e.id, open: wantGlide });
     }
-    if (p.gliding && glide) {
+    if (climbing) {
+      // On a chain: the climbing rules set the speed.
+    } else if (p.gliding && glide) {
       const w = state.weather.wind;
       const tx = cos * glide.speed * Math.max(0.35, 1 + input.forward * 0.4) + w.x * 0.8;
       const ty = sin * glide.speed * Math.max(0.35, 1 + input.forward * 0.4) + w.y * 0.8;

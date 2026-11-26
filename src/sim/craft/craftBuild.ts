@@ -4,6 +4,7 @@ import { shapeByte } from '../../types';
 import { shapeId } from '../../content/shapes';
 import { tileCode } from '../../content/tiles';
 import { thingDef } from '../../content';
+import { aboard } from './craftMotion';
 
 /** Builds a craft of this kind at a world spot, facing `yaw`. Its cells live at the dock (rules.crafts) and fly as one frame. */
 export function buildCraft(ctx: SimContext, thing: ThingId, x: number, y: number, z: number, yaw: number): Entity | null {
@@ -31,8 +32,11 @@ export function buildCraft(ctx: SimContext, thing: ThingId, x: number, y: number
     }
   }
   for (const f of cd.fittings) {
-    const o = ctx.spawn(f.thing, x, y, { z });
-    o.ride = { craft: e.id, x: f.at[0], y: f.at[1], z: f.at[2], face: f.face ?? 0 };
+    const at = aboard(e, cd, f.at[0], f.at[1]);
+    const o = ctx.spawn(f.thing, at.x, at.y, { z: z + f.at[2], prevZ: z + f.at[2], angle: yaw + (f.face ?? 0) });
+    // Loose things lie aboard and ride along like anyone on deck; the rest are fixed in place.
+    if (!f.loose) o.ride = { craft: e.id, x: f.at[0], y: f.at[1], z: f.at[2], face: f.face ?? 0 };
+    if (f.tie) o.tether = { craft: e.id, x: f.tie[0], y: f.tie[1], z: f.tie[2], len: thingDef(ctx.content, f.thing).chain ?? 10 };
     if (o.control && f.fill) o.control.v = f.fill;
   }
   return e;

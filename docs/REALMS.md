@@ -57,11 +57,18 @@
   (`ThingDef.station`) write a channel: E takes it, movement keys move it, it eases to the middle while manned, holds
   when left; `feed` stations take items (rune shard = 300 s, burnt only under power). No fuel: it sinks and moors.
   `ThingDef.store` = hold (shown as a bag, drag to and from your own), `onJump` = launching plank, item `calls` = sky horn.
+  Hull sweeps keep every cell with air even diagonally beside it, so shaped skin cells always have a block behind them
+  (`scripts/hullTight.ts` floods the real shapes and fails on any pinhole). A call ignores the wind until touchdown.
+  `Fitting.loose` = lies aboard and rides like anyone on deck (crates, barrels and lanterns are fixed fittings);
+  `Fitting.tie` + `ThingDef.chain` = a chained thing (the anchor, carried and thrown with G): `Entity.tether`,
+  `sim/craft/tether.ts` keeps it within the chain, a taut chain to one lying still holds the craft and swings its bow
+  round; climbing any hanging chain is `sim/player/climbing.ts` (forward climbs, looking down climbs down, jump lets go,
+  forward at the top steps onto a floor). `ThingDef.vane` = a fitting that points downwind (windsock).
 - `craftMotion` (host and a guest's foresight, `sim/foresight.ts`) moves the craft and carries every body inside its
   box (`Entity.aboard`): standing, on stairs, jumping, falling. Entering, a body's speed becomes relative to the craft;
   leaving (over the side, off the plank) it keeps the craft's speed. In the air bodies keep their momentum (air control
   only adds; knockback fades only on the ground). Fire on a ship's cells spreads: `matter.place` gives a spot's world
-  position, so it is never "far from everyone". Not yet: no sun shadow from the ship, view does not turn with it.
+  position, so it is never "far from everyone". Ships cast shadows (`render/gpu/gpuFrameShade.ts`). Not yet: view does not turn with it.
 
 ## Ruins
 Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with weighted `styles` (ring, street, cross, scatter) over decayed recipes
@@ -72,4 +79,4 @@ Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with 
 - New building: `structures` recipe. New shape: append to `shapeTable.ts` (never renumber). New door kind: a tile with `shape: 'door'` named in `materials.door`.
 
 ## Checks
-`scripts/volumeSmoke.ts`, `fineSmoke.ts`, `doorSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`.
+`scripts/volumeSmoke.ts`, `fineSmoke.ts`, `doorSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`, `shipSmoke.ts`.

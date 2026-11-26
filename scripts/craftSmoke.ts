@@ -39,6 +39,13 @@ check('its stations, hold and plank are fitted aboard', !!fit('altitudeLever') &
 const park = (z: number): void => {
   if (!ship.craft) return;
   ship.craft.goal = null;
+  // Whatever lies aboard (the anchor) moves with it.
+  for (const o of s.entities.values()) {
+    if (o.aboard !== ship.id) continue;
+    o.pos.x += me.pos.x - ship.pos.x;
+    o.pos.y += me.pos.y - ship.pos.y;
+    o.z += z - ship.z;
+  }
   ship.pos.x = me.pos.x;
   ship.pos.y = me.pos.y;
   ship.z = z;
@@ -73,15 +80,15 @@ check('stairs rise the right way (boarding stair, stern stair)', Math.abs(vol.fl
 
 // Down the hatch stair into the hold and back up: the deck above leaves head room all the way.
 const origin = aboard(ship, cd, 0, 0);
-stand(12.5, 7.75, 4.5);
-for (let i = 0; i < 60 && me.pos.x - origin.x < 16.8; i++) run(sim, 1, () => ({ forward: 1, yaw: 0 }));
+stand(16, 7.25, 4.5);
+for (let i = 0; i < 60 && me.pos.x - origin.x > 11.2; i++) run(sim, 1, () => ({ forward: 1, yaw: Math.PI }));
 run(sim, 10);
 const downAt = me.pos.x - origin.x;
-check('you can walk down the hatch stair into the hold', Math.abs(me.z - ship.z - 1.5) < 0.1 && downAt > 16.5, `at x ${downAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
-stand(17.5, 7.75, 1.5);
-for (let i = 0; i < 80 && me.pos.x - origin.x > 13; i++) run(sim, 1, () => ({ forward: 1, yaw: Math.PI }));
+check('you can walk down the hatch stair into the hold', Math.abs(me.z - ship.z - 1.5) < 0.1 && downAt < 11.5, `at x ${downAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
+stand(10.5, 7.25, 1.5);
+for (let i = 0; i < 80 && me.pos.x - origin.x < 15.8; i++) run(sim, 1, () => ({ forward: 1, yaw: 0 }));
 const upAt = me.pos.x - origin.x;
-check('and back up it onto the deck', Math.abs(me.z - ship.z - 4.5) < 0.1 && upAt < 13.5, `at x ${upAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
+check('and back up it onto the deck', Math.abs(me.z - ship.z - 4.5) < 0.1 && upAt > 15.5, `at x ${upAt.toFixed(1)}, ${(me.z - ship.z).toFixed(2)} m above the keel`);
 
 // Stations: E takes the wheel, keys move it, it eases back while manned and holds once you leave.
 const use = (t: Entity): void => {
@@ -178,11 +185,11 @@ run(sim, 1);
 check('E at the tank feeds it one shard: five minutes of flight', (tank.control?.v ?? 0) === 300 && countItem(bag(), 'runeShard') === 1);
 
 // The plank flings a jumper out and up.
-stand(11.75, 13, 4.5);
+stand(12, 12.5, 4.5);
 run(sim, 3);
 run(sim, 1, () => ({ jump: true }));
 run(sim, 1);
-const out = aboard(ship, cd, 11.75, 30);
+const out = aboard(ship, cd, 12, 30);
 const away = (me.kb?.x ?? 0) * (out.x - me.pos.x) + (me.kb?.y ?? 0) * (out.y - me.pos.y);
 check('jumping from the plank launches you out and up', me.vz > 7.5 && away > 0, `vz ${me.vz.toFixed(1)}`);
 const p0 = { x: me.pos.x, y: me.pos.y };
@@ -190,7 +197,7 @@ run(sim, 20);
 check('and you keep flying out (no sudden stop in the air)', Math.hypot(me.pos.x - p0.x, me.pos.y - p0.y) > 10, `${Math.hypot(me.pos.x - p0.x, me.pos.y - p0.y).toFixed(1)} m in a second`);
 
 // The hold keeps what you put in it.
-stand(17.5, 5, 1.5);
+stand(10, 5.4, 1.5);
 run(sim, 20);
 const hold = fit('shipHold');
 use(hold);

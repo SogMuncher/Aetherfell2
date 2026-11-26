@@ -9,7 +9,8 @@ export interface Sweep {
   solid: Inside;
   /** Which cells to keep, given the cell's centre and whether it touches the open air (the shell always shows). */
   keep: (x: number, y: number, z: number, edge: boolean) => boolean;
-  mat: string;
+  /** Tile kind of every cell, or of each cell by where it is. */
+  mat: string | ((x: number, y: number, z: number) => string);
   /** The box to sweep (metres, on the half-metre grid). */
   from: readonly [number, number, number];
   to: readonly [number, number, number];
@@ -36,10 +37,13 @@ export function sweep(s: Sweep): HullBox[] {
         const sy = air(0, 1, 0) === air(0, -1, 0) ? 0 : air(0, 1, 0) ? 1 : -1;
         const up = air(0, 0, 1);
         const down = air(0, 0, -1);
-        const edge = up || down || air(1, 0, 0) || air(-1, 0, 0) || air(0, 1, 0) || air(0, -1, 0);
+        // Open air even only across an edge or a corner keeps the cell: the shaped cells of the skin then always have a
+        // block behind them, so their cut-away corners never open onto a hollow inside (no pinholes in a curved hull).
+        let edge = false;
+        for (let dx = -1; dx <= 1 && !edge; dx++) for (let dy = -1; dy <= 1 && !edge; dy++) for (let dz = -1; dz <= 1 && !edge; dz++) edge = (dx !== 0 || dy !== 0 || dz !== 0) && air(dx, dy, dz);
         if (!s.keep(cx, cy, cz, edge)) continue;
         const [shape, rot] = pick(sx, sy, up, down);
-        out.push({ from: [x, y, z], to: [x + H, y + H, z + H], shape, rot, mat: s.mat, fine: true });
+        out.push({ from: [x, y, z], to: [x + H, y + H, z + H], shape, rot, mat: typeof s.mat === 'string' ? s.mat : s.mat(cx, cy, cz), fine: true });
       }
     }
   }

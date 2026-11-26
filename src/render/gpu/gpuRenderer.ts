@@ -156,7 +156,7 @@ export class GpuRenderer {
     const vp = viewProj(f.eye, cam, NEAR, FAR);
     this.terrain.update(f.eye.x, f.eye.y);
     this.light.upload(f.lightmap.lights, f.eye.x, f.eye.y);
-    this.solid.update(f.eye, f.tiles, f.volume);
+    this.solid.update(f.eye, f.tiles, f.volume, f.frames);
     this.post.begin(w, h);
     this.sky.draw(cam, f.eye, f.env, f.time);
     if (this.frames % 4 === 0) this.farShade.setClouds(f.shadow, f.shadowOn);
