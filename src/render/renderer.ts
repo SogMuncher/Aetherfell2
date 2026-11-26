@@ -7,7 +7,9 @@ import { CloudShadow } from './raycaster/cloudShadow';
 import { project } from './raycaster/camera';
 import type { Camera, Projection } from './raycaster/camera';
 import { SpriteRenderer } from './entities/spriteRenderer';
-import { ViewModel } from './entities/viewModel';
+import { ViewModel, type ViewFrame } from './entities/viewModel';
+import type { Surface } from './vfx/glow';
+import { ViewGlider } from './entities/viewGlider';
 import { Particles } from './vfx/particles';
 import { GpuRenderer } from './gpu/gpuRenderer';
 
@@ -40,6 +42,7 @@ export class Renderer {
   readonly particles = new Particles();
   private lightmap = new LightMap();
   private viewModel = new ViewModel();
+  private viewGlider = new ViewGlider();
   private gpu: GpuRenderer | null = null;
   /** WebGL2 could not start: nothing can be drawn (said once in the console). */
   private gpuFailed = false;
@@ -168,10 +171,16 @@ export class Renderer {
     const wind = state.weather.wind;
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.paintView(s, me, env, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;
+  }
+
+  /** Your own hands in the view: the held item, and over it the glider while it is open. */
+  private paintView(s: Surface, me: Entity, env: Env, v: ViewFrame): void {
+    this.viewModel.draw(s, me, env, this.lightmap, v);
+    this.viewGlider.draw(s, me, env, this.lightmap, v);
   }
 }
 

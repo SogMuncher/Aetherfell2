@@ -3,6 +3,7 @@ import { CONTENT, heldLight, itemDef, spellFor, thingDef } from '../../content';
 import type { Env } from '../lighting';
 import { emitFire, type FireSink } from './fireEmitter';
 import { emitThings, type MoteSink } from './thingEmitters';
+import { emitGlideTrails } from './glideTrails';
 import { spellBurst, spellCone, spellHand, spellNova, spellTrail, spellWard, type SpellSink } from './spellEmitters';
 import { KINDS, type KindMote, MAX, type Particle, TAU, fx } from './particleKinds';
 import { TILES } from '../../content/tiles';
@@ -220,6 +221,7 @@ export class Particles implements FireSink, MoteSink, SpellSink {
   emit(state: SimState, tiles: ReadonlyTiles, camX: number, camY: number, dt: number, env: Env): void {
     emitFire(this, state, tiles, camX, camY, dt);
     emitThings(this, state, camX, camY, dt);
+    emitGlideTrails(this, state, camX, camY);
     // Rain splashes on the ground around the eye.
     if (env.rain > 0.05) {
       const count = env.rain * 60 * dt * 20;

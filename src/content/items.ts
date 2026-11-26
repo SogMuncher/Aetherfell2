@@ -1,6 +1,9 @@
 import type { ItemDef, ItemId, ItemStack, RuneId, WeaponStats } from '../types';
 import { RUNES } from './runes';
 
+/** Gliders are worn on the back: they turn nothing aside, it is just where they go. */
+const BACK = { region: 'back', armor: 0, resist: {} };
+
 function weapon(name: string, p: Partial<WeaponStats> & Pick<WeaponStats, 'damage' | 'kind' | 'reach'>): WeaponStats {
   return { name, speed: 1, push: 1, tint: { r: 180, g: 186, b: 196 }, ...p };
 }
@@ -75,11 +78,11 @@ export const ITEMS: Record<ItemId, ItemDef> = {
       effects: [{ type: 'heat', amount: 1 }, { type: 'damage', amount: 2, kind: 'fire' }],
     }),
   },
-  // Gliders, worst to best: the cloth decides how they fly (`GlideDef`). Burlap only slows your fall; wyvern hide soars.
-  burlapGlider: { name: 'Burlap glider', category: 'tool', material: 'cloth', weight: 2.5, value: 25, tint: 0x9a8058, glide: { sink: 2.4, speed: 6.5, soar: 0, drag: 1, top: 8, grip: 0.05 } },
-  glider: { name: 'Sailcloth glider', category: 'tool', material: 'cloth', weight: 2, value: 60, tint: 0xd8c8a0, glide: { sink: 1.7, speed: 8.5, soar: 0.3, drag: 0.8, top: 16, grip: 0.07 } },
-  silkGlider: { name: 'Silk glider', category: 'tool', material: 'cloth', weight: 1.2, value: 150, tint: 0xe8d8f0, glide: { sink: 1.3, speed: 11, soar: 0.65, drag: 0.4, top: 28, grip: 0.12 } },
-  wyvernGlider: { name: 'Wyvern-hide glider', category: 'tool', weight: 1.8, value: 340, tint: 0x5a7860, glide: { sink: 0.9, speed: 14, soar: 1, drag: 0.12, top: 46, grip: 0.22 } },
+  // Gliders, worst to best: worn on the back, the cloth decides how they fly (`GlideDef`). Burlap only slows your fall; wyvern hide soars.
+  burlapGlider: { name: 'Burlap glider', category: 'tool', material: 'cloth', weight: 2.5, value: 25, tint: 0x9a8058, armour: BACK, glide: { sink: 2.4, speed: 6.5, soar: 0, drag: 1, top: 8, grip: 0.05, trail: 'glideTrail' } },
+  glider: { name: 'Sailcloth glider', category: 'tool', material: 'cloth', weight: 2, value: 60, tint: 0xd8c8a0, armour: BACK, glide: { sink: 1.7, speed: 8.5, soar: 0.3, drag: 0.8, top: 16, grip: 0.07, trail: 'glideTrail' } },
+  silkGlider: { name: 'Silk glider', category: 'tool', material: 'cloth', weight: 1.2, value: 150, tint: 0xe8d8f0, armour: BACK, glide: { sink: 1.3, speed: 11, soar: 0.65, drag: 0.4, top: 28, grip: 0.12, trail: 'glideTrail' } },
+  wyvernGlider: { name: 'Wyvern-hide glider', category: 'tool', weight: 1.8, value: 340, tint: 0x5a7860, armour: BACK, glide: { sink: 0.9, speed: 14, soar: 1, drag: 0.12, top: 46, grip: 0.22, trail: 'glideTrail' } },
   ruinKey: { name: 'Ruin key', category: 'key', weight: 0.1, value: 0, tint: 0x60e0d0 },
   wolfPelt: { name: 'Wolf pelt', category: 'material', weight: 1.5, value: 9, tint: 0x6a6a70 },
   runeShard: { name: 'Rune shard', category: 'material', weight: 0.1, value: 30, tint: 0x60e0d0 },
