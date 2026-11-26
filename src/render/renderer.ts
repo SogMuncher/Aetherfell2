@@ -1,5 +1,5 @@
 import type { Entity, ReadonlyTiles, SimEvent, SimState, VolumeFrame, WorldSampler } from '../types';
-import { computeEnv, LightMap, lerp } from './lighting';
+import { computeEnv, LightMap, lerp, poseBetween } from './lighting';
 import type { Env } from './lighting';
 import { Viewport } from './viewport';
 import { TerrainLod } from './raycaster/terrainLod';
@@ -155,8 +155,11 @@ export class Renderer {
       return false;
     }
     this.lod.beginFrame(7);
-    this.lightmap.build(state, tiles, cx, cy, this.time, f.alpha);
-    const billboards = this.sprites.collect(p, state, tiles, f.localId, f.alpha, this.time, this.hitFlash);
+    // What a guest foresees itself (its own traveller, crafts and what is fixed aboard them) moves every tick, so it is drawn
+    // by the time since that tick, like the view; the rest by the time since the host's last update. One on the host.
+    const alphaOf = (e: Entity): number => (e.id === f.localId || e.craft || e.ride || (me?.player?.holding ?? null) === e.id ? (f.selfAlpha ?? f.alpha) : f.alpha);
+    this.lightmap.build(state, tiles, cx, cy, this.time, alphaOf);
+    const billboards = this.sprites.collect(p, state, tiles, f.localId, alphaOf, this.time, this.hitFlash);
     const wl = tiles.waterLevel(cx, cy);
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
     this.shadow.update(state.weather, cx, cy);
@@ -165,7 +168,7 @@ export class Renderer {
     const wind = state.weather.wind;
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, f.alpha), lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, lightsPerPixel: this.options.lights, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.viewModel.draw(s, me, env, this.lightmap, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time }) : null, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;
@@ -173,7 +176,7 @@ export class Renderer {
 }
 
 /** Moving frames (airships) where they are between two ticks, from their owners' last two places. */
-function framesBetween(state: SimState, a: number): VolumeFrame[] {
+function framesBetween(state: SimState, alphaOf: (e: Entity) => number): VolumeFrame[] {
   const out: VolumeFrame[] = [];
   for (const f of state.volume.frames.values()) {
     const e = state.entities.get(f.id);
@@ -181,8 +184,8 @@ function framesBetween(state: SimState, a: number): VolumeFrame[] {
       out.push(f);
       continue;
     }
-    const turn = Math.atan2(Math.sin(e.angle - e.craft.prevYaw), Math.cos(e.angle - e.craft.prevYaw));
-    out.push({ ...f, wx: lerp(e.prev.x, e.pos.x, a), wy: lerp(e.prev.y, e.pos.y, a), wz: lerp(e.prevZ, e.z, a), yaw: e.craft.prevYaw + turn * a });
+    const at = poseBetween(e, alphaOf(e));
+    out.push({ ...f, wx: at.x, wy: at.y, wz: at.z, yaw: at.yaw });
   }
   return out;
 }

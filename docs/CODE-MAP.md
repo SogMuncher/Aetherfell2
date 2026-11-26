@@ -40,7 +40,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `fineSmoke.ts` (64) FINE CELLS: a 3D cell split into 2 x 2 x 2 half-metre cells; the shape palette, splitting, standing, saving, f
 - `doorSmoke.ts` (70) DOORS: one rule for a door tile on the ground and a door leaf in a wall of the 3D layer: open, shut, burn, fre
 - `hullTight.ts` (74) Is a swept hull tight? Fills its fine cells' real shapes at an eighth of a metre and floods the outside air: n
-- `shipSmoke.ts` (239) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
+- `shipSmoke.ts` (282) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
 - `glideSmoke.ts` (62) GLIDERS: each cloth flies its own way (data): burlap only slows your fall, wyvern hide soars, dives and climbs
 
 ## src/audio/
@@ -135,7 +135,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `handling.ts` (87) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
 - `bodyPlans.ts` (172) Body plans as reusable parts (two legs, four legs, hopper, antlers): segmented limbs on joints, roles for body
 - `moves.ts` (78) Body moves seen from outside: how arms, torso, head (or a beast's neck) turn through each swing direction and
-- `crafts.ts` (160) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
+- `crafts.ts` (162) Crafts as data: the airship's hull (boxes of cells), what is fitted aboard, and how it flies
 - `shipProps.ts` (194) Airship fittings as art: the wheel, lever and aether tank, each in five pictures that show its state (gauge fr
 - `shapeTable.ts` (124) The shape palette of the 3D layer as data: every shape a cell (1 m) or a fine cell (half a metre) can take
 - `hullSweep.ts` (64) Curved hulls as fine cells: every half-metre cell inside a solid is kept where it shows, shaped by which sides
@@ -157,20 +157,20 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/render/
 - `color.ts` (50) packed pixel colour helpers
 - `env.ts` (144) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
-- `lighting.ts` (166) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); 1 m grid for the held item; re-exports Env
+- `lighting.ts` (136) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); lights the held item in 3D (`sample`); `poseBetween` = a craft drawn between ticks; re-exports Env
 - `airSmoke.ts` (170) smoke: the live level of the air cells; burning spots feed it, it rises, spreads and thins in steps
 - `airCells.ts` (228) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
 - `stateLooks.ts` (68) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
-- `renderer.ts` (188) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `renderer.ts` (191) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
 
 ## src/render/entities/
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
 - `bodyPaint.ts` (293) ray-intersect solids into colour-region pixels
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
-- `spriteRenderer.ts` (183) gathers billboards (trees, creatures, props, items) for the GPU
+- `spriteRenderer.ts` (197) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (270) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
@@ -239,7 +239,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `fireEmitter.ts` (47) Where fire's motes go: the particle system draws them from the palette in the fire rules.
 - `glow.ts` (86) Light painted straight over the frame: glows, lines, specks. Shared by the held item and its sparks.
 - `spellEmitters.ts` (161) Spell motes: the bloom of a bolt bursting, cones, novas, wards, the casting hand and a bolt's trail, all from
-- `thingEmitters.ts` (59) Motes things give off every frame: flames on what burns with firelight, smoke and trails, a held torch, burnin
+- `thingEmitters.ts` (60) Motes things give off every frame: flames on what burns with firelight, smoke and trails, a held torch, burnin
 
 ## src/settings/
 - `settings.ts` (222) settings as data + localStorage store
@@ -372,7 +372,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `world.ts` (70) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (202) surface, biome, water and world-generation defs
 - `art.ts` (203) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
-- `craft.ts` (112) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
+- `craft.ts` (114) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
 
 ## src/types/defs/
 - `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population
@@ -386,8 +386,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
 
 ## src/sim/craft/
-- `craftBuild.ts` (44) Makes a craft: its hull cells written into a quiet corner of the 3D layer and its fittings set aboard
-- `craftMotion.ts` (120) Moves every craft by its own speed and turn, carrying whoever stands on it, and keeps its frame in the 3D laye
-- `craftSystem.ts` (199) Crafts: stations taken and fed, horn calls answered, and flight worked out from the stations' channels, wind a
+- `craftBuild.ts` (45) Makes a craft: its hull cells written into a quiet corner of the 3D layer and its fittings set aboard
+- `craftMotion.ts` (124) Moves every craft by its own speed and turn, carrying whoever stands on it, and keeps its frame in the 3D laye
+- `craftSystem.ts` (218) Crafts: stations taken and fed, horn calls answered, and flight worked out from the stations' channels, wind a
 - `index.ts` (3) The craft system (airships): stations, calls, flight, and the motion shared with a guest's foresight
 - `tether.ts` (92) Chains from a loose thing to a point aboard a craft (the anchor's): never longer than the chain; lying still o

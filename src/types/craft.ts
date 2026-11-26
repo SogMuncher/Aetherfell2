@@ -35,8 +35,9 @@ export interface Fitting {
  * a new vehicle is new data. Speeds are metres (or radians) a second at full.
  */
 export interface CraftDef {
-  /** Box of cells it occupies (x, y, z), and the pivot it turns about (x, y). */
+  /** Box of cells it occupies, from `low` (x, y; default 0, 0, where something overhangs the keel's corner) to `size` (x, y, z), and the pivot it turns about (x, y). */
   size: readonly [number, number, number];
+  low?: readonly [number, number];
   pivot: readonly [number, number];
   hull: readonly HullBox[];
   fittings: readonly Fitting[];
@@ -47,8 +48,9 @@ export interface CraftDef {
   fuel: string;
   /** Sinks this fast with no fuel. */
   sink: number;
-  /** Share of the wind it drifts with while aloft. */
+  /** Share of the wind it drifts with while aloft. Within `still` m of where it would rest the wind leaves it be, and it takes its full share at twice that. */
   wind: number;
+  still: number;
   /** Thin air: from height `base` over `span` metres; at the top speed is × (1 + speed) and the wind × (1 - calm). Never climbs above `top`. */
   air: { base: number; span: number; speed: number; calm: number; top: number };
   /** Its keel stays this far above the ground; resting this low it is moored (the wind leaves it be). */

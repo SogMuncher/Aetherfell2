@@ -17,7 +17,7 @@ const MAIN = 4.5;
 const QUARTER = 7;
 const AFT = 6.5;
 /** The envelope: middle (x, z) and half-sizes. */
-const ENV = { x: 11, z: 16.5, rx: 11, ry: 5, rz: 4.5 };
+const ENV = { x: 12, z: 18, rx: 14.5, ry: 7, rz: 6 };
 /** A ship's lantern from its foot to the top of its hook (content/shipProps.ts), to hang it right under a beam. */
 const LAMP_TALL = 0.62;
 /** The rope ladder hangs just outside the widest beam of the port side. */
@@ -47,13 +47,13 @@ export const HULL_SWEEP: Sweep = {
   to: [L, 13, QUARTER + 1],
 };
 
-/** The gas envelope: a long sailcloth shell high over the deck. */
+/** The gas envelope: a sailcloth shell high over the deck, longer and wider than the hull (it overhangs bow, stern and both sides). */
 export const ENVELOPE_SWEEP: Sweep = {
   solid: inEnvelope,
   keep: (_x, _y, _z, edge) => edge,
   mat: 'sailcloth',
-  from: [0, 1, 11.5],
-  to: [L, 11.5, 21.5],
+  from: [-3, -1, 11.5],
+  to: [L + 5, 13.5, 24.5],
 };
 
 const box = (from: [number, number, number], to: [number, number, number], shape: string | null, mat?: string, rot?: number): HullBox => ({ from, to, shape, mat, rot, fine: true });
@@ -71,7 +71,7 @@ const stays = (x: number): HullBox[] =>
   [-1, 1].map((side) => {
     const y = edgeY(x, side);
     let z = top(x) + 1;
-    while (z < 22 && !inEnvelope(x + 0.25, y + 0.25, z + 0.25)) z += 0.5;
+    while (z < 24 && !inEnvelope(x + 0.25, y + 0.25, z + 0.25)) z += 0.5;
     return box([x, y, top(x) + 1], [x + 0.5, y + 0.5, z + 0.5], 'postThin', 'post');
   });
 
@@ -103,7 +103,8 @@ const goods: Fitting[] = ([
 ] as const).map(([thing, x, y, z]) => ({ thing, at: [x, y, z], face: x * 1.7, loose: true }));
 
 export const AIRSHIP: CraftDef = {
-  size: [24.5, 15, 22],
+  size: [27, 15, 25],
+  low: [-3, -1],
   pivot: [11, YC],
   hull: [
     ...sweep(HULL_SWEEP),
@@ -144,7 +145,7 @@ export const AIRSHIP: CraftDef = {
     { thing: 'launchPlank', at: [12, 12.5, MAIN], face: Q },
     // A rope ladder down the port side from the gap in the bulwark, long enough to reach the ground on a slope; the propeller astern, on a shaft from the stern post.
     { thing: 'ropeLadder', at: [10.25, LADDER_Y, -1.5], tie: [10.25, LADDER_Y + 0.15, MAIN + 0.3] },
-    { thing: 'shipPropeller', at: [-0.45, YC, 2.6] },
+    { thing: 'shipPropeller', at: [-0.7, YC, 1.4] },
     // The anchor lies loose on the foredeck, its chain made fast just past the end of the cathead (clear of it, so a climber's head does not hit it).
     { thing: 'shipAnchor', at: [18.4, YC + 1.2, MAIN], loose: true, tie: [19.25, 9.95, MAIN + 0.3] },
   ],
@@ -154,6 +155,7 @@ export const AIRSHIP: CraftDef = {
   fuel: 'fuel',
   sink: 0.8,
   wind: 0.7,
+  still: 4,
   air: { base: 40, span: 180, speed: 1.5, calm: 0.75, top: 260 },
   clearance: 0.3,
   called: { cruise: 30, near: 16 },

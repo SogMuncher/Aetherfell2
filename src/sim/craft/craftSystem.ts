@@ -122,18 +122,12 @@ function fly(ctx: SimContext, e: Entity, cd: CraftDef, dt: number): void {
   let turn = get(cd.turn.channel);
   let climb = get(cd.climb.channel);
 
-  // The ground under its four corners and middle, while anyone is near enough for it to be loaded.
+  // The highest ground anywhere under it, while anyone is near enough for it to be loaded.
   const near = Object.values(state.players).some((id) => {
     const p = state.entities.get(id);
     return !!p && Math.hypot(p.pos.x - e.pos.x, p.pos.y - e.pos.y) < content.rules.awake;
   });
-  let ground = -Infinity;
-  if (near) {
-    for (const [x, y] of [[0, 0], [cd.size[0], 0], [0, cd.size[1]], [cd.size[0], cd.size[1]], [cd.pivot[0], cd.pivot[1]]] as const) {
-      const at = aboard(e, cd, x, y);
-      ground = Math.max(ground, ctx.tiles.ground(at.x, at.y));
-    }
-  }
+  const ground = near ? groundUnder(ctx, e, cd, e.pos.x, e.pos.y, e.angle) : -Infinity;
   const rest = ground + cd.clearance;
 
   if (c.goal && powered) {
@@ -156,8 +150,9 @@ function fly(ctx: SimContext, e: Entity, cd: CraftDef, dt: number): void {
   const moored = e.z <= rest + 0.05;
   const thin = Math.max(0, Math.min(1, (e.z - cd.air.base) / cd.air.span));
   const speed = cd.thrust.speed * (1 + thin * cd.air.speed);
-  // Answering a call it flies straight in, the wind ignored, until it touches down.
-  const drift = moored || c.goal ? 0 : cd.wind * (1 - thin * cd.air.calm);
+  // Answering a call it flies straight in, the wind ignored, until it touches down. Low over the ground (landing, landed) the wind leaves it be.
+  const low = Math.max(0, Math.min(1, (e.z - rest - cd.still) / cd.still));
+  const drift = moored || c.goal ? 0 : cd.wind * (1 - thin * cd.air.calm) * low;
   const w = state.weather.wind;
   // Resting on the ground it drags to a stop.
   const k = Math.min(1, (moored ? 4 : 1) * cd.thrust.accel * dt);
@@ -165,8 +160,16 @@ function fly(ctx: SimContext, e: Entity, cd: CraftDef, dt: number): void {
   c.vel.y += (Math.sin(e.angle) * thrust * speed + w.y * drift - c.vel.y) * k;
   c.spin = turn * cd.turn.rate;
   c.vz = powered ? climb * cd.climb.rate : -cd.sink;
-  // Never into the ground, never above the top of the air.
-  if (e.z + c.vz * dt < rest) c.vz = Math.min(cd.climb.rate, (rest - e.z) / dt);
+  // Never into the ground, never above the top of the air: rising ground it cannot climb over in time stops it like a wall.
+  if (near && Number.isFinite(ground)) {
+    const ahead = groundUnder(ctx, e, cd, e.pos.x + c.vel.x * dt, e.pos.y + c.vel.y * dt, e.angle + c.spin * dt) + cd.clearance;
+    if (ahead > Math.max(rest, e.z) + cd.climb.rate * dt) {
+      c.vel.x = 0;
+      c.vel.y = 0;
+      c.spin = 0;
+    }
+  }
+  if (e.z + c.vz * dt < rest) c.vz = (rest - e.z) / dt;
   if (e.z + c.vz * dt > cd.air.top) c.vz = (cd.air.top - e.z) / dt;
 
   // Fuel burns while it flies under its own power.
@@ -179,6 +182,22 @@ function fly(ctx: SimContext, e: Entity, cd: CraftDef, dt: number): void {
       left -= take;
     }
   }
+}
+
+/** The highest ground under the craft's whole box (every 2 m across it), were it at (x, y) turned to `yaw`. */
+function groundUnder(ctx: SimContext, e: Entity, cd: CraftDef, x: number, y: number, yaw: number): number {
+  const at = { ...e, pos: { x, y }, angle: yaw };
+  const [x0, y0] = cd.low ?? [0, 0];
+  const nx = Math.ceil((cd.size[0] - x0) / 2);
+  const ny = Math.ceil((cd.size[1] - y0) / 2);
+  let g = -Infinity;
+  for (let i = 0; i <= nx; i++) {
+    for (let j = 0; j <= ny; j++) {
+      const p = aboard(at, cd, x0 + ((cd.size[0] - x0) * i) / nx, y0 + ((cd.size[1] - y0) * j) / ny);
+      g = Math.max(g, ctx.tiles.ground(p.x, p.y));
+    }
+  }
+  return g;
 }
 
 /** A manned lever follows its worker's keys and eases back to the middle when they let go; taking it over ends a call. */
