@@ -26,7 +26,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `volumeSmoke.ts` (295) The 3D layer: shapes, the brick store, standing on stairs and ramps, bumping heads, buildings
 - `waterSmoke.ts` (427) check: rivers, lakes, bridges, piers, harbours
 - `waysSmoke.ts` (205) WAYS: roads, paths and trails join the places of the world, and the underworld follows them.
-- `worldSmoke.ts` (257) Headless checks for data-driven world generation and the far-away terrain: biomes come from
+- `worldSmoke.ts` (260) Headless checks for data-driven world generation and the far-away terrain: biomes come from
 - `check.mjs` (78) One runner for every check, with short output (only failures + one summary line per script).
 - `codemap.mjs` (81) Keeps docs/CODE-MAP.md true by itself: refreshes every line count, adds new files (purpose taken
 - `senseSmoke.ts` (108) Checks: creatures see in 3D (height and line of sight), one "is it dark here" check, and what bodies stand in
@@ -188,7 +188,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/render/gpu/
 - `gpuRenderer.ts` (215) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
-- `gpuTerrain.ts` (274) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
+- `gpuTerrain.ts` (278) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (65) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
 - `gpuStructures.ts` (280) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
@@ -219,9 +219,10 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `camera.ts` (69) per-frame projection values
 - `cloudShadow.ts` (78) cloud shadows on the land
 - `lodLooks.ts` (57) far colours of biomes
-- `terrainLod.ts` (263) cached LOD pyramid for far land (C)
+- `terrainLod.ts` (187) cached LOD pyramid for far land (C)
 - `terrainLodPaint.ts` (184) paints changed chunks (tiles, matter states) over a LOD block's seed picture
 - `tileBillboards.ts` (169) tree/rock billboards from tiles
+- `terrainLodBuild.ts` (145) Builds one far-land block a row at a time (seed samples first, then colours), so a block never stalls a frame.
 
 ## src/render/ui/
 - `bag.ts` (289) BagWindow: draggable inventory window (C)
