@@ -51,6 +51,44 @@ export interface RoleDef {
   trade?: TradeDef;
   /** What people in this job wear (colours and features from their look). */
   dress?: DressDef;
+  /** Where they spend each part of the day (missing parts follow `rules.routine`). */
+  routine?: Routine;
+  /** What they say when asked about themselves. */
+  about?: string;
+}
+
+/** The four parts of the day (content/day.ts tells which it is). */
+export type DayPart = 'night' | 'morning' | 'afternoon' | 'evening';
+
+/**
+ * Where someone spends each part of the day, and where they shelter when it rains by day. Each is a
+ * list of place words; one is picked per person per day. A word is 'home', 'square' (the open
+ * middle of the place), 'edge' (out past the houses: fields, pastures) or a building recipe id
+ * ('tavern', 'smithy'...). A word the place has no spot for is skipped.
+ */
+export type Routine = Partial<Record<DayPart | 'rain', readonly string[]>>;
+
+/** The words of conversation: topic labels and answer templates (content/talk.ts). */
+export interface TalkDef {
+  /** Labels of the topics and menus. */
+  ask: { where: string; places: string; people: string; about: string; self: string; rumour: string; back: string; farewell: string };
+  /** Said when a menu of topics opens. */
+  prompt: string;
+  /** Where a place is: {what} {dir} {dist}. */
+  place: readonly string[];
+  /** Where a person is now: {name} {role} {at} {dir} {dist}. */
+  person: readonly string[];
+  /** Asked about themselves without an `about` line: {role}. */
+  self: string;
+  /** Asked where they themselves are. */
+  me: string;
+  /** How far, by the metres they are under (the last entry covers anything further). */
+  dist: readonly [number, string][];
+  /** Where someone is, by place word ('building' fills {what} with a building's name). */
+  at: { home: string; square: string; edge: string; building: string };
+  /** Below this feeling for the party, people will not give directions. */
+  refuseBelow: number;
+  refuse: readonly string[];
 }
 
 export interface FactionDef {

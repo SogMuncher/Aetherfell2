@@ -97,6 +97,8 @@ export class Simulation {
     const rng = makeRng(state);
     const spawn = (thing: ThingId, x: number, y: number, init?: SpawnInit): Entity => {
       const e = makeEntity(CONTENT, state.nextEntityId++, thing, x, y, init);
+      // Stand on the ground from the first tick (senses and path finding look from the feet), unless told a height.
+      if (init?.z === undefined) e.z = e.prevZ = this.tiles.ground(x, y);
       dress(CONTENT, e, rng);
       state.entities.set(e.id, e);
       return e;

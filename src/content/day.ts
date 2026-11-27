@@ -1,4 +1,5 @@
-import type { Content, DayRules, RealmId } from '../types';
+import type { Content, DayPart, DayRules, RealmId } from '../types';
+export type { DayPart };
 
 /**
  * The one day-and-night clock. Times are a share of the day: 0 is midnight, 0.25 six in the
@@ -6,7 +7,6 @@ import type { Content, DayRules, RealmId } from '../types';
  * auroras, greetings, the sun's path) asks here, so changing the hours in content/rules.ts
  * changes them everywhere at once.
  */
-export type DayPart = 'night' | 'morning' | 'afternoon' | 'evening';
 
 /** How high the sun stands, -1 (straight down) .. 1 (overhead). Above 0 it is up. */
 export function sunHeight(day: DayRules, time: number): number {

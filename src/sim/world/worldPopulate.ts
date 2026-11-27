@@ -1,5 +1,5 @@
 import { CHUNK_SIZE, type Entity, type Location, type Placement, type SimContext, type SpawnInit, type StructureReport, packKey } from '../../types';
-import type { SiteLayout } from './sites';
+import type { House, SiteLayout } from './sites';
 import { fillText, thingDef } from '../../content';
 import { hallsInChunk } from './underworld';
 
@@ -158,23 +158,28 @@ export function populate(ctx: SimContext, loc: Location, site: SiteLayout): void
   const roles = def.villagers ?? [];
   if (roles.length === 0) return;
   const names = ctx.content.villagerNames;
+  // Where each kind of building stands (outside its door), for giving directions; the nearest to the middle of each kind.
+  const sq = { x: site.square.x + 0.5, y: site.square.y + 0.5 };
+  const landmarks: Record<string, { x: number; y: number }> = { square: sq };
+  for (const h of site.houses) {
+    const at = { x: h.geometry.out.x + 0.5, y: h.geometry.out.y + 0.5 };
+    const was = landmarks[h.building];
+    if (!was || Math.hypot(at.x - sq.x, at.y - sq.y) < Math.hypot(was.x - sq.x, was.y - sq.y)) landmarks[h.building] = at;
+  }
+  loc.landmarks = landmarks;
   site.houses.forEach((h, idx) => {
     const role = roles[idx % roles.length] ?? 'farmer';
     const job = ctx.content.roles[role];
     const name = names[(loc.id * 7 + idx * 3) % names.length] ?? 'Nell';
     const g = h.geometry;
-    const home = g ? { x: g.home.x + 0.5, y: g.home.y + 0.5 } : { x: (h.x0 + h.x1) / 2 + 0.5, y: (h.y0 + h.y1) / 2 + 0.5 };
-    const door = g ? { out: { x: g.out.x + 0.5, y: g.out.y + 0.5 }, in: { x: g.in.x + 0.5, y: g.in.y + 0.5 }, room: g.interior } : undefined;
-    // Somewhere to spend the day in the open: not in the well, a tree or a wall, nor under a roof.
-    let work = { x: site.square.x + 0.5, y: site.square.y + 0.5 };
-    for (let tries = 0; tries < 16; tries++) {
-      const x = site.square.x + 0.5 + rng.range(-5, 5);
-      const y = site.square.y + 0.5 + rng.range(-5, 5);
-      const clear = [[0, 0], [0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8], [0.6, 0.6], [-0.6, 0.6], [0.6, -0.6], [-0.6, -0.6]].every(([dx, dy]) => !ctx.tiles.blocked(x + (dx ?? 0), y + (dy ?? 0)));
-      if (clear && state.volume.topAt(x, y) <= ctx.tiles.ground(x, y) + 0.05) {
-        work = { x, y };
-        break;
-      }
+    const home = { x: g.home.x + 0.5, y: g.home.y + 0.5 };
+    const door = { out: { x: g.out.x + 0.5, y: g.out.y + 0.5 }, in: { x: g.in.x + 0.5, y: g.in.y + 0.5 }, room: g.interior };
+    // Their own spot at every place their routine (or the shared one) names.
+    const haunts: Record<string, { x: number; y: number }> = { home };
+    const words = new Set([...Object.values(job?.routine ?? {}), ...Object.values(ctx.content.rules.routine)].flat());
+    for (const w of words) {
+      const spot = hauntSpot(ctx, site, w, home);
+      if (spot) haunts[w] = spot;
     }
     const stock = (job?.stock ?? []).map((st) => ({ ...st }));
     let questId: number | null = null;
@@ -196,8 +201,48 @@ export function populate(ctx: SimContext, loc: Location, site: SiteLayout): void
         reward: qt.reward,
       });
     }
-    const v = place(ctx, 'villager', work.x, work.y, { site: loc.id, npc: { name, role, home, work, ...(door ? { door } : {}), locationId: loc.id, questId, stock } });
+    const start = haunts.square ?? home;
+    const v = place(ctx, 'villager', start.x, start.y, { site: loc.id, npc: { name, role, home, haunts, door, locationId: loc.id, questId, stock } });
     const q = questId === null ? undefined : state.quests.find((qq) => qq.id === questId);
     if (q) q.giver = v.id;
   });
+}
+
+/** Open ground here: no tile obstacle near and nothing of the 3D layer overhead. */
+function openAt(ctx: SimContext, x: number, y: number): boolean {
+  const ring = [[0, 0], [0.8, 0], [-0.8, 0], [0, 0.8], [0, -0.8], [0.6, 0.6], [-0.6, 0.6], [0.6, -0.6], [-0.6, -0.6]];
+  return ring.every(([dx, dy]) => !ctx.tiles.blocked(x + (dx ?? 0), y + (dy ?? 0))) && ctx.state.volume.topAt(x, y) <= ctx.tiles.ground(x, y) + 0.05;
+}
+
+/**
+ * One person's spot for a place word of a routine: 'home', 'square' (somewhere open near the middle),
+ * 'edge' (out past the houses) or a building recipe id (a clear cell inside the nearest such building).
+ * Null when the place has none, so the routine skips that word.
+ */
+function hauntSpot(ctx: SimContext, site: SiteLayout, word: string, home: { x: number; y: number }): { x: number; y: number } | null {
+  const { rng, state } = ctx;
+  const sx = site.square.x + 0.5;
+  const sy = site.square.y + 0.5;
+  if (word === 'home') return home;
+  if (word === 'square' || word === 'edge') {
+    for (let tries = 0; tries < 16; tries++) {
+      const a = rng.range(0, Math.PI * 2);
+      const r = word === 'square' ? rng.range(0, 5) : site.radius + rng.range(2, 8);
+      const x = sx + Math.cos(a) * r;
+      const y = sy + Math.sin(a) * r;
+      if (openAt(ctx, x, y)) return { x, y };
+    }
+    return word === 'square' ? { x: sx, y: sy } : null;
+  }
+  let best: House | null = null;
+  for (const h of site.houses) if (h.building === word && (!best || Math.hypot(h.x0 - home.x, h.y0 - home.y) < Math.hypot(best.x0 - home.x, best.y0 - home.y))) best = h;
+  if (!best) return null;
+  const r = best.geometry.interior;
+  for (let tries = 0; tries < 12; tries++) {
+    const x = r.x0 + rng.int(r.x1 - r.x0 + 1) + 0.5;
+    const y = r.y0 + rng.int(r.y1 - r.y0 + 1) + 0.5;
+    const g = ctx.tiles.ground(x, y);
+    if (!state.volume.solidBetween(x, y, g + 0.6, g + 1.5)) return { x, y };
+  }
+  return { x: best.geometry.home.x + 0.5, y: best.geometry.home.y + 0.5 };
 }

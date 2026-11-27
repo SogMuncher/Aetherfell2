@@ -27,7 +27,7 @@
 - Anything that must be the same on host and guest uses `ctx.rng` or seed hashes, never `Math.random()`.
 
 ## Checks
-`scripts/worldSmoke.ts` (terrain, far view), `settlementSmoke.ts`, `waysSmoke.ts`, `waterSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`.
+`scripts/worldSmoke.ts` (terrain, far view), `settlementSmoke.ts` (villages), `citySmoke.ts` (cities; both use `siteKit.ts`), `waysSmoke.ts`, `waterSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`.
 
 - Gates and roads agree: ways are routed from the all-gates layout (`rawSiteInRegion`); `siteInRegion` then returns a walled city with gates only where a way leaves (`setGateRule` in roads.ts), so no gate leads nowhere. A route that would run through a city wall is dropped (`crossesWall` in wayRoute.ts). Checked in waysSmoke.
 - Water vs places/rivers: water keeps out of a place and fades out over 60 m beyond its radius (`waterSpotAt`), and water cuts its bed BEFORE the plateau levels the ground (`groundWith`, plateau blend 80 m), so no cliff stands beside a levelled place. A river inside or beside a lake becomes the lake and its surface settles to the lake's level (`waterSpot`). Checked in waterSmoke / settlementSmoke.

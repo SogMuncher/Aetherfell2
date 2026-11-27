@@ -124,5 +124,7 @@ export const RULES: RulesDef = {
   crafts: { dock: { x: -60000, y: -60000, z: 64 }, spacing: 48 },
   coop: { timeout: 20 },
   day: { minutes: 16, sunrise: 0.25, nightFrom: 0.8, nightUntil: 0.23, morningUntil: 0.45, afternoonUntil: 0.7 },
+  // Folk with no routine of their own: out and about by day, the tavern or home of an evening, in out of the rain.
+  routine: { night: ['home'], morning: ['square', 'edge'], afternoon: ['square', 'tavern', 'edge'], evening: ['tavern', 'square', 'home'], rain: ['home', 'tavern'] },
   factions: { player: 'party', folk: 'village', default: 'wild' },
 };

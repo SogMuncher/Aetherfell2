@@ -7,6 +7,8 @@ import type { RoleDef, RoleId } from '../types';
 export const ROLES: Record<RoleId, RoleDef> = {
   elder: {
     greeting: ' I keep watch over this village.',
+    about: 'I have spoken for this village longer than most here have been alive.',
+    routine: { morning: ['hall', 'square'], afternoon: ['square', 'hall'], evening: ['tavern', 'home'] },
     stock: [],
     dress: { features: ['robe', 'beard'], without: ['hat'], colors: { hair: ['#d8d0c0', '#a8a4a0'], tunic: ['#5a4a6e', '#3e4a5e'] } },
     quest: {
@@ -23,6 +25,8 @@ export const ROLES: Record<RoleId, RoleDef> = {
   },
   smith: {
     greeting: ' Mind the forge.',
+    about: 'Iron and fire, every day since I could lift a hammer.',
+    routine: { morning: ['smithy'], afternoon: ['smithy'], evening: ['tavern', 'home'], rain: ['smithy'] },
     dress: { features: ['apron'], without: ['robe'], colors: { apron: ['#4a3a2a', '#3a3230'], tunic: ['#5a5048', '#46403a'], sleeve: ['#c89070', '#a87050'] } },
     quest: {
       kind: 'fetch',
@@ -51,6 +55,8 @@ export const ROLES: Record<RoleId, RoleDef> = {
   },
   trader: {
     greeting: ' Looking to buy?',
+    about: 'I buy cheap, sell dear and hear everything in between.',
+    routine: { morning: ['square'], afternoon: ['square'], evening: ['tavern', 'square'], rain: ['tavern', 'home'] },
     quest: {
       kind: 'explore',
       site: 'stones',
@@ -81,9 +87,17 @@ export const ROLES: Record<RoleId, RoleDef> = {
       },
     },
   },
-  farmer: { greeting: '', stock: [], dress: { colors: { tunic: ['#6e7a3c', '#7a6040', '#8c7850'], hat: ['#c8a85a'] } } },
+  farmer: {
+    greeting: '',
+    about: 'Up before the sun, out in the fields till dusk.',
+    routine: { morning: ['edge'], afternoon: ['edge', 'barn', 'square'], evening: ['tavern', 'home'] },
+    stock: [],
+    dress: { colors: { tunic: ['#6e7a3c', '#7a6040', '#8c7850'], hat: ['#c8a85a'] } },
+  },
   brewer: {
     greeting: ' Cold out there? Have a cup.',
+    about: 'I keep the cups full and the gossip flowing.',
+    routine: { morning: ['tavern', 'square'], afternoon: ['tavern'], evening: ['tavern'], rain: ['tavern'] },
     dress: { features: ['apron'], colors: { apron: ['#d8ccb0'] } },
     stock: [
       { id: 'spicedCider', count: 6 },

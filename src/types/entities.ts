@@ -83,7 +83,9 @@ export interface ActorData {
 export interface DialogueOption {
   label: string;
   /** What the option does — resolved by the social system. */
-  action: 'rumour' | 'quest' | 'trade' | 'farewell' | 'turnIn';
+  action: 'rumour' | 'quest' | 'trade' | 'farewell' | 'turnIn' | 'where' | 'about' | 'places' | 'people' | 'place' | 'person' | 'self' | 'back';
+  /** Which place (a landmark key) or person (an entity id) a 'place'/'person' topic asks about. */
+  arg?: string;
 }
 
 export interface DialogueView {
@@ -144,6 +146,10 @@ export interface AiData {
   /** Ticks until the next decision. */
   think: number;
   home: Vec2;
+  /** Waypoints still to walk after `goal`, from the path finder (sim/ai/paths.ts); dropped when another plan takes over. */
+  path?: Vec2[];
+  /** Where that found way is meant to lead in the end (it may stop short when the way is long). */
+  aim?: Vec2;
   /** A spell being gathered (mode 'cast'): when `t` reaches the telegraph time it is let go. */
   cast?: { spell: SpellId; t: number };
 }
@@ -163,7 +169,8 @@ export interface NpcData {
   name: string;
   role: NpcRole;
   home: Vec2;
-  work: Vec2;
+  /** Their own spot at each place word of their routine ('home', 'square', 'tavern'...). */
+  haunts: Record<string, Vec2>;
   /** Their house's door, if home is indoors: the spot outside it, the spot just inside, and the room's cells. Used to walk in and out. */
   door?: { out: Vec2; in: Vec2; room: { x0: number; y0: number; x1: number; y1: number } };
   locationId: number;
