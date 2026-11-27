@@ -21,6 +21,9 @@ void main(){
 export const STRUCT_FS = `#version 300 es
 precision highp float; precision highp int; precision highp usampler2D;
 uniform mat4 uVP; uniform vec3 uEye, uFog; uniform float uFogDist; uniform vec2 uTurn; /* a moving frame's turn (cos, sin): normals back to the world */
+/* The eye as a whole cell plus the rest, and the view with the eye at 0: the march runs in the brick's own small numbers (a ship's cells sit
+   60 km out at the dock, where a float's step is 4 mm: hits, faces and depth came out as noise and rings that crawled as the view moved). */
+uniform ivec3 uEyeCell; uniform vec3 uEyeFrac; uniform mat4 uVP0;
 uniform vec3 uFwd, uRight, uUp; uniform vec3 uRes; /* x,y = target size, z = tanY */ uniform float uTime; uniform float uRainWet; uniform vec2 uFade; uniform usampler2D uAtlas, uPage, uFine; uniform ivec2 uGrid0;
 in vec3 vWorld; flat in vec4 fB0; flat in vec4 fB1; flat in vec4 fB2; layout(location = 0) out vec4 o;
 ${SURFACE_SHADER}
@@ -88,38 +91,39 @@ vec3 nextFace(ivec3 c, ivec3 e, vec3 n, ivec3 dom, vec3 t, bool wall, vec2 uv){
 }
 void main(){
   vec2 nd = gl_FragCoord.xy / uRes.xy * 2.0 - 1.0;
-  vec3 d = normalize(uFwd + uRight * nd.x * uRes.z * (uRes.x / uRes.y) + uUp * nd.y * uRes.z); vec3 org = uEye;
-  vec3 bmin = fB0.xyz, bmax = fB1.xyz; int slot = int(fB0.w); ivec3 origin = ivec3(fB2.xyz);
+  vec3 d = normalize(uFwd + uRight * nd.x * uRes.z * (uRes.x / uRes.y) + uUp * nd.y * uRes.z); 
+  ivec3 origin = ivec3(fB2.xyz); vec3 org = vec3(uEyeCell - origin) + uEyeFrac; // everything below is relative to the brick's origin
+  vec3 bmin = fB0.xyz - fB2.xyz, bmax = fB1.xyz - fB2.xyz; int slot = int(fB0.w);
   vec3 inv = 1.0 / d; vec3 ta = (bmin - org) * inv, tb = (bmax - org) * inv;
   float tin = max(max(min(ta.x, tb.x), min(ta.y, tb.y)), max(min(ta.z, tb.z), 0.0));
   float tout = min(min(max(ta.x, tb.x), max(ta.y, tb.y)), max(ta.z, tb.z));
   if (tin > tout) discard;
   vec3 p = org + d * (tin + 1e-4);
-  ivec3 cell = clamp(ivec3(floor(p)), ivec3(bmin), ivec3(bmax) - 1);
+  ivec3 cell = origin + clamp(ivec3(floor(p)), ivec3(bmin), ivec3(bmax) - 1);
   ivec3 st = ivec3(sign(d)); vec3 tDelta = abs(inv);
-  vec3 tMax = vec3(((d.x > 0.0 ? float(cell.x + 1) : float(cell.x)) - org.x) * inv.x, ((d.y > 0.0 ? float(cell.y + 1) : float(cell.y)) - org.y) * inv.y, ((d.z > 0.0 ? float(cell.z + 1) : float(cell.z)) - org.z) * inv.z);
+  vec3 tMax = (vec3(cell - origin) + vec3(greaterThan(d, vec3(0.0))) - org) * inv;
   float tc = tin; int axis = -1;
   // The box face the ray came in through: a wall flush with the box edge is hit in the very first cell and must not read as a floor.
   vec3 tm = min(ta, tb);
   if (tin > 0.0) axis = (tm.x >= tm.y && tm.x >= tm.z) ? 0 : (tm.y >= tm.z ? 1 : 2);
   bool hit = false; vec3 n = vec3(0.0); float th = 0.0; int mat = 0;
   for (int i = 0; i < 64; i++){
-    if (any(lessThan(cell, ivec3(bmin))) || any(greaterThanEqual(cell, ivec3(bmax)))) break;
+    if (any(lessThan(cell - origin, ivec3(bmin))) || any(greaterThanEqual(cell - origin, ivec3(bmax)))) break;
     uvec2 sm = cellAt(slot, cell - origin);
     if (sm.x != 0u){
       vec3 fn = axis < 0 ? vec3(0.0, 0.0, 1.0) : vec3(0.0); if (axis >= 0) fn[axis] = -float(st[axis]);
       // The eye can sit inside a cell (a wall it brushes, a doorpost): look out of it instead of painting it over the whole view.
-      bool within = axis < 0 && all(equal(cell, ivec3(floor(org))));
+      bool within = axis < 0 && all(equal(cell - origin, ivec3(floor(org))));
       if ((sm.x & 63u) == 1u){ if (!within){ hit = true; th = tc; n = fn; mat = int(sm.y); break; } }
       else if ((sm.x & 63u) == ${SHAPE_FINE}u){
         int fs = int(fB1.w) - 1, fm;
         if (fs >= 0){
-          vec4 r = rayFine(fs, cell - origin, clamp(org + d * tc - vec3(cell), 0.0, 1.0), d, fn, within, fm);
+          vec4 r = rayFine(fs, cell - origin, clamp(org + d * tc - vec3(cell - origin), 0.0, 1.0), d, fn, within, fm);
           if (r.x >= 0.0){ hit = true; th = tc + r.x; n = r.yzw; mat = fm; break; }
         }
       }
       else {
-        vec3 lo = clamp(org + d * tc - vec3(cell), 0.0, 1.0);
+        vec3 lo = clamp(org + d * tc - vec3(cell - origin), 0.0, 1.0);
         vec4 r = rayShape(int(sm.x), lo, d);
         if (r.x > (within ? 1e-3 : -1.0)){ hit = true; th = tc + r.x; n = (r.y == 0.0 && r.z == 0.0 && r.w == 0.0) ? fn : r.yzw; mat = int(sm.y); break; }
       }
@@ -129,9 +133,9 @@ void main(){
     else { tc = tMax.z; cell.z += st.z; tMax.z += tDelta.z; axis = 2; }
   }
   if (!hit) discard;
-  vec3 w = org + d * th;
+  vec3 w = vec3(origin) + org + d * th; // the world spot, for texture and patch lookups only (precision-critical math uses d * th)
   // Far buildings dissolve into the ground's own raised blocks (the terrain pass ramps those in over the same band), so a town never pops.
-  float away = smoothstep(uFade.x, uFade.y, length(w.xy - uEye.xy));
+  float away = smoothstep(uFade.x, uFade.y, length(d.xy * th));
   if (away > fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))))) discard;
   // Texture coords, where in its cell this texel is (f, texels per cell tx), the face's two steps to neighbour cells and its normal axis.
   vec2 suv, fc, tx; ivec3 ea, eb, dom; bool wall = abs(n.z) <= 0.6;
@@ -150,12 +154,12 @@ void main(){
     ivec3 sa = ea * (fc.x < 0.5 ? -1 : 1), sb = eb * (fc.y < 0.5 ? -1 : 1);
     col = mix(mix(col, nextFace(cell, sa, n, dom, t0, wall, suv), lean.x), mix(nextFace(cell, sb, n, dom, t0, wall, suv), nextFace(cell, sa + sb, n, dom, t0, wall, suv), lean.x), lean.y);
   }
-  col = surfPatches(col, w.xy + w.z * vec2(1.7, -1.3), length(w - uEye));
+  col = surfPatches(col, w.xy + w.z * vec2(1.7, -1.3), th);
   // What has happened to this cell (the same matter states the sim's rules use), blended over its own surface.
   vec3 glow = vec3(0.0);
   col = blendStates(col, ivec2((slot % 32) * 64 + (cell.z - origin.z & 3) * 16 + (cell.x - origin.x), (slot / 32) * 64 + ((cell.z - origin.z) >> 2) * 16 + (cell.y - origin.y)), suv, open ? uRainWet : 0.0, 0.75 + 0.25 * sin(uTime * 40.0 + float(cell.x) * 1.7 + float(cell.y) * 2.3 + float(cell.z)), glow);
   surfaceOut(col, vec3(uTurn.x * n.x - uTurn.y * n.y, uTurn.y * n.x + uTurn.x * n.y, n.z), 1.0, surfShine);
-  float f = min(0.97, 1.0 - exp(-length(w - uEye) / uFogDist));
+  float f = min(0.97, 1.0 - exp(-th / uFogDist));
   o = vec4(col * glow * (1.0 - f) + uFog * f, 1.0);
-  vec4 cp = uVP * vec4(w, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;
+  vec4 cp = uVP0 * vec4(d * th, 1.0); gl_FragDepth = (cp.z / cp.w) * 0.5 + 0.5;
 }`;

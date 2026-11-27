@@ -6,13 +6,14 @@
 import type { ReadonlyVolume, VolumeBrick, VolumeFrame } from '../../types';
 import { FINE_CELLS } from '../../types';
 import type { Env } from '../lighting';
-import { compile, loc, makeTexture, makeTextureArray } from './glUtil';
+import { compile, loc, makeTexture, makeTextureArray, viewProj } from './glUtil';
 import { bindStateLooks, packStates, STATE_LAYERS } from './gpuStates';
 import type { CamBasis } from './glUtil';
 import { GRID, STRUCT_FS, STRUCT_VS } from './gpuStructShader';
 import { makeShapeTextures } from './gpuSolid';
 
 /** All numbers live here. */
+const ZERO = { x: 0, y: 0, z: 0 };
 export const GPU_STRUCT = { range: 170, fade: 36, slots: 1024, uploadsPerFrame: 24, freshPerFrame: 64, tile: 64 } as const;
 const GW = GRID.win * 2 + 1;
 const ATLAS = 32 * GPU_STRUCT.tile;
@@ -163,13 +164,13 @@ export class GpuStructures {
    * Draws the bricks around the eye, then each moving frame (an airship) from its own point of view: the eye and view are
    * turned into the frame's cells and the projection carries them back, so its bricks march exactly like a building's.
    */
-  draw(vp: Float32Array, cam: CamBasis, w: number, h: number, time: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume, views: readonly VolumeFrame[] = []): void {
+  draw(vp: Float32Array, cam: CamBasis, w: number, h: number, time: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume, near: number, far: number, views: readonly VolumeFrame[] = []): void {
     this.bricks = 0;
     if (vol.bricks.size === 0) return;
     const seen = new Set<number>();
     this.budget = GPU_STRUCT.uploadsPerFrame;
     this.fresh = GPU_STRUCT.freshPerFrame;
-    this.drawView(vp, cam, w, h, time, eye, env, vol, seen, 1, 0);
+    this.drawView(vp, viewProj(ZERO, cam, near, far), cam, w, h, time, eye, env, vol, seen, 1, 0);
     for (const f of views) {
       const c = Math.cos(f.yaw);
       const s = Math.sin(f.yaw);
@@ -186,7 +187,7 @@ export class GpuStructures {
         for (let k = 0; k < 4; k++) sum += (vp[k * 4 + row] ?? 0) * (m[col * 4 + k] ?? 0);
         lvp[col * 4 + row] = sum;
       }
-      this.drawView(lvp, lc, w, h, time, le, env, vol, seen, c, s);
+      this.drawView(lvp, viewProj(ZERO, lc, near, far), lc, w, h, time, le, env, vol, seen, c, s);
     }
     for (const [key, r] of this.resident) {
       if (!seen.has(key)) {
@@ -197,7 +198,8 @@ export class GpuStructures {
     }
   }
 
-  private drawView(vp: Float32Array, cam: CamBasis, w: number, h: number, time: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume, seen: Set<number>, tc: number, ts: number): void {
+  /** `vp0` = the view with the eye at 0 (depth from the eye-relative hit, exact however far out the cells are). */
+  private drawView(vp: Float32Array, vp0: Float32Array, cam: CamBasis, w: number, h: number, time: number, eye: { x: number; y: number; z: number }, env: Env, vol: ReadonlyVolume, seen: Set<number>, tc: number, ts: number): void {
     const gl = this.gl;
     const R2 = GPU_STRUCT.range * GPU_STRUCT.range;
     const gx0 = (Math.floor(eye.x) >> 4) - GRID.win;
@@ -267,6 +269,10 @@ export class GpuStructures {
     gl.uniform3f(loc(gl, p, 'uUp'), cam.up[0], cam.up[1], cam.up[2]);
     gl.uniform3f(loc(gl, p, 'uRes'), w, h, cam.tanY);
     gl.uniform3f(loc(gl, p, 'uEye'), eye.x, eye.y, eye.z);
+    const ex = Math.floor(eye.x), ey = Math.floor(eye.y), ez = Math.floor(eye.z);
+    gl.uniform3i(loc(gl, p, 'uEyeCell'), ex, ey, ez);
+    gl.uniform3f(loc(gl, p, 'uEyeFrac'), eye.x - ex, eye.y - ey, eye.z - ez);
+    gl.uniformMatrix4fv(loc(gl, p, 'uVP0'), false, vp0);
     gl.uniform3f(loc(gl, p, 'uFog'), env.fog[0] / 255, env.fog[1] / 255, env.fog[2] / 255);
     gl.uniform1f(loc(gl, p, 'uFogDist'), env.fogDist);
     gl.uniform2f(loc(gl, p, 'uFade'), GPU_STRUCT.range - GPU_STRUCT.fade, GPU_STRUCT.range);

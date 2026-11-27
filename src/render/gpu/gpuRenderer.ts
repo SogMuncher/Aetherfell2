@@ -174,7 +174,7 @@ export class GpuRenderer {
     this.post.surfaces(true);
     this.terrain.draw(vp, f.eye, f.env, f.time);
     this.blocks.draw(vp, f.eye, f.env, f.tiles, f.time);
-    this.structures.draw(vp, cam, w, h, f.time, f.eye, f.env, f.volume, f.frames);
+    this.structures.draw(vp, cam, w, h, f.time, f.eye, f.env, f.volume, NEAR, FAR, f.frames);
     this.sprites.draw(vp, cam, f.eye, f.env, f.billboards);
     this.post.surfaces(false);
     this.casters.update(this.sprites.casters, this.solid.origin.x, this.solid.origin.y);

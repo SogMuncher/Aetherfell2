@@ -196,8 +196,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuTerrain.ts` (278) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (65) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
-- `gpuStructures.ts` (280) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
-- `gpuStructShader.ts` (161) shader text for structures: shapes, DDA, surface textures, sun/cover light
+- `gpuStructures.ts` (286) 3D bricks in an atlas texture; each brick box is rasterised, pixels walk its cells, shared depth
+- `gpuStructShader.ts` (165) shader text for structures: shapes, DDA, surface textures, sun/cover light
 - `gpuTileBlocks.ts` (159) tile walls/doors/windows as boxes from tile data, with their matter states
 - `gpuSprites.ts` (256) billboards: sprite atlas + instanced quads
 - `gpuLight.ts` (253) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
