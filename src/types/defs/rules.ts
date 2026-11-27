@@ -6,6 +6,7 @@ import type { SkillId } from '../entities';
 import type { SwingDir } from '../input';
 import type { ItemCategory } from './items';
 import type { HandlingDef } from './handling';
+import type { Routine } from './social';
 
 
 /**
@@ -187,6 +188,8 @@ export interface RulesDef {
   coop: { timeout: number };
   /** The day and its hours (content/day.ts asks these). */
   day: DayRules;
+  /** Where townsfolk spend the day when their role says nothing else. */
+  routine: Routine;
   /**
    * Who is who. `player`: the travellers' own faction. `folk`: the people of the villages, whose
    * opinion of the party colours greetings and trade. `default`: anything that names none.

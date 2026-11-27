@@ -1,6 +1,6 @@
-import type { BehaviourDef, BehaviourKind, NpcData, Vec2 } from '../../types';
-import { isPanicking, looksDangerous, spellFor, spellKey, thingDef } from '../../content';
-import { type Senses, busy, clearShot, go, isEnemy, runAlong, runFrom } from './senses';
+import type { BehaviourDef, BehaviourKind } from '../../types';
+import { hauntNow, isPanicking, looksDangerous, spellFor, spellKey, thingDef } from '../../content';
+import { type Senses, busy, clearShot, go, goVia, isEnemy, runAlong, runFrom } from './senses';
 import { grab, throwAt } from './handling';
 
 /**
@@ -9,41 +9,6 @@ import { grab, throwAt } from './handling';
  * where to, returns true) or passes (returns false) so the next behaviour in the brain's list gets
  * a turn. Behaviours never check what kind of creature they belong to, only what it senses.
  */
-
-function within(p: Vec2, r: { x0: number; y0: number; x1: number; y1: number }): boolean {
-  return p.x >= r.x0 && p.x < r.x1 + 1 && p.y >= r.y0 && p.y < r.y1 + 1;
-}
-
-/**
- * The next point to head for on the way to `to`. Between inside a house and outside it, the way is
- * through the door: line up in front of it, step through, then carry on.
- */
-function viaDoor(from: Vec2, to: Vec2, door: NpcData['door']): Vec2 {
-  if (!door) return to;
-  const inside = within(from, door.room);
-  const goingIn = within(to, door.room);
-  if (inside === goingIn) return to;
-  // The way out of the door, as a unit step.
-  const len = Math.hypot(door.out.x - door.in.x, door.out.y - door.in.y) || 1;
-  const nx = (door.out.x - door.in.x) / len;
-  const ny = (door.out.y - door.in.y) / len;
-  const ahead = (d: number): Vec2 => ({ x: door.out.x + nx * d, y: door.out.y + ny * d });
-  if (goingIn) {
-    // Far from the door: first a spot a metre and a half out in front of it, in line; then straight in.
-    return Math.hypot(from.x - door.out.x, from.y - door.out.y) > 2.2 ? ahead(1.5) : door.in;
-  }
-  // Inside heading out: to just inside the door first, then out through it.
-  return Math.hypot(from.x - door.in.x, from.y - door.in.y) > 1.2 ? door.in : ahead(1);
-}
-
-/** On the way through a shut door, near it: open it the way a player does (it stays open behind you). */
-function openDoor(s: Senses, door: NonNullable<NpcData['door']>): void {
-  const x = Math.floor((door.in.x + door.out.x) / 2);
-  const y = Math.floor((door.in.y + door.out.y) / 2);
-  const z = Math.floor(s.me.z + 0.3);
-  if (Math.hypot(x + 0.5 - s.me.pos.x, y + 0.5 - s.me.pos.y) > 1.8 || s.ctx.matter.doorOpen(x, y, z) !== false) return;
-  s.ctx.state.queues.use.push({ player: s.me.id, tileX: x, tileY: y, z, entity: null });
-}
 
 type Behaviour<K extends BehaviourKind> = (s: Senses, b: Extract<BehaviourDef, { do: K }>) => boolean;
 
@@ -107,13 +72,23 @@ export const BEHAVIOURS: { [K in BehaviourKind]: Behaviour<K> } = {
   routine(s, b) {
     const n = s.me.npc;
     if (!n) return false;
-    const spot = s.night ? n.home : n.work;
-    // On the way in or out, a shut door on the way is opened (even mid-walk).
-    if (n.door && within(s.me.pos, n.door.room) !== within(spot, n.door.room)) openDoor(s, n.door);
-    if (busy(s, 'routine', 'goto')) return true;
-    if (Math.hypot(spot.x - s.me.pos.x, spot.y - s.me.pos.y) > 1.2) return go(s, 'goto', viaDoor(s.me.pos, spot, n.door));
     const { rng } = s.ctx;
-    if (!s.night && rng.chance(b.chance)) return go(s, 'goto', { x: n.work.x + rng.range(-b.potter, b.potter), y: n.work.y + rng.range(-b.potter, b.potter) });
+    const ai = s.me.ai;
+    const at = hauntNow(s.ctx.content, s.ctx.state.weather, s.me);
+    const spot = n.haunts[at] ?? n.home;
+    // Under a roof they keep to a step or two; in the open they potter about more.
+    const roofed = s.ctx.state.volume.topAt(spot.x, spot.y) > s.ctx.tiles.ground(spot.x, spot.y) + 2;
+    const reach = roofed ? 1 : b.potter;
+    // On the way somewhere: keep going, unless the day moved on and that is no longer the place.
+    const end = ai.aim ?? ai.goal;
+    // (Heading straight at it because no way was found: now and then look for one again.)
+    const lost = ai.path === undefined && rng.chance(0.05);
+    if (busy(s, 'routine', 'goto') && end && !lost && Math.hypot(end.x - spot.x, end.y - spot.y) < reach + 0.7) return true;
+    if (Math.hypot(spot.x - s.me.pos.x, spot.y - s.me.pos.y) > 1.2) return goVia(s, 'goto', spot);
+    // There: now and then potter off a little way (and come back), or stop and face whoever else is about, as if talking.
+    if (rng.chance(b.chance)) return goVia(s, 'goto', { x: spot.x + rng.range(-reach, reach), y: spot.y + rng.range(-reach, reach) });
+    const friend = s.seen.find((o) => o.d < 3.5 && o.e.npc && o.feeling >= 0);
+    if (friend) s.me.angle = Math.atan2(friend.e.pos.y - s.me.pos.y, friend.e.pos.x - s.me.pos.x);
     return go(s, 'idle', null);
   },
 

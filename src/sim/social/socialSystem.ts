@@ -1,21 +1,7 @@
-import type { DialogueOption, DialogueView, Entity, Location, Quest, RoleDef, SimContext, SimSystem } from '../../types';
+import type { DialogueOption, DialogueView, Entity, Quest, RoleDef, SimContext, SimSystem } from '../../types';
 import { bagOf, addItem, countItem, removeItem } from '../../types';
+import { answer, direction, distanceWords, submenu } from './topics';
 import { dayPart, fillText, itemDef, mended, pluralName, rainAt, siteBaseName, thingDef } from '../../content';
-
-const COMPASS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
-
-function direction(from: Entity, to: Location): string {
-  const a = Math.atan2(to.pos.y - from.pos.y, to.pos.x - from.pos.x);
-  const i = Math.round(((a + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 4)) % 8;
-  return COMPASS[i] ?? 'north';
-}
-
-function distanceWords(d: number): string {
-  if (d < 150) return 'just a short walk';
-  if (d < 400) return 'not far';
-  if (d < 800) return 'a fair walk';
-  return 'a long road';
-}
 
 /**
  * Conversation: greetings that depend on the hour and on what the party has done, rumours that
@@ -111,13 +97,14 @@ function questReady(q: Quest, pl: Entity | undefined): boolean {
 }
 
 function optionsFor(ctx: SimContext, npc: Entity, pl?: Entity): DialogueOption[] {
-  const opts: DialogueOption[] = [{ label: 'Heard any rumours?', action: 'rumour' }];
+  const ask = ctx.content.talk.ask;
+  const opts: DialogueOption[] = [{ label: ask.where, action: 'where' }, { label: ask.about, action: 'about' }];
   const q = npc.npc?.questId != null ? ctx.state.quests.find((x) => x.id === npc.npc?.questId) : undefined;
   const role = roleOf(ctx, npc);
   if (q?.state === 'offered') opts.push({ label: role?.quest?.offer ?? 'Any work for me?', action: 'quest' });
   if (q && questReady(q, pl)) opts.push({ label: role?.quest?.turnIn ?? 'It is done.', action: 'turnIn' });
   if (role?.trade) opts.push({ label: role.trade.label, action: 'trade' });
-  opts.push({ label: 'Farewell.', action: 'farewell' });
+  opts.push({ label: ask.farewell, action: 'farewell' });
   return opts;
 }
 
@@ -135,6 +122,20 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
     case 'farewell':
       ctx.emit({ type: 'say', speaker: npc.id, text: 'Safe travels.' });
       return null;
+    case 'where':
+    case 'about':
+    case 'places':
+    case 'people':
+      return { speaker: npc.id, speakerName: npc.npc?.name ?? 'Villager', text: ctx.content.talk.prompt, options: submenu(ctx, npc, opt.action) };
+    case 'back':
+      return { speaker: npc.id, speakerName: npc.npc?.name ?? 'Villager', text: ctx.content.talk.prompt, options: optionsFor(ctx, npc, pl) };
+    case 'place':
+    case 'person':
+    case 'self':
+      text = answer(ctx, npc, opt, folkMood(ctx, npc));
+      if (opt.action !== 'self') p.skills.speech.xp += 1;
+      ctx.emit({ type: 'say', speaker: npc.id, text });
+      return { speaker: npc.id, speakerName: npc.npc?.name ?? 'Villager', text, options: submenu(ctx, npc, opt.action === 'self' ? 'about' : opt.action === 'place' ? 'places' : 'people') };
     case 'rumour': {
       const unknown = state.locations.filter((l) => !l.discovered).sort((a, b) => Math.hypot(a.pos.x - npc.pos.x, a.pos.y - npc.pos.y) - Math.hypot(b.pos.x - npc.pos.x, b.pos.y - npc.pos.y));
       const l = unknown[ctx.rng.int(Math.min(2, unknown.length))];
@@ -143,9 +144,9 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
       } else {
         const d = Math.hypot(l.pos.x - npc.pos.x, l.pos.y - npc.pos.y);
         const what = fillText(ctx.content.sites[l.kind]?.rumour ?? 'a place called {name}', { name: l.name, base: siteBaseName(ctx.content, l.kind, l.name) });
-        const dist = distanceWords(d);
-        text = `They say there's ${what} to the ${direction(npc, l)}. ${dist.charAt(0).toUpperCase()}${dist.slice(1)}.`;
-        state.journal.push({ tick: state.tick, day: state.weather.day, text: `Rumour from ${npc.npc?.name ?? 'a villager'}: ${what} lies ${direction(npc, l)}.` });
+        const dist = distanceWords(ctx, d);
+        text = `They say there's ${what} to the ${direction(npc.pos, l.pos)}. ${dist.charAt(0).toUpperCase()}${dist.slice(1)}.`;
+        state.journal.push({ tick: state.tick, day: state.weather.day, text: `Rumour from ${npc.npc?.name ?? 'a villager'}: ${what} lies ${direction(npc.pos, l.pos)}.` });
         p.skills.speech.xp += 3;
       }
       break;

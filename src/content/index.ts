@@ -17,6 +17,7 @@ import { PROPS } from './props';
 import { SHIP_PROPS } from './shipProps';
 import { REALMS } from './realms';
 import { ROLES, VILLAGER_NAMES } from './roles';
+import { TALK } from './talk';
 import { RULES } from './rules';
 import { RUNES, RUNE_ORDER, STARTING_RUNES } from './runes';
 import { SITES } from './sites';
@@ -38,6 +39,7 @@ export { validateContent } from './validate';
 export { cloudDensity3, cloudPattern, layerCover, layerDensity, airColumn, airAt, rainAt, airMoisture, setAirMoisture, moistCell, MOIST_CELL, sunThrough } from './skyField';
 export { dayPart, isDark, isNight, nightFalls, sunAngle, sunHeight } from './day';
 export type { DayPart } from './day';
+export { hauntNow } from './routine';
 
 export { MAX_SPELL_RUNES, composeSpell, describeSpell, effectWords, spellFor, spellKey } from './spellcraft';
 export type { Composed } from './spellcraft';
@@ -69,6 +71,7 @@ export const CONTENT: Content = {
   sites: SITES,
   structures: STRUCTURES,
   roles: ROLES,
+  talk: TALK,
   villagerNames: VILLAGER_NAMES,
   rules: RULES,
   gear: GEAR,

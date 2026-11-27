@@ -18,6 +18,8 @@ export interface Location {
   built?: number;
   /** Tick it was found (for "find a place" quests). */
   discoveredAt?: number;
+  /** Where its buildings stand, by recipe id (plus 'square'): the spot outside a door. Townsfolk give directions to these. */
+  landmarks?: Record<string, Vec2>;
 }
 
 export interface JournalEntry {

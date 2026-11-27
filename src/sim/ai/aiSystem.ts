@@ -113,9 +113,11 @@ export const aiSystem: SimSystem = (ctx: SimContext) => {
       const dy = goal.y - e.pos.y;
       const d = Math.hypot(dx, dy);
       const tr = target ? thingDef(ctx.content, target.def).body.radius : 0;
-      const stop = target ? reach * 0.7 + tr : 0.4;
+      const onWay = ai.path !== undefined;
+      const stop = target ? reach * 0.7 + tr : onWay && ai.path?.length ? 0.6 : 0.4;
+      if (onWay) openAhead(ctx, e, dx, dy, d);
       if (d > stop) {
-        const dir = steer(ctx, e, Math.atan2(dy, dx));
+        const dir = steer(ctx, e, Math.atan2(dy, dx), onWay ? d : Infinity);
         e.vel.x += (Math.cos(dir) * speed - e.vel.x) * 0.3;
         e.vel.y += (Math.sin(dir) * speed - e.vel.y) * 0.3;
         e.angle = dir;
@@ -123,7 +125,14 @@ export const aiSystem: SimSystem = (ctx: SimContext) => {
         e.vel.x *= 0.5;
         e.vel.y *= 0.5;
         if (target) e.angle = Math.atan2(dy, dx);
-        if (ai.mode === 'goto' || ai.mode === 'wander') ai.goal = null;
+        if (ai.mode === 'goto' || ai.mode === 'wander') {
+          // Next waypoint of a found way, or arrived.
+          ai.goal = ai.path?.shift() ?? null;
+          if (!ai.goal) {
+            delete ai.path;
+            delete ai.aim;
+          }
+        }
       }
       if (target && (ai.mode === 'chase' || ai.mode === 'attack') && d < reach + tr && !a.swing && !a.charge) {
         const wp = weaponStats(ctx.content, def, a.weapon);
@@ -154,9 +163,21 @@ export const aiSystem: SimSystem = (ctx: SimContext) => {
   }
 };
 
-/** Feel ahead; if the way is blocked, try angles either side. */
-function steer(ctx: SimContext, e: Creature, want: number): number {
-  const probe = Math.max(1.2, thingDef(ctx.content, e.def).body.radius * 3);
+/** Walking a found way: a shut door on the next stretch is opened the way a player does (it stays open behind). */
+function openAhead(ctx: SimContext, e: Creature, dx: number, dy: number, d: number): void {
+  const z = Math.floor(e.z + 0.3);
+  for (let t = 0.5; t <= Math.min(1.8, d + 0.5); t += 0.5) {
+    const x = Math.floor(e.pos.x + (dx / (d || 1)) * t);
+    const y = Math.floor(e.pos.y + (dy / (d || 1)) * t);
+    if (ctx.matter.doorOpen(x, y, z) !== false) continue;
+    ctx.state.queues.use.push({ player: e.id, tileX: x, tileY: y, z, entity: null });
+    return;
+  }
+}
+
+/** Feel ahead (no further than `upTo`, the next waypoint); if the way is blocked, try angles either side. */
+function steer(ctx: SimContext, e: Creature, want: number, upTo = Infinity): number {
+  const probe = Math.min(upTo + 0.3, Math.max(1.2, thingDef(ctx.content, e.def).body.radius * 3));
   const offsets = [0, 0.5, -0.5, 1, -1, 1.6, -1.6, 2.4, -2.4];
   for (const o of offsets) {
     const a = want + o;

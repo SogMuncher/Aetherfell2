@@ -54,6 +54,9 @@ for (const raised of [false, true]) {
   if (t.actor) t.actor.inventory = [{ id: 'firePot', count: 1 }];
   let thrown = false;
   for (let i = 0; i < 200 && !thrown; i++) {
+    // Held at throwing range, so a brain that chose to close in first gets more chances (the throw is a dice roll).
+    t.pos.x = t.prev.x = me.pos.x + 7;
+    t.pos.y = t.prev.y = me.pos.y;
     sim.step();
     me.hp = Math.max(me.hp, 50);
     thrown = !t.actor?.inventory.length;

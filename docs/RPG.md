@@ -12,10 +12,16 @@
   all of it drops on death (plus `onDestroy.loot`). Creatures ask for the player's pick-up/throw via `actor.wantPick/wantThrow`.
 - `ai/` : one thinking loop for every creature. `senses.ts` gathers what it notices; `handling.ts` = `grab`/`throw` behaviours. `behaviours.ts` is the library (`BehaviourDef` in `types/defs/brains.ts`);
   a creature's brain is an ordered data list in `content/living.ts`. Villagers are creatures with a brain + role.
+  `paths.ts`: A* over 1 m cells (tiles, 3D walls, floors within a step, doors count as open), straightened; `goVia` walks it
+  (`ai.path`/`ai.aim`), opening shut doors ahead. Long ways come back partial and are searched again from nearer.
+  Townsfolk routines: `RoleDef.routine` (else `rules.routine`) lists place words per day part + `rain`; `hauntNow`
+  (content/routine.ts) picks one per person per day; `npc.haunts` holds each person's spot per word (set in worldPopulate).
   Sensing counts height and needs a clear line eye to eye (`matter.clearLine`: ground, walls, doors, 3D cells); an attacker
   is noticed anyway. Night eyesight and wildlife both ask `isDark` (content/day.ts): the underworld is always dark.
 - `ecology/`: wildlife comes and goes by habitat and time of day; factions remember what the party did.
-- `social/`: dialogue, trade, quests from `content/roles.ts` templates. Topics are code for now (known gap).
+- `social/`: dialogue, trade, quests from `content/roles.ts` templates. `topics.ts`: Daggerfall-style menus "Where is..."
+  (places = `Location.landmarks`, people = where `hauntNow` says they are) and "Tell me about..." (rumours, `RoleDef.about`);
+  all words in `content/talk.ts`. Folk who dislike the party (`talk.refuseBelow`) refuse directions.
 - `interaction/`: the world's own rules (fire spread, drying, rain, traps, doors, containers) over `ctx.matter`.
 - `persistence/`: fflate save; also how the world is sent to joining friends. Version bump refuses old saves (fine in dev).
 - `cheats/`: debug menu entries from `content/cheats.ts`, each names an action the sim knows. "Held item" rows (generated from
@@ -24,7 +30,7 @@
 ## Add / change
 - Creature: `things` + `habitats` entries; new behaviour kind = type + one function in `BEHAVIOURS`.
 - Skill growth, currency, start kit, hours, factions: `content/rules.ts`.
-- Villager job: `roles` entry listed in a site's `villagers`.
+- Villager job: `roles` entry listed in a site's `villagers`; its day = `routine` place words (building recipe ids work).
 
 ## Checks
-`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`, `handsSmoke.ts`.
+`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`, `handsSmoke.ts`, `townSmoke.ts` (paths, routines, topics).

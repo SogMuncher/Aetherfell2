@@ -2,6 +2,7 @@
 import type { AiMode, BehaviourKind, BrainDef, Creature, Entity, FactionId, SimContext, Vec2 } from '../../types';
 import { unpackSpot } from '../../types';
 import { thingDef } from '../../content';
+import { findPath } from './paths';
 
 /** Someone the creature can see (in range in 3D, with a clear line from eye to eye). */
 export interface Seen {
@@ -86,6 +87,19 @@ export function go(s: Senses, mode: AiMode, goal: Vec2 | null, target: number | 
   ai.mode = mode;
   ai.goal = goal;
   ai.target = target;
+  delete ai.path;
+  delete ai.aim;
+  return true;
+}
+
+/** Like `go`, but walks a found way there (round houses, in through doors); straight at it when none is found. */
+export function goVia(s: Senses, mode: AiMode, to: Vec2): true {
+  const path = findPath(s.ctx, s.me.pos, to, s.me.z);
+  const first = path?.[0];
+  if (!path || !first) return go(s, mode, to);
+  go(s, mode, first);
+  s.me.ai.path = path.slice(1);
+  s.me.ai.aim = { x: to.x, y: to.y };
   return true;
 }
 
