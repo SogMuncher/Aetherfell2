@@ -1,33 +1,35 @@
-import { type BiomeId, CHUNK_SIZE, type Chunk, type ReadonlyTiles, type WorldSampler, packKey } from '../../types';
-import { CONTENT } from '../../content';
-import { TILES } from '../../content/tiles';
-import { biomeLook, farColours, key } from './lodLooks';
-import { pack, rhash, vnoise } from '../color';
+// Distant land as a pyramid of cached height/colour blocks, built a row at a time in the background, with changed chunks painted on.
+import { CHUNK_SIZE, type Chunk, type ReadonlyTiles, type WorldSampler, packKey } from '../../types';
+import { key } from './lodLooks';
 import { BLOCK, type ChangedChunk, type LodBlock, paintChunk } from './terrainLodPaint';
+import { LEVEL_CELL, blockRows } from './terrainLodBuild';
 
 export { BLOCK, type LodBlock } from './terrainLodPaint';
-const HW = BLOCK + 1;
-
-
-/** Cell size (metres) per level. Level 0 is drawn straight from live tiles, so it is not cached here. */
-export const LEVEL_CELL = [1, 2, 4, 8, 16, 32, 64, 128] as const;
+export { LEVEL_CELL } from './terrainLodBuild';
 export const TOP_LEVEL = LEVEL_CELL.length - 1;
 
 /** Levels whose cells fit inside one chunk get real tile changes painted in (burns, frozen lakes, and every matter state: soot, frost…). */
 const OVERLAY_MAX_CELL = CHUNK_SIZE;
+/** A wanted block nobody has asked for in this many frames is dropped half built (the eye moved on). */
+const FORGET_AFTER = 90;
+
+interface Job {
+  level: number;
+  asked: number;
+  rows: Generator<void, LodBlock>;
+}
 
 /**
- * Distant land as a pyramid of 64×64 height/colour blocks, coarser with distance. Blocks are built
- * from the seed's world sampler a few per frame; anything not ready yet falls back to a coarser level,
- * so the horizon is always there and detail streams in. Chunks that have changed since they were
+ * Distant land as a pyramid of 64×64 height/colour blocks, coarser with distance. A missing block is wanted,
+ * then built a row at a time inside each frame's budget (finest first); until then it falls back to a coarser
+ * level. The coarsest blocks around the eye are built ahead, so the horizon is always there without a stall. Chunks that have changed since they were
  * generated (burnt, frozen, scorched) are painted over the seed's picture, so changes stay visible
  * at any distance.
  */
 export class TerrainLod {
   private blocks = new Map<number, LodBlock>();
   private frame = 0;
-  private budgetEnd = 0;
-  private exhausted = false;
+  private jobs = new Map<number, Job>();
   /** Changed chunks already painted into the blocks, by chunk key. */
   private changed = new Map<number, ChangedChunk>();
   private pending: Chunk[] = [];
@@ -40,13 +42,21 @@ export class TerrainLod {
     private readonly tiles: ReadonlyTiles,
   ) {}
 
-  beginFrame(budgetMs: number): void {
+  /** Paints changed chunks, wants the coarsest blocks around the eye, then builds wanted blocks until the budget is spent. */
+  beginFrame(budgetMs: number, ex: number, ey: number): void {
     this.frame++;
-    this.budgetEnd = performance.now() + budgetMs;
-    this.exhausted = false;
+    const end = performance.now() + budgetMs;
     if (this.blocks.size > 700) this.evict();
     if (this.frame % 6 === 0) this.findChanges();
     this.paintChanges(performance.now() + Math.min(2, budgetMs * 0.3));
+    const span = (LEVEL_CELL[TOP_LEVEL] ?? 128) * BLOCK;
+    const bx = Math.floor(ex / span);
+    const by = Math.floor(ey / span);
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const k = key(TOP_LEVEL, bx + dx, by + dy);
+        if (!this.blocks.has(k)) this.want(TOP_LEVEL, bx + dx, by + dy, k);
+      }
+    this.work(end);
   }
 
   /** Forget every cached block (the party went to another realm, whose far ground is different). */
@@ -54,32 +64,84 @@ export class TerrainLod {
     this.blocks.clear();
     this.changed.clear();
     this.pending = [];
+    this.jobs.clear();
   }
 
   get size(): number {
     return this.blocks.size;
   }
 
-  /** Block covering (x, y) at `level`, or the nearest coarser one that exists. */
+  /** Block covering (x, y) at `level`, or the nearest coarser one that exists (a missing one is wanted). */
   get(level: number, x: number, y: number): LodBlock {
     for (let L = level; L <= TOP_LEVEL; L++) {
-      const cs = LEVEL_CELL[L] ?? 128;
-      const span = cs * BLOCK;
+      const span = (LEVEL_CELL[L] ?? 128) * BLOCK;
       const bx = Math.floor(x / span);
       const by = Math.floor(y / span);
       const k = key(L, bx, by);
-      let b = this.blocks.get(k);
-      if (!b && (L === TOP_LEVEL || !this.exhausted)) {
-        b = this.build(L, bx, by);
-        this.blocks.set(k, b);
-        if (performance.now() > this.budgetEnd) this.exhausted = true;
-      }
+      const b = this.blocks.get(k);
       if (b) {
         b.used = this.frame;
         return b;
       }
+      // The horizon is never missing: a top block the look-ahead did not reach yet (a new world, a jump) is finished at once.
+      if (L === TOP_LEVEL) return this.finish(k, this.want(L, bx, by, k));
+      this.want(L, bx, by, k);
     }
     throw new Error('unreachable: top level is always built');
+  }
+
+  private want(level: number, bx: number, by: number, k: number): Job {
+    let j = this.jobs.get(k);
+    if (!j) {
+      j = { level, asked: this.frame, rows: blockRows(this.sampler, level, bx, by) };
+      this.jobs.set(k, j);
+    }
+    j.asked = this.frame;
+    return j;
+  }
+
+  /** Works wanted blocks a row at a time until `until`, finest level first. */
+  private work(until: number): void {
+    while (performance.now() < until) {
+      let best: [number, Job] | null = null;
+      for (const e of this.jobs) {
+        if (this.frame - e[1].asked > FORGET_AFTER) this.jobs.delete(e[0]);
+        else if (!best || e[1].level < best[1].level) best = e;
+      }
+      if (!best) return;
+      const [k, j] = best;
+      while (performance.now() < until) {
+        const r = j.rows.next();
+        if (r.done) {
+          this.store(k, r.value);
+          break;
+        }
+      }
+    }
+  }
+
+  /** Runs a job to its end and stores its block. */
+  private finish(k: number, j: Job): LodBlock {
+    let r = j.rows.next();
+    while (!r.done) r = j.rows.next();
+    return this.store(k, r.value);
+  }
+
+  /** Keeps a finished block, with the changed chunks it covers painted on. */
+  private store(k: number, block: LodBlock): LodBlock {
+    this.jobs.delete(k);
+    block.used = this.frame;
+    if (block.cs <= OVERLAY_MAX_CELL) {
+      const span = block.cs * BLOCK;
+      for (const e of this.changed.values()) {
+        const tx = e.chunk.cx * CHUNK_SIZE;
+        const ty = e.chunk.cy * CHUNK_SIZE;
+        if (tx >= block.ox && tx < block.ox + span && ty >= block.oy && ty < block.oy + span) paintChunk(block, e);
+      }
+    }
+    this.blocks.set(k, block);
+    this.built++;
+    return block;
   }
 
   private evict(): void {
@@ -120,144 +182,6 @@ export class TerrainLod {
     }
   }
 
-  private build(level: number, bx: number, by: number): LodBlock {
-    this.built++;
-    const cs = LEVEL_CELL[level] ?? 128;
-    const ox = bx * BLOCK * cs;
-    const oy = by * BLOCK * cs;
-    const N = BLOCK * BLOCK;
-    const h = new Float32Array(HW * HW);
-    const col = new Uint32Array(N);
-    const nrm = new Int8Array(N * 3);
-    const water = new Uint8Array(N);
-    const canopy = new Uint8Array(N);
-    const lift = new Uint8Array(N);
-    const glow = new Uint8Array(N);
-    const base = { ground: new Uint32Array(N), tree: new Uint32Array(N), cover: new Uint8Array(N), canopy: new Uint8Array(N), lift: new Uint8Array(N), water: new Uint8Array(N) };
-    const biomes: BiomeId[] = new Array<BiomeId>(HW * HW);
-    const trees = new Float32Array(HW * HW);
-    const road = new Float32Array(HW * HW);
-    const built = new Uint16Array(HW * HW);
-    /** How far a river's or lake's surface lies over the bed at each corner (0 = none; the sea is told by the ground sinking under 0). */
-    const wdep = new Float32Array(HW * HW);
-    const farW = CONTENT.world.far;
-    const far = farColours();
-    let maxH = -Infinity;
-    for (let j = 0; j < HW; j++) {
-      for (let i = 0; i < HW; i++) {
-        const s = this.sampler.sample(ox + i * cs, oy + j * cs, cs);
-        const k = j * HW + i;
-        const g = s.ground;
-        biomes[k] = s.biome;
-        trees[k] = s.trees;
-        road[k] = s.road;
-        built[k] = s.built === null ? 0 : s.built + 1;
-        let top = g < 0 ? 0 : g;
-        if (s.water !== undefined && s.water > g) {
-          top = s.water;
-          wdep[k] = s.water - g;
-        }
-        h[k] = top;
-        if (top > maxH) maxH = top;
-      }
-    }
-    for (let j = 0; j < BLOCK; j++) {
-      for (let i = 0; i < BLOCK; i++) {
-        const k = j * HW + i;
-        const q = j * BLOCK + i;
-        const x = ox + i * cs;
-        const y = oy + j * cs;
-        const hc = h[k] ?? 0;
-        const gx = ((h[k + 1] ?? hc) - hc) / cs;
-        const gy = ((h[k + HW] ?? hc) - hc) / cs;
-        const il = 1 / Math.sqrt(1 + gx * gx + gy * gy);
-        const nz = il;
-        nrm[q * 3] = Math.round(-gx * il * 127);
-        nrm[q * 3 + 1] = Math.round(-gy * il * 127);
-        nrm[q * 3 + 2] = Math.round(nz * 127);
-        const look = biomeLook(biomes[k] ?? 'meadow');
-        const bfar = look.far;
-        let r = bfar[0];
-        let g = bfar[1];
-        let b = bfar[2];
-        const vary = vnoise(x * 0.013, y * 0.013, 5) * 0.5 + vnoise(x * 0.06, y * 0.06, 6) * 0.3 + rhash(x, y, 7) * 0.2;
-        const m = 0.82 + vary * 0.36;
-        r *= m;
-        g *= m;
-        b *= m;
-        let cover = 0;
-        let can = 0;
-        const inland = (wdep[k] ?? 0) > 0;
-        if ((hc <= 0 && look.water) || inland) {
-          // Deeper water is darker and bluer.
-          const depth = inland ? Math.min(1, (wdep[k] ?? 0) / 8) : Math.min(1, -this.sampler.sample(x, y, cs * 4).ground / 30);
-          r = 46 - depth * 26;
-          g = 104 - depth * 50;
-          b = 120 - depth * 30;
-          water[q] = 1;
-          nrm[q * 3] = 0;
-          nrm[q * 3 + 1] = 0;
-          nrm[q * 3 + 2] = 127;
-        } else {
-          if (nz < farW.steep && look.bareSlopes) {
-            // Steep slopes show bare rock.
-            const t = Math.min(1, (farW.steep - nz) * 4);
-            r += (farW.rock[0] - r) * t;
-            g += (farW.rock[1] - g) * t;
-            b += (farW.rock[2] - b) * t;
-          }
-          if (hc > farW.snowLine + vnoise(x * 0.01, y * 0.01, 8) * farW.snowJitter && nz > 0.7) {
-            r = farW.snow[0];
-            g = farW.snow[1];
-            b = farW.snow[2];
-          }
-          const rd = road[k] ?? 0;
-          if (rd > CONTENT.world.roads.above && cs <= 8) {
-            r += (farW.road[0] - r) * 0.8;
-            g += (farW.road[1] - g) * 0.8;
-            b += (farW.road[2] - b) * 0.8;
-          }
-          // Buildings and walls: their tile's far colour, standing as tall as the tile is.
-          const bt = built[k] ?? 0;
-          if (bt > 0) {
-            const code = bt - 1;
-            r = far[code * 3] ?? 110;
-            g = far[code * 3 + 1] ?? 100;
-            b = far[code * 3 + 2] ?? 100;
-            lift[q] = Math.min(255, Math.round((TILES[code]?.height ?? 2.8) * 10));
-          }
-          const tr = trees[k] ?? 0;
-          if (tr > 0.01) {
-            const clump = vnoise(x * 0.09, y * 0.09, 9);
-            const raw = Math.min(1, tr * 4) * (0.6 + clump * 0.6);
-            cover = Math.min(1, raw);
-            can = Math.min(255, Math.round(raw * look.canopy * (0.6 + clump * 0.8)));
-          }
-        }
-        const tree = look.tree;
-        base.ground[q] = pack(r, g, b);
-        base.tree[q] = pack(tree[0], tree[1], tree[2]);
-        base.cover[q] = Math.round(cover * 255);
-        base.canopy[q] = can;
-        base.lift[q] = lift[q] ?? 0;
-        base.water[q] = water[q] ?? 0;
-        canopy[q] = can;
-        col[q] = pack(r + (tree[0] - r) * cover, g + (tree[1] - g) * cover, b + (tree[2] - b) * cover);
-        const top = hc + (lift[q] ?? 0) * 0.1;
-        if (top > maxH) maxH = top;
-      }
-    }
-    const block: LodBlock = { level, cs, ox, oy, h, col, nrm, water, canopy, lift, glow, maxH, used: this.frame, base };
-    if (cs <= OVERLAY_MAX_CELL) {
-      const span = cs * BLOCK;
-      for (const e of this.changed.values()) {
-        const tx = e.chunk.cx * CHUNK_SIZE;
-        const ty = e.chunk.cy * CHUNK_SIZE;
-        if (tx >= ox && tx < ox + span && ty >= oy && ty < oy + span) paintChunk(block, e);
-      }
-    }
-    return block;
-  }
 
   /** Paints one changed chunk's real tiles over a block's cells (or restores cells that are back to normal). */
 }

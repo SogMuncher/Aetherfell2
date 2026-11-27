@@ -168,7 +168,7 @@ export class Renderer {
       this.gpuFailed = true;
       return false;
     }
-    this.lod.beginFrame(7);
+    this.lod.beginFrame(4, cx, cy);
     // What a guest foresees itself (its own traveller, crafts and what is fixed aboard them) moves every tick, so it is drawn
     // by the time since that tick, like the view; the rest by the time since the host's last update. One on the host.
     const alphaOf = (e: Entity): number => (e.id === f.localId || e.craft || e.ride || (me?.player?.holding ?? null) === e.id ? (f.selfAlpha ?? f.alpha) : f.alpha);

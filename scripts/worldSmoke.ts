@@ -82,9 +82,11 @@ else {
   const wy = cy * CHUNK_SIZE + 3;
   const frames = (n: number): LodBlock => {
     let b: LodBlock | null = null;
-    for (let i = 0; i < n; i++) {
-      lod.beginFrame(50);
+    // Blocks are built a row at a time over frames: keep going until the asked level has landed, then n frames more.
+    for (let i = 0, left = n; left > 0 && i < 400; i++) {
+      lod.beginFrame(50, wx, wy);
       b = lod.get(level, wx, wy);
+      if (b.level === level) left--;
     }
     if (!b) throw new Error('no block');
     return b;
@@ -131,9 +133,10 @@ else {
   // A block built after the fire (say, after walking away and back) shows it too.
   const fresh = new TerrainLod(terrain, tiles);
   let fb: LodBlock | null = null;
-  for (let i = 0; i < 8; i++) {
-    fresh.beginFrame(50);
+  for (let i = 0, left = 8; left > 0 && i < 400; i++) {
+    fresh.beginFrame(50, wx, wy);
     fb = fresh.get(3, wx, wy);
+    if (fb.level === 3) left--;
   }
   if (fb) {
     const i0 = Math.floor((cx * CHUNK_SIZE - fb.ox) / fb.cs);
