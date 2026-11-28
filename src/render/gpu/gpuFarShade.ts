@@ -1,9 +1,10 @@
 /**
- * What shades the sun beyond the near solid field, for the one light pass: cloud shadows (the `CloudShadow` grid) and the
+ * What shades the sun beyond the near solid field, for the one light pass: cloud shadows (gpuCloudShade.ts) and the
  * land itself, walked toward the sun over two of the terrain's own height levels (ground + canopy + far buildings), so
  * hills, forests and towns throw shadows at any distance for the same cost per pixel.
  */
-import type { CloudShadow } from '../raycaster/cloudShadow';
+import { CLOUD_SHADE_SHADER } from './gpuCloudShade';
+import type { GpuCloudShade } from './gpuCloudShade';
 import { loc, makeTexture } from './glUtil';
 import type { GpuTerrain } from './gpuTerrain';
 import { GPU_SOLID } from './gpuSolid';
@@ -11,16 +12,10 @@ import { GPU_SOLID } from './gpuSolid';
 /** Terrain levels walked (cell 4 m over 512 m, then 64 m over 8 km), and the march: `steps` growing by `grow` from `start` m. */
 export const GPU_FAR_SHADE = { levels: [2, 6], start: 1.5, grow: 1.55, steps: 16 } as const;
 
-/** GLSL (after SOLID_UNIFORMS): `cloudShade(xy)`, `landSun(p, sunDir)`. */
+/** GLSL (after SOLID_UNIFORMS): `cloudShade(p)`, `landSun(p, sunDir)`. */
 export const FAR_SHADE_SHADER = `
-uniform highp sampler2D uShade, uFarH0, uFarH1; uniform vec4 uShadeO; uniform float uShadeOn; uniform vec3 uFar0, uFar1;
-float cloudShade(vec2 xy){
-  if (uShadeOn < 0.5) return 1.0;
-  vec2 g = xy / uShadeO.z - uShadeO.xy - 0.5; ivec2 i = ivec2(floor(g)); vec2 t = g - vec2(i);
-  if (i.x < 0 || i.y < 0 || i.x >= 127 || i.y >= 127) return uShadeO.w;
-  float a = texelFetch(uShade, i, 0).r, b = texelFetch(uShade, i + ivec2(1, 0), 0).r, c = texelFetch(uShade, i + ivec2(0, 1), 0).r, d = texelFetch(uShade, i + ivec2(1, 1), 0).r;
-  return mix(mix(a, b, t.x), mix(c, d, t.x), t.y);
-}
+uniform highp sampler2D uFarH0, uFarH1; uniform vec3 uFar0, uFar1;
+${CLOUD_SHADE_SHADER}
 float landTop(highp sampler2D tex, vec3 o, vec2 p, bool tall, out bool ok){
   vec2 g = (p - o.xy) / o.z; ivec2 i = ivec2(floor(g)); vec2 t = g - vec2(i);
   ok = o.z > 0.0 && i.x >= 0 && i.y >= 0 && i.x < 128 && i.y < 128; if (!ok) return 0.0;
@@ -46,39 +41,28 @@ float landSun(vec3 p, vec3 s){
 }`;
 
 export class GpuFarShade {
-  private readonly shadeTex: WebGLTexture;
-  private on = 0;
-  private mean = 1;
-  private o = [0, 0, 48];
+  /** Stand-in for a height level not built yet. */
+  private readonly none: WebGLTexture;
+  private clouds: GpuCloudShade | null = null;
 
   constructor(private readonly gl: WebGL2RenderingContext, private readonly terrain: GpuTerrain) {
-    this.shadeTex = makeTexture(gl, gl.R32F, 128, 128, gl.RED, gl.FLOAT);
+    this.none = makeTexture(gl, gl.RGBA8, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE);
   }
 
-  /** Cloud shadows: copies the shadow grid into a texture (called every few frames), or switches them off for a clear sky. */
-  setClouds(sh: CloudShadow, on: boolean): void {
-    this.on = on ? 1 : 0;
-    if (!on) return;
-    const st = sh.state;
-    const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.shadeTex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, st.size, st.size, gl.RED, gl.FLOAT, st.grid);
-    this.o = [st.ox, st.oy, st.cell];
-    this.mean = st.mean;
+  /** The cloud shadow maps the light pass reads. */
+  setClouds(c: GpuCloudShade): void {
+    this.clouds = c;
   }
 
   /** Binds three units for a program that includes FAR_SHADE_SHADER. */
   bind(p: WebGLProgram, unit: number): void {
     const gl = this.gl;
-    gl.activeTexture(gl.TEXTURE0 + unit);
-    gl.bindTexture(gl.TEXTURE_2D, this.shadeTex);
-    gl.uniform1i(loc(gl, p, 'uShade'), unit);
-    gl.uniform4f(loc(gl, p, 'uShadeO'), this.o[0] ?? 0, this.o[1] ?? 0, this.o[2] ?? 48, this.mean);
-    gl.uniform1f(loc(gl, p, 'uShadeOn'), this.on);
+    if (this.clouds) this.clouds.bind(p, unit);
+    else gl.uniform3f(loc(gl, p, 'uShadeS'), 0, 0, 0);
     GPU_FAR_SHADE.levels.forEach((L, i) => {
       const h = this.terrain.heights(L);
       gl.activeTexture(gl.TEXTURE0 + unit + 1 + i);
-      gl.bindTexture(gl.TEXTURE_2D, h ? h.tex : this.shadeTex);
+      gl.bindTexture(gl.TEXTURE_2D, h ? h.tex : this.none);
       gl.uniform1i(loc(gl, p, `uFarH${i}`), unit + 1 + i);
       gl.uniform3f(loc(gl, p, `uFar${i}`), h ? h.ox : 0, h ? h.oy : 0, h ? h.cs : 0);
     });

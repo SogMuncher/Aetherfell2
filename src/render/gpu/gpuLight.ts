@@ -114,7 +114,7 @@ void main(){
 #if SUN > 1
     if (vis > 0.0 && sd.z > 0.0) vis *= landSun(from, sd);
 #endif
-    L += uSun * ndl * vis * cloudShade(p.xy);
+    L += uSun * ndl * vis * cloudShade(p);
   }
 #if SCALE == 1
   o = vec4(al.rgb * L * keep, 1.0);

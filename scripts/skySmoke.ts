@@ -1,9 +1,9 @@
 // Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
 // cloud shadows, and the sim soaking only what stands under a storm.
 import { Simulation, createState } from '../src/sim';
-import { CONTENT, airAt, airColumn, airMoisture, cloudDensity3, setAirMoisture, layerCover, layerDensity, rainAt, sunThrough, validateContent } from '../src/content';
+import { CONTENT, airAt, airMoisture, cloudDensity3, setAirMoisture, setAirWater, layerCover, layerDensity, rainAt, sunThrough, validateContent } from '../src/content';
 import type { WeatherState } from '../src/types';
-import { AirCells } from '../src/render/airCells';
+import { AirLevels } from '../src/render/airLevels';
 import { AirSmoke } from '../src/render/airSmoke';
 import { packKey, spotKey } from '../src/types';
 import type { ReadonlyTiles, ReadonlyVolume } from '../src/types';
@@ -188,51 +188,41 @@ for (const l of SKY.layers) {
   }
 }
 
-// The air as one grid of cells every layer writes into: the same density rule, fine near, coarse far, reaching the far
-// horizon; drifting with the wind without a refill; moving the eye fills only the cells that came into reach; storms
-// rain only where the air overhead holds their cloud; standing in a low cloud fogs the view in the cloud's colour.
+// The air as levels of cells round the eye (built on the graphics card by the one density rule): the coarsest reaches
+// the far clouds; clouds drift with the wind without a rebuild; a short step rebuilds nothing, a long walk the finest
+// level first; old levels are rebuilt for the weather; never more than `perFrame` levels a frame; open water thickens
+// the mist; storms rain only where the air overhead holds their cloud; standing in a low cloud fogs the view.
 {
   const w = weather(0.7, 0.3);
-  const air = new AirCells();
-  air.fillAll(w, 5000, 3000, 300);
-  const lv0 = air.levels[0];
-  let worst = 0;
-  let cloudy = 0;
-  for (let k = 0; k < 400 && lv0; k++) {
-    // Cell centres of the finest level near the eye (cells there are narrower than any shape, so one spot each).
-    const gx = lv0.ox + 16 + ((k * 7) % 32);
-    const gy = lv0.oy + 16 + ((k * 11) % 32);
-    const gz = lv0.oz + (k % air.tall);
-    const cz = lv0.cellZ;
-    const x = (gx + 0.5) * lv0.cell + (w.drift?.x ?? 0);
-    const y = (gy + 0.5) * lv0.cell + (w.drift?.y ?? 0);
-    const z = (gz + 0.5) * cz;
-    const want = Math.min(1, airColumnAt(x, y, gz * cz, cz, lv0.cell));
-    const got = air.sample(w, x, y, z);
-    worst = Math.max(worst, Math.abs(want - got));
-    if (got > 0) cloudy++;
-  }
-  check('air cells hold the clouds of every layer by the one density rule', worst < 0.01 && cloudy > 10, `worst ${worst.toFixed(3)}, ${cloudy} cloudy cells`);
+  const air = new AirLevels();
+  for (let i = 0; i < air.levels.length; i++) air.plan(w, 5000, 3000, 300, 0);
+  check('every air level gets built, a few a frame', air.levels.every((l) => !Number.isNaN(l.ox)) && air.built === air.levels.length, `${air.built} builds`);
   const top = air.levels[air.levels.length - 1];
   check('the coarsest air cells reach the far clouds', !!top && top.cell * SKY.air.lod >= SKY.cloudRange);
-  const moved = { ...w, drift: { x: (w.drift?.x ?? 0) + 400, y: (w.drift?.y ?? 0) + 150 } };
-  check('air cells drift with the wind without refilling', Math.abs(air.sample(w, 5100, 3100, 320) - air.sample(moved, 5500, 3250, 320)) < 1e-6);
-  let farCloud = 0;
-  for (let a = 0; a < 144; a++) for (const z of [300, 450, 1550]) if (air.sample(w, 5000 + Math.cos(a / 22.9) * SKY.cloudRange * 0.9, 3000 + Math.sin(a / 22.9) * SKY.cloudRange * 0.9, z) > 0) farCloud++;
-  check('far clouds come from coarse cells (no hole toward the horizon)', farCloud > 5, `${farCloud} cloudy spots 36 km out`);
-  const before = air.filled;
-  air.update(w, 5000 + SKY.air.cell * (air.n / 8 + 1), 3000, 300, 0.1, 1e9);
-  const step = air.filled - before;
-  check('a short walk fills only the cells that came into reach', step > 0 && step <= air.n * air.n * air.tall / 4, `${step} cells`);
-  const calm = air.filled;
-  air.update(w, 5000 + SKY.air.cell * (air.n / 8 + 1), 3000, 300, 500, 1e9);
-  check('old air cells are not rebuilt while the weather holds', air.filled === calm, `${air.filled - calm} cells`);
-  air.update({ ...w, cloud: (w.cloud ?? 0) + 0.2 }, 5000 + SKY.air.cell * (air.n / 8 + 1), 3000, 300, 500, 2e5);
-  check('they are rebuilt when the weather changes', air.filled > calm);
-  const wet = { ...w, cloud: (w.cloud ?? 0) + 0.4 }, ex = 5000 + SKY.air.cell * (air.n / 4 + 2);
-  air.update(wet, ex - SKY.air.cell * (air.n / 8 + 1), 3000, 300, 1e4, 1000);
-  air.update(wet, ex, 3000, 300, 1e4, air.n * air.tall * (air.n / 8 + 2) / SKY.air.rush);
-  check('a level the eye left behind catches up first, ahead of a weather refill', lv0?.ox === Math.floor((ex - (w.drift?.x ?? 0)) / SKY.air.cell) - air.n / 2);
+  const calm = air.built;
+  air.plan(w, 5000 + SKY.air.cell * 2, 3000, 300, 0.1);
+  check('a short step rebuilds nothing', air.built === calm);
+  const blown = { ...w, drift: { x: 2, y: 1 } };
+  air.plan(blown, 5002, 3001, 300, 0.2);
+  check('the wind carries the air cells without a rebuild', air.built === calm);
+  const due = air.plan(w, 5000 + SKY.air.cell * air.n, 3000, 300, 0.3);
+  check('a long walk rebuilds the finest level first, a few at a time', due[0]?.k === 0 && due.length === SKY.air.perFrame, due.map((l) => l.k).join(','));
+  const old = air.plan(w, 5000 + SKY.air.cell * air.n, 3000, 300, 1e4);
+  check('old levels are rebuilt for the weather', old.length > 0);
+  check('the air cells sit round the eye', !!air.levels[0] && Math.abs(air.levels[0].ox + air.n / 2 - (5000 + SKY.air.cell * air.n) / SKY.air.cell) <= 1);
+  const mist = SKY.layers.find((l) => (l.water ?? 0) > 0.5);
+  check('a low mist layer gathers over open water', !!mist);
+  if (mist) {
+    const calmAir = weather(0.3, 0);
+    const z = mist.height + (mist.thickness ?? 0) * 0.3;
+    const sum = (): number => grid((x, y) => airAt(SKY, calmAir, x, y, z).dens).reduce((a, b) => a + b, 0);
+    setAirWater(null);
+    const dry = sum();
+    setAirWater(() => -5);
+    const wet = sum();
+    setAirWater(null);
+    check('mist is thicker over a river or lake', wet > dry * 1.5 + 1, `${wet.toFixed(1)} vs ${dry.toFixed(1)}`);
+  }
   // Weather: rain falls only under storm cloud, and the air above holds that cloud.
   const storm = weather(0.9, 0.9);
   let rainy = 0;
@@ -293,9 +283,3 @@ for (const l of SKY.layers) {
 if (failed) throw new Error(`${failed} sky check(s) failed`);
 console.log('all sky checks passed');
 
-function airColumnAt(x: number, y: number, z0: number, cell: number, wide: number): number {
-  const d = new Float32Array(1);
-  const l = new Float32Array(1);
-  airColumn(SKY, weather(0.7, 0.3), SKY.layers.map((ly) => layerCover(ly, weather(0.7, 0.3))), x, y, z0, cell, 1, d, l, wide);
-  return d[0] ?? 0;
-}

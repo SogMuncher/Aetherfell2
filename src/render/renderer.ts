@@ -3,7 +3,6 @@ import { computeEnv, LightMap, lerp, poseBetween } from './lighting';
 import type { Env } from './lighting';
 import { Viewport } from './viewport';
 import { TerrainLod } from './raycaster/terrainLod';
-import { CloudShadow } from './raycaster/cloudShadow';
 import { project } from './raycaster/camera';
 import type { Camera, Projection } from './raycaster/camera';
 import { SpriteRenderer } from './entities/spriteRenderer';
@@ -40,7 +39,6 @@ export class Renderer {
   /** Cached far land (LOD pyramid) the GPU terrain reads. */
   readonly lod: TerrainLod;
   /** Where clouds keep the sun off the land. */
-  private readonly shadow = new CloudShadow();
   private realm = 'overworld';
   private sprites = new SpriteRenderer();
   readonly particles = new Particles();
@@ -176,13 +174,12 @@ export class Renderer {
     const billboards = this.sprites.collect(p, state, tiles, f.localId, alphaOf, this.time, this.hitFlash);
     const wl = tiles.waterLevel(cx, cy);
     const underwater = me && cz < wl && tiles.ground(cx, cy) < wl ? Math.min(1, (wl - cz) * 2) : 0;
-    this.shadow.update(state.weather, cx, cy);
     this.particles.emit(state, tiles, cx, cy, f.dt, env);
     this.particles.update(f.dt);
     const wind = state.weather.wind;
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, roll: cam.roll, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, light: this.options.light, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.paintView(s, me, env, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time, wind }) : null, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, light: this.options.light, tiles, burning: state.burning, billboards, motes: this.particles.motes, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.paintView(s, me, env, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time, wind }) : null, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;

@@ -20,7 +20,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `settlementSmoke.ts` (198) Settlements and cities in the 3D layer: villages raise real buildings with furniture inside,
 - `simSmoke.ts` (26) Headless smoke test: run the sim for a while and report what happened.
 - `bootSmoke.mjs` (46) Boots the bundled game in a real browser (`npm run check:boot`, needs Playwright): no load errors, journey starts, a world swap keeps one view canvas
-- `skySmoke.ts` (301) Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
+- `skySmoke.ts` (285) Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
 - `torchSmoke.ts` (94) Headless checks for torches: the wall-mounted kind in buildings and halls, and the one you hold
 - `viewmodelShot.ts` (150) renders held-weapon PNGs (owned by the viewmodel thread)
 - `volumeSmoke.ts` (295) The 3D layer: shapes, the brick store, standing on stairs and ramps, bumping heads, buildings
@@ -104,7 +104,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemDefs.ts` (117) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (124) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
-- `index.ts` (90) collects every table into CONTENT, re-exports helpers, runs validation
+- `index.ts` (91) collects every table into CONTENT, re-exports helpers, runs validation
 - `items.ts` (112) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
 - `living.ts` (133) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (175) creature looks as solid parts (D)
@@ -118,8 +118,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
 - `shapes.ts` (268) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
 - `sites.ts` (287) named places: odds, layout, population (D)
-- `sky.ts` (38) The sky and air. Each cloud/mist layer is a sheet of drifting shapes at its own height, size and speed, and
-- `skyField.ts` (293) Where the clouds are (`airColumn`: every layer into air cells). One pure function of the sky data, the weather (cover, storminess, how far
+- `sky.ts` (41) The sky and air. Each cloud/mist layer is a sheet of drifting shapes at its own height, size and speed, and
+- `skyField.ts` (262) Where the clouds are (`airColumn`: every layer into air cells). One pure function of the sky data, the weather (cover, storminess, how far
 - `spellcraft.ts` (286) composes a spell from up to 3 runes; spell descriptions
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
@@ -128,7 +128,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `things.ts` (298) entity archetypes by trait (D)
 - `tileCodes.ts` (20) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
 - `tiles.ts` (225) all tile kinds + code assignment from the ledger
-- `validate.ts` (275) validateContent: every reference must point at something that exists
+- `validate.ts` (280) validateContent: every reference must point at something that exists
 - `viewmodel.ts` (36) held-item hand poses (viewmodel thread)
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
 - `artCheck.ts` (41) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
@@ -148,6 +148,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `sitesWards.ts` (107) City districts and megacity wards as data: what each quarter builds, what it is built of, how it is paved and
 - `structuresCivic.ts` (242) Recipes for stone and civic buildings in the 3D layer: towers, ruins, gatehouses, barracks, church, keep, city
 - `surfacesBuild.ts` (179) Building surfaces: brick, dressed stone, timber frame, daub, washes, roofs, floors and street paving (merged i
+- `airWet.ts` (77) How damp the air is over a map spot: the land's moisture (coarse) and open water close by (fine), which clouds
 
 ## src/input/
 - `input.ts` (185) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -169,12 +170,13 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `env.ts` (144) the light and air of the moment (Env): sun path, sky colours, cloud light, fog = sky at the horizon or the cloud you stand in
 - `lighting.ts` (136) gathers every light from shared data (`LightMap.lights`; fire from the `fire` matter state); lights the held item in 3D (`sample`); `poseBetween` = a craft drawn between ticks; re-exports Env
 - `airSmoke.ts` (170) smoke: the live level of the air cells; burning spots feed it, it rises, spreads and thins in steps
-- `airCells.ts` (253) ONE grid of air cells around the eye that every sky layer writes into; LOD levels, wrapped storage (moving fills only new cells)
 - `stateLooks.ts` (70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
-- `renderer.ts` (211) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `renderer.ts` (208) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
+- `airGrids.ts` (45) A square grid of map cells round the eye, stored wrapped and filled nearest first within a time budget (moistu
+- `airLevels.ts` (89) Plans the air cells round the eye: LOD levels (each twice as wide), where each sits and which to rebuild this
 
 ## src/render/entities/
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
@@ -196,7 +198,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `viewGlider.ts` (235) Your own open glider in first person: a cloth canopy that snaps open overhead, ripples with your speed and ban
 
 ## src/render/gpu/
-- `gpuRenderer.ts` (215) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
+- `gpuRenderer.ts` (218) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
 - `gpuTerrain.ts` (278) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (65) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
@@ -206,13 +208,13 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuSprites.ts` (256) billboards: sprite atlas + instanced quads
 - `gpuLight.ts` (253) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
 - `gpuCasters.ts` (125) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
-- `gpuFarShade.ts` (86) cloud shade + sun rays over terrain height levels far from the eye
+- `gpuFarShade.ts` (70) cloud shade + sun rays over terrain height levels far from the eye
 - `gpuSolid.ts` (240) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
 - `gpuSurfaces.ts` (116) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
 - `gpuParticles.ts` (163) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (61) held item buffer composited on top
 - `gpuSky.ts` (82) full-screen sky: gradient, sun, moon, stars, aurora
-- `gpuClouds.ts` (312) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
+- `gpuClouds.ts` (255) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
 - `gpuPost.ts` (142) low-res colour+depth target and the dither/vignette/tint finish
 - `gpuAir.ts` (65) floating air motes from `AirDef` (biome/realm data)
 - `glUtil.ts` (96) shader/texture helpers, camera basis and view-projection
@@ -220,13 +222,15 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuSpeedLines.ts` (81) Speed lines: thin streaks hanging still in the air around the eye, each drawn stretched along how fast the eye
 - `gpuLightSpread.ts` (105) Smoothed lighting: light worked out at half or quarter resolution, spread to every pixel only from samples on
 - `gpuReflect.ts` (134) Reflections: shiny surfaces (shine from surface and matter-state data, written beside each pixel's normal) mir
+- `gpuAirFill.ts` (215) Fills the air cells on the graphics card: every sky layer into one stack of 3D cell levels, by the skyField ru
+- `gpuCloudShade.ts` (129) Cloud shadows: sun light walked up through the air cells into two maps round the eye, which the light pass rea
+- `gpuGodRays.ts` (126) Sun rays (god rays): light streaming past clouds, hills, trees and walls toward the eye, from the depth and cl
 
 ## src/render/materials/
 - `textures.ts` (197) tileable procedural textures from surface layers
 
 ## src/render/raycaster/
 - `camera.ts` (69) per-frame projection values
-- `cloudShadow.ts` (78) cloud shadows on the land
 - `lodLooks.ts` (57) far colours of biomes
 - `terrainLod.ts` (187) cached LOD pyramid for far land (C)
 - `terrainLodPaint.ts` (184) paints changed chunks (tiles, matter states) over a LOD block's seed picture
@@ -284,7 +288,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/sim/
 - `breakage.ts` (18) ctx.breakItem: an item's onBreak burst + what it breaks into
 - `inputQueue.ts` (142) queueing/folding of guest inputs
-- `simLoop.ts` (354) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
+- `simLoop.ts` (357) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
 - `simState.ts` (95) rng, createState, newPlayer
 - `templates.ts` (67) Builds an entity from its definition. Only instance data lives on the entity.
 - `foresight.ts` (43) A guest's foresight: one tick of its own traveller (and the crafts it may stand on) by the host's rules, touch
@@ -385,7 +389,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matter.ts` (104) MATTER — one way to talk about "the stuff at a place", whatever holds it.
 - `net.ts` (53) co-op message types
 - `palettes.ts` (22) Colour as data. Pictures are never painted in fixed colours: every part of a creature, tree,
-- `sky.ts` (96) RGB, 0..255.
+- `sky.ts` (109) RGB, 0..255.
 - `state.ts` (136) SimState and queues
 - `structures.ts` (181) StructureDef, planned structures, house geometry
 - `tiles.ts` (217) tile/chunk types, TileInfo, keys

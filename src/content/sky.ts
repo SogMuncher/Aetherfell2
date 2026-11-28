@@ -18,9 +18,9 @@ export const SKY: SkyDef = {
     // Storm cells: dark-bellied towers. Rain falls only under these.
     { name: 'storm', height: 240, thickness: 1100, wet: 0.4, tower: 0.95, billow: 0.8, scale: 1100, cover: { base: -0.3, perCloud: 0.15, perRain: 0.9 }, softness: 0.18, detail: 4, tint: [214, 216, 224], belly: 0.62, opacity: 1, shadow: 0.7, rain: true, seed: 53 },
     // Low ragged cloud round the hills and upper slopes, so a high peak stands in it or above it: it gathers over wet land, so valleys and marshes go grey and dry steppe stays bright.
-    { name: 'stratus', height: 220, thickness: 300, tower: 0.3, billow: 0.6, scale: 520, cover: { base: -0.05, perCloud: 0.4, perRain: 0.3 }, softness: 0.2, detail: 4, tint: [226, 228, 232], belly: 0.35, opacity: 0.85, shadow: 0.3, wet: 1, seed: 71 },
+    { name: 'stratus', height: 220, thickness: 300, tower: 0.3, billow: 0.6, scale: 520, cover: { base: -0.05, perCloud: 0.4, perRain: 0.3 }, softness: 0.2, detail: 4, tint: [226, 228, 232], belly: 0.35, opacity: 0.85, shadow: 0.3, wet: 1, water: 0.3, seed: 71 },
     // Ground mist: a thin sheet lying in the low wet places (lakes, marsh hollows); standing in it fogs the view.
-    { name: 'mist', height: 4, thickness: 40, tower: 0.2, billow: 0.6, scale: 220, cover: { base: 0.05, perCloud: 0.25, perRain: 0.35 }, softness: 0.3, detail: 3, tint: [214, 218, 224], belly: 0.1, opacity: 0.5, shadow: 0, wet: 1, seed: 89 },
+    { name: 'mist', height: 4, thickness: 40, tower: 0.2, billow: 0.6, scale: 220, cover: { base: 0.05, perCloud: 0.25, perRain: 0.35 }, softness: 0.3, detail: 3, tint: [214, 218, 224], belly: 0.1, opacity: 0.5, shadow: 0, wet: 1, water: 1, seed: 89 },
   ],
   colours: {
     zenith: { night: [8, 10, 26], day: [62, 110, 196], dusk: [86, 60, 108] },
@@ -33,6 +33,9 @@ export const SKY: SkyDef = {
   aurora: { colour: [40, 190, 120], edge: [0, 0, 60] },
   cloudRange: 40000,
   haze: 6,
-  air: { cell: 1, count: 96, tall: 32, lod: 18, ext: 0.05, budget: 5000, rush: 3, refresh: 8, change: 0.02, blend: 2 },
+  air: { cell: 1, count: 96, tall: 32, lod: 18, ext: 0.05, self: 0.6, perFrame: 2, refresh: 4 },
+  damp: { cell: 32, count: 128, reach: 90, shift: 0.5 },
+  shade: { size: 256, near: 24, far: 192, ext: 0.0066, floor: 0.3 },
+  rays: { strength: 0.55, samples: 28, decay: 0.955, reach: 0.6 },
   smoke: { cell: 1, count: 64, tall: 48, step: 0.1, rise: 0.8, spread: 0.006, fade: 0.03, ext: 1, colour: [52, 50, 48] },
 };
