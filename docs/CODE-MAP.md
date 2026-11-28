@@ -187,7 +187,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `renderer.ts` (218) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
 - `airGrids.ts` (45) A square grid of map cells round the eye, stored wrapped and filled nearest first within a time budget (moistu
-- `airLevels.ts` (89) Plans the air cells round the eye: LOD levels (each twice as wide), where each sits and which to rebuild this 
+- `airLevels.ts` (89) Plans the air cells round the eye: LOD levels (each twice as wide), where each sits and which to rebuild this
 
 ## src/render/entities/
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
