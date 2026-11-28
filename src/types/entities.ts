@@ -156,6 +156,8 @@ export interface AiData {
   aim?: Vec2;
   /** A spell being gathered (mode 'cast'): when `t` reaches the telegraph time it is let go. */
   cast?: { spell: SpellId; t: number };
+  /** What a talker last barked about (sim/social/barks.ts): the tick, the behaviour and place it was on, if it followed the party, the loot it remarked on, when it last greeted. */
+  bark?: { at: number; doing: string; place: string; follower: boolean; loot: number; greet: number };
 }
 
 /**

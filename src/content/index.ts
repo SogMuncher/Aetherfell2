@@ -18,6 +18,8 @@ import { SHIP_PROPS } from './shipProps';
 import { REALMS } from './realms';
 import { ROLES, VILLAGER_NAMES } from './roles';
 import { TALK } from './talk';
+import { BARKS } from './barks';
+import { BARK_RULES } from './speech';
 import { RULES } from './rules';
 import { RUNES, RUNE_ORDER, STARTING_RUNES } from './runes';
 import { SITES } from './sites';
@@ -72,6 +74,8 @@ export const CONTENT: Content = {
   structures: STRUCTURES,
   roles: ROLES,
   talk: TALK,
+  barks: BARKS,
+  barkRules: BARK_RULES,
   villagerNames: VILLAGER_NAMES,
   rules: RULES,
   gear: GEAR,

@@ -14,7 +14,7 @@ const AREAS = {
   realms: ['volumeSmoke', 'fineSmoke', 'doorSmoke', 'realmSmoke', 'matterSmoke', 'matterFireSmoke', 'craftSmoke', 'shipSmoke'],
   world: ['worldSmoke', 'settlementSmoke', 'citySmoke', 'waysSmoke', 'waterSmoke', 'matterSmoke', 'matterFireSmoke'],
   render: ['artSmoke', 'skySmoke'],
-  rpg: ['townSmoke', 'partySmoke', 'mechanicsSmoke', 'simSmoke', 'cheatsSmoke', 'dataSmoke', 'gearSmoke', 'outfitSmoke', 'senseSmoke', 'handsSmoke', 'glideSmoke'],
+  rpg: ['townSmoke', 'barkSmoke', 'partySmoke', 'mechanicsSmoke', 'simSmoke', 'cheatsSmoke', 'dataSmoke', 'gearSmoke', 'outfitSmoke', 'senseSmoke', 'handsSmoke', 'glideSmoke'],
   content: ['dataSmoke', 'mechanicsSmoke'],
   audio: ['mechanicsSmoke', 'musicSmoke'],
   multiplayer: ['coopSmoke'],

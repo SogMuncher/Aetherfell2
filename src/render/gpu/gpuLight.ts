@@ -37,7 +37,7 @@ export const LIGHT_DEFAULT: Readonly<LightQuality> = { scale: 2, sun: 2, sky: tr
  * rays walk `sunSteps` cells of the solid field; `ao` rays of `aoLen` m; the sky ray `skyLen` m up; `indoor` = ambient
  * where the sky ray is blocked (x times ambient + y).
  */
-export const GPU_LIGHT = { bin: 4, span: 96, perBin: 16, maxPerPixel: 8, steps: 24, sunSteps: 48, pick: 0.15, ao: 4, aoLen: 1.2, aoDark: 0.16, skyLen: 10, indoor: [0.9, 0.09] } as const;
+export const GPU_LIGHT = { bin: 4, span: 96, perBin: 16, maxPerPixel: 8, steps: 24, sunSteps: 48, pick: 0.15, ao: 4, aoLen: 1.2, aoDark: 0.16, skyLen: 10, indoor: [0.4, 0.02] } as const;
 const BINS = GPU_LIGHT.span / GPU_LIGHT.bin;
 const K = GPU_LIGHT.perBin;
 
@@ -100,7 +100,7 @@ void main(){
   float spin = fract(sin(dot(vec2(px), vec2(12.9898, 78.233))) * 43758.5453) * 6.2832; float ao = 1.0;
   if (!sprite) for (int i = 0; i < AO; i++){
     float an = spin + float(i) * ${(2 * Math.PI).toFixed(4)} / float(AO); vec3 dir = normalize(n + 0.9 * (cos(an) * tA + sin(an) * tB));
-    ao -= ${(GPU_LIGHT.aoDark * GPU_LIGHT.ao).toFixed(2)} / float(AO) * (1.0 - shadowRay(from, dir, ${GPU_LIGHT.aoLen.toFixed(2)}, 3, false, -1));
+    ao -= ${(GPU_LIGHT.aoDark * GPU_LIGHT.ao).toFixed(2)} / float(AO) * (1.0 - shadowRay(from, dir, ${GPU_LIGHT.aoLen.toFixed(2)}, 5, false, -1));
   }
   vec3 L = (sky > 0.5 ? uAmb : uAmb * ${GPU_LIGHT.indoor[0].toFixed(2)} + ${GPU_LIGHT.indoor[1].toFixed(2)}) * ao + lit;
   // The sun or moon: through the near field (walls, cells, every sprite), then over the land far off, then the clouds.

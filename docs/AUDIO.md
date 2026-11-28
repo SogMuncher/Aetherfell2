@@ -11,7 +11,10 @@
   each sound is `where: 'sky'|'deep'`, day/night, needs trees/water/wind/dry…). Sky sounds, wind, rain and thunder only play
   in a realm with `sky`; the deep has cave air, drips, rumbles, moans.
 - `sfx/`: `materials.ts` (strikes/steps per sound class), `voices.ts` (from body/brain), `spells.ts` (from effects),
-  `vary.ts` (variation).
+  `vary.ts` (variation). `speech.ts`: things with `speech.voice` (`VoiceDef` ranges in `content/speech.ts`; each person
+  picks fixed values by id) talk through one synth: the text's own syllables (vowel formants, consonant clicks/hisses/hums),
+  falling pitch, lilt on stressed words, rising questions; their cries (effort on a swing, hurt, death, battle cry) use
+  the same throat. Creatures without speech snarl on a swing (`speak(..., 'attack')`).
 - `music/`: `signals.ts` + `signalProbes.ts` (state/events -> 0..1 mood signals), styles as data
   (`styleTypes.ts` incl. meters 2/4..12/8, `stylesDay|Places|Danger.ts`, `styles.ts` collects + picks), `conductor.ts`
   (clock, style changes, tempo glide), `band.ts` (plays layers), `composer.ts`, `theory.ts`, `mixer.ts`,

@@ -46,15 +46,16 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `citySmoke.ts` (157) Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings o
 - `siteKit.ts` (64) Shared helpers for the settlement and city checks: a calm world, stepping, finding a site of a kind, walking i
 - `partySmoke.ts` (96) Party: townsfolk join for a fee, follow and fight with the travellers, and carry and wear what they are given
+- `barkSmoke.ts` (63) Barks: talkers say a line from their bark set when hurt or when their plan changes, keep quiet a while after,
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
-- `gameAudio.ts` (232) GameAudio class: reacts to sim events/state, owns ambience, steps, voices, spells, music hookup (C)
+- `gameAudio.ts` (243) GameAudio class: reacts to sim events/state, owns ambience, steps, voices, spells, music hookup (C)
 - `ambience.ts` (187) The ambient bed: wind, rain, fire, water and cave air that follow your surroundings, plus one-shots from ambie
 - `ambientSounds.ts` (77) Ambient one-shots as data: birds, owls, frogs, drips, rumbles… each says where it belongs (under open sky or d
-- `bodySounds.ts` (191) Sounds of bodies and blows: steps, swings, strikes, hits, deaths, voices, spells, traps, frost, breakage, gear
+- `bodySounds.ts` (195) Sounds of bodies and blows: steps, swings, strikes, hits, deaths, voices, spells, traps, frost, breakage, gear
 - `craftSounds.ts` (211) The airship's sounds: a hum, drive rumble and rigging wind that follow its speed, creaks aboard, lever notches
-- `worldSounds.ts` (161) Sounds of things in the world: statuses, doors, throws, impacts, fire, water, jumps, pickups, chests, speech,
+- `worldSounds.ts` (163) Sounds of things in the world: statuses, doors, throws, impacts, fire, water, jumps, pickups, chests, speech,
 
 ## src/audio/music/
 - `composer.ts` (237) The composer writes sections: a key, a tempo, a meter, a chord progression, a melody motif
@@ -87,7 +88,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `materials.ts` (128) What stuff sounds like when it is struck, dropped, broken or walked on, as one small recipe per
 - `spells.ts` (318) Spell and status sounds, built from what the magic actually does.
 - `vary.ts` (82) Variation helpers for procedural sound effects. Audio lives outside the simulation, so it may use
-- `voices.ts` (286) Creature voices, grown from the creature's own definition instead of picked from a list.
+- `voices.ts` (293) Creature voices, grown from the creature's own definition instead of picked from a list.
+- `speech.ts` (166) Speaking voices: one synth that reads a VoiceDef (pitch, pace, lilt, breath, rasp, throat) and sings words or
 
 ## src/clock/
 - `ticker.ts` (20) A steady beat that keeps going when the page is in the background. Browsers stop drawing
@@ -104,7 +106,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemDefs.ts` (117) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (124) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
-- `index.ts` (90) collects every table into CONTENT, re-exports helpers, runs validation
+- `index.ts` (94) collects every table into CONTENT, re-exports helpers, runs validation
 - `items.ts` (112) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
 - `living.ts` (133) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (175) creature looks as solid parts (D)
@@ -135,7 +137,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `smallForms.ts` (253) Bushes, rocks, plants and small heaps (haystacks, woodpiles, wells, rubble) grown from parts, like trees (form
 - `itemGearArt.ts` (124) Gear pictures as art pieces: weapon parts (grip, guard, blade, haft, heads) and the four kinds of armour
 - `itemGoodsArt.ts` (137) Everyday item pictures as art pieces: vessels, torch, coin, key, food, pelt, shard, rune stone, bundle, lump
-- `creatures.ts` (153) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
+- `creatures.ts` (158) Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they ar
 - `handling.ts` (87) How a weapon handles, worked out: its damage kind's profile, its weight, then its own overrides (data in rules
 - `bodyPlans.ts` (172) Body plans as reusable parts (two legs, four legs, hopper, antlers): segmented limbs on joints, roles for body
 - `moves.ts` (78) Body moves seen from outside: how arms, torso, head (or a beast's neck) turn through each swing direction and
@@ -148,6 +150,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `sitesWards.ts` (107) City districts and megacity wards as data: what each quarter builds, what it is built of, how it is paved and
 - `structuresCivic.ts` (242) Recipes for stone and civic buildings in the 3D layer: towers, ruins, gatehouses, barracks, church, keep, city
 - `surfacesBuild.ts` (179) Building surfaces: brick, dressed stone, timber frame, daub, washes, roofs, floors and street paving (merged i
+- `barks.ts` (56) Bark lines of townsfolk (and the folk hired into the party), by moment (see BarkSet in types/defs/speech.ts)
+- `barksFoes.ts` (65) Bark lines of raiders and hexers, by moment (see BarkSet in types/defs/speech.ts)
+- `speech.ts` (43) Speaking voices (ranges each person picks from) and how often talkers bark; the lines are in barks*.ts
 
 ## src/input/
 - `input.ts` (185) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -173,14 +178,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `stateLooks.ts` (70) matter-state looks flattened for the GPU uniforms and far-land tint (`tintFar`)
 - `palette.ts` (82) Turns colour choices ('#rrggbb' or '@palette', see types/palettes.ts) into packed pixels, and
 - `adaptiveRes.ts` (50) adaptive pixel size from frame time
-- `renderer.ts` (211) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
+- `renderer.ts` (221) frame orchestration: camera, env, lights, billboards, particles, then the GPU frame
 - `viewport.ts` (33) the low-resolution frame size; the GPU canvas lies over it
 
 ## src/render/entities/
 - `bodyMath.ts` (49) 3x3 matrix helpers for posing parts
 - `bodyPaint.ts` (294) ray-intersect solids into colour-region pixels
 - `itemArt.ts` (165) paints an item: its parts in order (one picture per item), other base forms, world size
-- `spriteRenderer.ts` (208) gathers billboards (trees, creatures, props, items) for the GPU
+- `spriteRenderer.ts` (224) gathers billboards (trees, creatures, props, items) for the GPU
 - `sprites.ts` (55) sprite type and registry
 - `viewModel.ts` (272) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
@@ -196,7 +201,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `viewGlider.ts` (235) Your own open glider in first person: a cloth canopy that snaps open overhead, ripples with your speed and ban
 
 ## src/render/gpu/
-- `gpuRenderer.ts` (215) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
+- `gpuRenderer.ts` (217) GPU pipeline orchestration: one WebGL2 canvas, passes sky, terrain, air, post (docs/GPU-RENDER.md)
 - `gpuTerrain.ts` (278) LOD clipmap: height/colour textures from `TerrainLod` blocks, displaced grids, tile edge blend, far lift + canopy, depth fog
 - `gpuTerrainState.ts` (54) every matter state of live ground cells as a texture array for the finest levels
 - `gpuStates.ts` (65) STATE_SHADER `blendStates` + uniform looks + packing; used by terrain, tile blocks, structures
@@ -207,9 +212,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gpuLight.ts` (253) THE light pass: every pixel's sky light + AO, sun/moon and nearest point lights, each with shadow rays
 - `gpuCasters.ts` (125) every drawn sprite as a shadow-casting card of its own shape, filed per 1 m column
 - `gpuFarShade.ts` (86) cloud shade + sun rays over terrain height levels far from the eye
-- `gpuSolid.ts` (240) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
+- `gpuSolid.ts` (243) 1 m solid field + ground heights around the eye for shadow rays (`shadowRay` GLSL)
 - `gpuSurfaces.ts` (116) shared tile surface atlas (+ the surfaces matter states cover things with); `SURFACE_OUT` for the light pass
-- `gpuParticles.ts` (163) motes as point sprites and rain streaks
+- `gpuParticles.ts` (169) motes as point sprites and rain streaks
 - `gpuOverlay.ts` (61) held item buffer composited on top
 - `gpuSky.ts` (82) full-screen sky: gradient, sun, moon, stars, aurora
 - `gpuClouds.ts` (312) air cells in a texture array, walked nearest first per pixel; each clump one solid shape (look set at its entry face, no inside faces), cut at the scene depth
@@ -255,6 +260,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `spellEmitters.ts` (161) Spell motes: the bloom of a bolt bursting, cones, novas, wards, the casting hand and a bolt's trail, all from
 - `thingEmitters.ts` (62) Motes things give off every frame: flames on what burns with firelight, smoke and trails, a held torch, burnin
 - `glideTrails.ts` (44) Light trails behind open gliders: a line of glowing motes left hanging in the air from each wingtip (the glide
+- `crumble.ts` (178) Death crumble: a dying body's picture falls apart into its own pixels, which tumble down, blow about, settle a
 
 ## src/settings/
 - `settings.ts` (184) settings as data + localStorage store
@@ -284,10 +290,10 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/sim/
 - `breakage.ts` (18) ctx.breakItem: an item's onBreak burst + what it breaks into
 - `inputQueue.ts` (142) queueing/folding of guest inputs
-- `simLoop.ts` (354) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
+- `simLoop.ts` (359) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
 - `simState.ts` (95) rng, createState, newPlayer
 - `templates.ts` (67) Builds an entity from its definition. Only instance data lives on the entity.
-- `foresight.ts` (43) A guest's foresight: one tick of its own traveller (and the crafts it may stand on) by the host's rules, touch
+- `foresight.ts` (44) A guest's foresight: one tick of its own traveller (and the crafts it may stand on) by the host's rules, touch
 - `travel.ts` (84) Moving the party between realms: travel through a way down or up, and a party wipe carrying them to the surfac
 
 ## src/sim/interaction/
@@ -323,6 +329,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `socialSystem.ts` (238) Conversation: greetings that depend on the hour and on what the party has done, rumours that
 - `topics.ts` (75) Daggerfall-style topics: the "Where is..." and "Tell me about..." menus, and the answers townsfolk give from w
 - `party.ts` (47) Hiring townsfolk into the party for a fee, seeing to their gear, and letting them go again.
+- `barks.ts` (160) Barks: talkers blurt out a line when their brain changes plan or something happens to or near them (lines are
 
 ## src/sim/statuses/
 - `statusSystem.ts` (32) Ticks ongoing conditions: counts them down and queues their repeating effects (burning hurts
@@ -373,9 +380,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/types/
 - `cheats.ts` (71) Debug cheats: shapes only. The list of cheats is data (src/content/cheats.ts), the menu builds
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
-- `defs.ts` (84) Content type + re-exports of defs/*
+- `defs.ts` (89) Content type + re-exports of defs/*
 - `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
-- `entities.ts` (259) Entity and its components
+- `entities.ts` (261) Entity and its components
 - `events.ts` (72) Things that happened during a tick. Audio, render effects, UI and the network react to these.
 - `gear.ts` (200) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
 - `index.ts` (21) re-exports all types
@@ -386,7 +393,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `net.ts` (53) co-op message types
 - `palettes.ts` (22) Colour as data. Pictures are never painted in fixed colours: every part of a creature, tree,
 - `sky.ts` (96) RGB, 0..255.
-- `state.ts` (136) SimState and queues
+- `state.ts` (138) SimState and queues
 - `structures.ts` (181) StructureDef, planned structures, house geometry
 - `tiles.ts` (217) tile/chunk types, TileInfo, keys
 - `vfx.ts` (86) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
@@ -404,8 +411,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `rules.ts` (236) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (160) SiteDef, layouts, city, districts
 - `social.ts` (102) quests, trade, roles, factions
-- `things.ts` (213) MaterialDef, ThingDef, RealmDef, light, weapon stats
+- `things.ts` (216) MaterialDef, ThingDef, RealmDef, light, weapon stats
 - `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
+- `speech.ts` (52) How people sound and what they blurt out: a voice as ranges each person picks from, and bark lines keyed by mo
 
 ## src/sim/craft/
 - `craftBuild.ts` (45) Makes a craft: its hull cells written into a quiet corner of the 3D layer and its fittings set aboard
