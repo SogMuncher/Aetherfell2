@@ -3,6 +3,7 @@ import { bagOf, addItem, countItem, removeItem } from '../../types';
 import { itemDef, pluralName, skillXp, thingDef } from '../../content';
 import { changeClothes, followerNear, hold, putOn } from './gearHandling';
 import { pickFromView, throwFromBag, throwHeld } from './throwing';
+import { heave, lift } from './carrying';
 
 /**
  * Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
@@ -20,6 +21,17 @@ export const rpgSystem: SimSystem = (ctx: SimContext) => {
     addItem(bagOf(pl), it.item.id, it.item.count);
     it.dead = true;
     ctx.emit({ type: 'pickup', player: pl.id, item: it.item.id, count: it.item.count });
+  }
+
+  // Everyone lifts and heaves big things the same way (players' keys and creatures' brains ask alike).
+  for (const e of state.entities.values()) {
+    const a = e.actor;
+    if (!a || e.dead) continue;
+    if (a.holding !== null && ctx.state.entities.get(a.holding)?.dead !== false) a.holding = null;
+    if (a.wantHeave) heave(ctx, e, a.wantHeave);
+    else if (a.wantLift != null) lift(ctx, e, a.wantLift);
+    a.wantHeave = null;
+    a.wantLift = null;
   }
 
   // Creatures pick up and throw with the same hands players use (their brain asks via wantPick / wantThrow).
@@ -143,7 +155,7 @@ function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): voi
     return;
   }
   if (def.thrown) {
-    if (p.holding !== null) return;
+    if (e.actor?.holding != null) return;
     removeItem(bagOf(e), id, 1);
     const pitch = p.input.pitch * 0.9;
     const sp = def.thrown.speed * (1 + p.stats.might * 0.03);

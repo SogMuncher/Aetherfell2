@@ -83,7 +83,6 @@ export function newPlayer(peerId: string, name: string, at: { x: number; y: numb
     maxMana: 60,
     runes: [...CONTENT.startingRunes],
     prepared: CONTENT.rules.start.prepared.filter((r) => CONTENT.startingRunes.includes(r)),
-    holding: null,
     stats: { might: 5, grace: 5, will: 5 },
     skills: { blade: { level: 1, xp: 0 }, evocation: { level: 1, xp: 0 }, athletics: { level: 1, xp: 0 }, speech: { level: 1, xp: 0 } },
     dialogue: null,

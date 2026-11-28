@@ -2,6 +2,7 @@ import type { BehaviourDef, BehaviourKind, Entity } from '../../types';
 import { hauntNow, isPanicking, looksDangerous, spellFor, spellKey, thingDef } from '../../content';
 import { type Senses, busy, clearShot, go, goVia, isEnemy, runAlong, runFrom } from './senses';
 import { grab, throwAt } from './handling';
+import { heaveAt, liftUp, smash } from './carrying';
 
 /**
  * The shared library of behaviours every creature brain picks from (content/living.ts).
@@ -142,6 +143,9 @@ export const BEHAVIOURS: { [K in BehaviourKind]: Behaviour<K> } = {
   grab,
 
   throw: throwAt,
+  lift: liftUp,
+  heave: heaveAt,
+  smash,
 
   wander(s, b) {
     const { rng } = s.ctx;

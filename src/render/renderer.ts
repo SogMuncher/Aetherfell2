@@ -171,7 +171,7 @@ export class Renderer {
     this.lod.beginFrame(4, cx, cy);
     // What a guest foresees itself (its own traveller, crafts and what is fixed aboard them) moves every tick, so it is drawn
     // by the time since that tick, like the view; the rest by the time since the host's last update. One on the host.
-    const alphaOf = (e: Entity): number => (e.id === f.localId || e.craft || e.ride || (me?.player?.holding ?? null) === e.id ? (f.selfAlpha ?? f.alpha) : f.alpha);
+    const alphaOf = (e: Entity): number => (e.id === f.localId || e.craft || e.ride || (me?.actor?.holding ?? null) === e.id ? (f.selfAlpha ?? f.alpha) : f.alpha);
     this.lightmap.build(state, tiles, cx, cy, this.time, alphaOf);
     const billboards = this.sprites.collect(p, state, tiles, f.localId, alphaOf, this.time, this.hitFlash);
     const wl = tiles.waterLevel(cx, cy);

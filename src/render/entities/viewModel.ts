@@ -154,7 +154,7 @@ export class ViewModel {
       pose.y += walk * vm.sway.walk - vm.sway.walk * 0.4 + Math.sin(f.time * 1.7) * vm.sway.breath;
       pose.x += Math.sin(f.bob) * vm.sway.walk * 0.6;
     }
-    if (p.holding !== null) pose.y += vm.carry.y;
+    if (e.actor?.holding != null) pose.y += vm.carry.y;
     // Turning the view drags the item behind it, then it catches up.
     const dyaw = Math.atan2(Math.sin(f.yaw - this.lastYaw), Math.cos(f.yaw - this.lastYaw)) / dt;
     const dpit = (f.pitch - this.lastPitch) / dt;

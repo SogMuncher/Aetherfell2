@@ -78,6 +78,12 @@ export interface ActorData {
   wantThrow?: ThrowAim | null;
   /** Set by a controller (AI) to pick up this loose item into the bag, the same pick-up a player makes. */
   wantPick?: number | null;
+  /** The big thing (crate, pot, barrel) carried in both hands, if any. Players and creatures alike. */
+  holding: number | null;
+  /** Set by a controller to lift this thing in both hands (sim/rpg/carrying.ts). */
+  wantLift?: number | null;
+  /** Set by a controller to heave what it carries (`power` 0 sets it down at its feet). */
+  wantHeave?: { yaw: number; lift: number; power: number } | null;
 }
 
 export interface DialogueOption {
@@ -109,8 +115,6 @@ export interface PlayerData {
   runes: RuneId[];
   /** The runes of the spell readied for casting (empty = none). */
   prepared: RuneId[];
-  /** Entity being carried, if any. */
-  holding: number | null;
   stats: Stats;
   skills: Record<SkillId, Skill>;
   dialogue: DialogueView | null;

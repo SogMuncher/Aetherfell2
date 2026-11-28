@@ -46,6 +46,10 @@ export function stampCards(cards: readonly Solid[], source: CardSource, c: Canva
     let ax = (s.a[1] ?? 0) * R[0] + (s.a[4] ?? 0) * R[1] + (s.a[7] ?? 0) * R[2];
     let ay = -(s.a[4] ?? 0);
     const al = Math.hypot(ax, ay);
+    // The item leans toward or away from the viewer as its axis does: depth runs along it from the grip, so a
+    // blade pointing at you stays over the arm and one pointing away goes behind it (never one flat depth).
+    const aF = (s.a[1] ?? 0) * F[0] + (s.a[4] ?? 0) * F[1] + (s.a[7] ?? 0) * F[2];
+    const slope = Math.max(-3, Math.min(3, aF / Math.max(al, 0.3))) / ppm;
     if (al < 1e-3) [ax, ay] = [0, -1];
     else [ax, ay] = [ax / al, ay / al];
     // Rotation taking the picture's own axis onto it, run backwards per target pixel.
@@ -67,9 +71,10 @@ export function stampCards(cards: readonly Solid[], source: CardSource, c: Canva
         const col = pic.px[v * pic.n + u] ?? 0;
         if (!col) continue;
         const o = j * w + i;
-        if (c.px[o] && (c.depth[o] ?? Infinity) < d) continue;
+        const dp = d + ((i + 0.5 - gx) * ax + (j + 0.5 - gy) * ay) * slope;
+        if (c.px[o] && (c.depth[o] ?? Infinity) < dp) continue;
         c.px[o] = col;
-        c.depth[o] = d;
+        c.depth[o] = dp;
         if (c.regions) c.regions[o] = 0;
       }
     }

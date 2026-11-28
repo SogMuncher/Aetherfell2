@@ -233,13 +233,13 @@ export class Simulation {
           const id = state.players[c.playerId];
           if (id !== undefined) {
             const e = state.entities.get(id);
-            if (e?.player?.holding != null) {
-              const held = state.entities.get(e.player.holding);
+            if (e?.actor?.holding != null) {
+              const held = state.entities.get(e.actor.holding);
               if (held) held.heldBy = null;
             }
             if (e) {
               if (e.player) {
-                e.player.holding = null;
+                if (e.actor) e.actor.holding = null;
                 e.player.dialogue = null;
                 e.player.input = emptyInput(0, e.player.input.yaw);
               }
@@ -289,7 +289,7 @@ export class Simulation {
     for (const [pid, id] of Object.entries(state.players)) {
       const e = state.entities.get(id);
       if (e?.player) {
-        e.player.holding = null;
+        if (e.actor) e.actor.holding = null;
         e.player.dialogue = null;
         e.player.input = emptyInput(0, e.player.input.yaw);
         state.absent[pid] = e;

@@ -28,7 +28,7 @@ export function makeEntity(content: Content, id: number, def: ThingId, x: number
     cooldown: 0,
   };
   if (d.actor) {
-    base.actor = { weapon: null, inventory: [], swing: null, guard: null, guardSince: 0, lastAttacker: null, onGround: true, wantSwing: null, wantGuard: false };
+    base.actor = { weapon: null, inventory: [], swing: null, guard: null, guardSince: 0, lastAttacker: null, onGround: true, wantSwing: null, wantGuard: false, holding: null };
     // Casters start with their aether full.
     if (d.actor.caster) base.actor.mana = d.actor.caster.mana;
   }
