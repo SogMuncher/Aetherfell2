@@ -35,6 +35,9 @@ interface Drag {
 export class PaperdollWindow {
   readonly el: HTMLElement;
   open = false;
+  /** Whose body is shown: a party member's (entity id), or undefined for your own. */
+  who: number | undefined;
+  private readonly heading: HTMLElement;
   private readonly host: HTMLElement;
   private readonly fig: HTMLElement;
   private readonly canvas: HTMLCanvasElement;
@@ -64,7 +67,9 @@ export class PaperdollWindow {
     const canvas = this.el.querySelector<HTMLCanvasElement>('canvas');
     const side = this.el.querySelector<HTMLElement>('.doll-side');
     const note = this.el.querySelector<HTMLElement>('.doll-note');
-    if (!fig || !canvas || !side || !note) throw new Error('paperdoll markup');
+    const heading = this.el.querySelector<HTMLElement>('h2');
+    if (!fig || !canvas || !side || !note || !heading) throw new Error('paperdoll markup');
+    this.heading = heading;
     this.fig = fig;
     this.canvas = canvas;
     this.side = side;
@@ -125,7 +130,14 @@ export class PaperdollWindow {
 
   /** Called every frame. */
   update(e: Entity): void {
+    this.who = e.player ? undefined : e.id;
     if (!this.open) return;
+    const name = e.npc?.name ?? 'You';
+    if (this.heading.textContent !== name) {
+      this.heading.textContent = name;
+      this.key = '';
+      this.side.innerHTML = '';
+    }
     // The hands are one more slot: whatever is held shows there.
     const worn: Record<BodyRegionId, ItemId> = { ...(e.worn ?? {}) };
     if (e.actor?.weapon) worn[HAND_SLOT] = e.actor.weapon;

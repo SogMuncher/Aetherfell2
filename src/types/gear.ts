@@ -190,10 +190,11 @@ export interface OutfitEntry {
 }
 
 /** A request to change what a traveller wears or holds (an input, like using an item). */
+/** `on`: a party member's body (entity id) instead of your own; pieces come from their bag, else from yours. */
 export type WearRequest =
   /** Put a piece from the bag on (or, with `slot` HAND_SLOT, take anything from the bag into the hands). */
-  | { do: 'wear'; item: ItemId; slot?: GearSlot }
+  | { do: 'wear'; item: ItemId; slot?: GearSlot; on?: number }
   /** Put on a piece lying in the world (it is picked up first, if within reach). */
   | { do: 'wearFrom'; entity: number }
   /** Take what is on this part of the body (or in the hands) into the bag. */
-  | { do: 'remove'; region: GearSlot };
+  | { do: 'remove'; region: GearSlot; on?: number };

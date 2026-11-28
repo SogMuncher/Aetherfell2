@@ -61,8 +61,9 @@ export const aiSystem: SimSystem = (ctx: SimContext) => {
         break;
       case 'wander':
       case 'goto':
+      case 'run':
         goal = ai.goal;
-        speed = ai.mode === 'wander' ? base * 0.35 : base * 0.6;
+        speed = ai.mode === 'wander' ? base * 0.35 : ai.mode === 'run' ? base : base * 0.6;
         break;
       case 'chase':
       case 'attack':
@@ -125,7 +126,7 @@ export const aiSystem: SimSystem = (ctx: SimContext) => {
         e.vel.x *= 0.5;
         e.vel.y *= 0.5;
         if (target) e.angle = Math.atan2(dy, dx);
-        if (ai.mode === 'goto' || ai.mode === 'wander') {
+        if (ai.mode === 'goto' || ai.mode === 'run' || ai.mode === 'wander') {
           // Next waypoint of a found way, or arrived.
           ai.goal = ai.path?.shift() ?? null;
           if (!ai.goal) {

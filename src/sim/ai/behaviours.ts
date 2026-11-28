@@ -1,4 +1,4 @@
-import type { BehaviourDef, BehaviourKind } from '../../types';
+import type { BehaviourDef, BehaviourKind, Entity } from '../../types';
 import { hauntNow, isPanicking, looksDangerous, spellFor, spellKey, thingDef } from '../../content';
 import { type Senses, busy, clearShot, go, goVia, isEnemy, runAlong, runFrom } from './senses';
 import { grab, throwAt } from './handling';
@@ -62,6 +62,38 @@ export const BEHAVIOURS: { [K in BehaviourKind]: Behaviour<K> } = {
       return go(s, 'cast', null, foe.e.id);
     }
     return false;
+  },
+
+  follow(s, b) {
+    const { me, ctx } = s;
+    let lead: Entity | undefined;
+    let ld = Infinity;
+    for (const id of Object.values(ctx.state.players)) {
+      const p = ctx.state.entities.get(id);
+      const d = p && p.faction === me.faction ? Math.hypot(p.pos.x - me.pos.x, p.pos.y - me.pos.y) : Infinity;
+      if (p && d < ld) [lead, ld] = [p, d];
+    }
+    if (!lead) return false;
+    const by = lead;
+    // Whatever their side hates, or anything going for one of their own, near the one they follow.
+    const foe = s.seen.find((o) => {
+      const aim = o.e.ai?.target;
+      const theirs = aim !== null && aim !== undefined && ctx.state.entities.get(aim)?.faction === me.faction;
+      return (isEnemy(s, o) || theirs) && Math.hypot(o.e.pos.x - by.pos.x, o.e.pos.y - by.pos.y) < b.guard;
+    });
+    if (foe) return go(s, 'chase', null, foe.e.id);
+    // A spot a little short of them, on this side (not into their back).
+    const k = ld > 0 ? (b.near * 0.6) / ld : 0;
+    const spot = { x: by.pos.x + (me.pos.x - by.pos.x) * k, y: by.pos.y + (me.pos.y - by.pos.y) * k };
+    if (ld > b.far || (ld > b.near && busy(s, 'follow', 'run'))) {
+      // Keep the way found while it still leads close to them.
+      const end = me.ai.aim ?? me.ai.goal;
+      if (busy(s, 'follow', 'run') && end && Math.hypot(end.x - by.pos.x, end.y - by.pos.y) < b.near) return true;
+      return goVia(s, 'run', spot);
+    }
+    if (ld > b.near) return go(s, 'goto', spot);
+    me.angle = Math.atan2(by.pos.y - me.pos.y, by.pos.x - me.pos.x);
+    return go(s, 'idle', null);
   },
 
   defend(s) {

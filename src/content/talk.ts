@@ -12,4 +12,12 @@ export const TALK: TalkDef = {
   at: { home: 'at home', square: 'about the square', edge: 'out past the houses', building: 'at the {what}' },
   refuseBelow: -0.2,
   refuse: ['Find it yourself.', 'I have nothing to say to your sort.', 'Ask someone else.'],
+  party: {
+    hire: 'Come with us. ({fee} silver)',
+    joined: 'For {fee} silver? Lead on, I am with you.',
+    broke: 'Come back when you have {fee} silver.',
+    gear: 'Let me see your gear.',
+    dismiss: 'We part ways here.',
+    left: 'As you like. I will find my own way home.',
+  },
 };

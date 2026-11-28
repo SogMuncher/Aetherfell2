@@ -44,6 +44,11 @@ export function isCreature(e: Entity): e is Creature {
   return e.actor !== undefined && e.ai !== undefined;
 }
 
+/** A creature on the travellers' side (someone hired into the party): it follows them and they can see to its gear. */
+export function isFollower(c: Content, e: Entity): e is Creature {
+  return !e.player && !e.dead && isCreature(e) && e.faction === c.rules.factions.player;
+}
+
 /**
  * Whether others see this thing as dangerous: a traveller, or a creature whose brain hunts.
  * Skittish creatures keep their distance from these.

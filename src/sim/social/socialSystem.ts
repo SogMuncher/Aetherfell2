@@ -1,6 +1,7 @@
 import type { DialogueOption, DialogueView, Entity, Quest, RoleDef, SimContext, SimSystem } from '../../types';
 import { bagOf, addItem, countItem, removeItem } from '../../types';
 import { answer, direction, distanceWords, submenu } from './topics';
+import { partyChoice, partyOptions } from './party';
 import { dayPart, fillText, itemDef, mended, pluralName, rainAt, siteBaseName, thingDef } from '../../content';
 
 /**
@@ -104,6 +105,7 @@ function optionsFor(ctx: SimContext, npc: Entity, pl?: Entity): DialogueOption[]
   if (q?.state === 'offered') opts.push({ label: role?.quest?.offer ?? 'Any work for me?', action: 'quest' });
   if (q && questReady(q, pl)) opts.push({ label: role?.quest?.turnIn ?? 'It is done.', action: 'turnIn' });
   if (role?.trade) opts.push({ label: role.trade.label, action: 'trade' });
+  opts.push(...partyOptions(ctx, npc, folkMood(ctx, npc)));
   opts.push({ label: ask.farewell, action: 'farewell' });
   return opts;
 }
@@ -127,6 +129,14 @@ function choose(ctx: SimContext, npc: Entity, pl: Entity, opt: DialogueOption): 
     case 'places':
     case 'people':
       return { speaker: npc.id, speakerName: npc.npc?.name ?? 'Villager', text: ctx.content.talk.prompt, options: submenu(ctx, npc, opt.action) };
+    case 'hire':
+    case 'dismiss':
+    case 'gear': {
+      const said = partyChoice(ctx, npc, pl, opt.action);
+      if (said === null) return null;
+      text = said;
+      break;
+    }
     case 'back':
       return { speaker: npc.id, speakerName: npc.npc?.name ?? 'Villager', text: ctx.content.talk.prompt, options: optionsFor(ctx, npc, pl) };
     case 'place':

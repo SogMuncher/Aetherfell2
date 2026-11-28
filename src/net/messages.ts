@@ -78,9 +78,10 @@ function cleanWear(v: unknown): WearRequest | null {
   if (typeof v !== 'object' || v === null) return null;
   const w = v as Record<string, unknown>;
   const short = (x: unknown): x is string => typeof x === 'string' && x.length > 0 && x.length <= 64;
-  if (w.do === 'wear' && short(w.item)) return short(w.slot) ? { do: 'wear', item: w.item, slot: w.slot } : { do: 'wear', item: w.item };
+  const on = typeof w.on === 'number' && Number.isInteger(w.on) ? { on: w.on } : {};
+  if (w.do === 'wear' && short(w.item)) return short(w.slot) ? { do: 'wear', item: w.item, slot: w.slot, ...on } : { do: 'wear', item: w.item, ...on };
   if (w.do === 'wearFrom' && typeof w.entity === 'number' && Number.isInteger(w.entity)) return { do: 'wearFrom', entity: w.entity };
-  if (w.do === 'remove' && short(w.region)) return { do: 'remove', region: w.region };
+  if (w.do === 'remove' && short(w.region)) return { do: 'remove', region: w.region, ...on };
   return null;
 }
 

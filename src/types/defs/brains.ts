@@ -31,6 +31,11 @@ export type BehaviourDef =
    * `cooldown` the ticks between casts. Needs the thing to have `actor.caster`.
    */
   | { do: 'cast'; spells: { runes: RuneId[]; range: [number, number]; chance: number }[]; keep: number; telegraph: number; cooldown: [number, number] }
+  /**
+   * Goes with the nearest traveller of its own side (someone who joined the party): fights what threatens the party
+   * within `guard` metres of them, keeps within `near`, and hurries once more than `far` behind.
+   */
+  | { do: 'follow'; near: number; far: number; guard: number }
   /** Fights back against whoever hurt it, if they are still close. */
   | { do: 'defend' }
   /** Keeps a daily routine: work place by day, home by night, pottering about at work. Needs a home and work place. */

@@ -1,21 +1,35 @@
 import type { BodyRegionId, Entity, ItemId, PlayerData, SimContext, WearRequest } from '../../types';
 import { bagOf, addItem, HAND_SLOT, removeItem } from '../../types';
-import { itemDef, thingDef } from '../../content';
+import { isFollower, itemDef, thingDef } from '../../content';
 import { pickFromView } from './throwing';
 
 /** Putting armour on, taking it off, or putting on what lies in the world: one rule for every body that wears things. */
 export function changeClothes(ctx: SimContext, e: Entity, p: PlayerData, req: WearRequest): void {
   if (p.downed > 0) return;
+  // Dressing a party member: their body, and a piece from your bag goes into theirs first.
+  const body = req.do !== 'wearFrom' && req.on !== undefined ? followerNear(ctx, e, req.on) : e;
+  if (!body) return;
+  if (req.do === 'wear' && body !== e && !bagOf(body).some((s) => s.id === req.item)) {
+    if (!removeItem(bagOf(e), req.item, 1)) return;
+    addItem(bagOf(body), req.item, 1);
+  }
   if (req.do === 'wear') {
-    if (req.slot === HAND_SLOT) hold(ctx, e, req.item);
-    else putOn(ctx, e, req.item);
+    if (req.slot === HAND_SLOT) hold(ctx, body, req.item);
+    else putOn(ctx, body, req.item);
   } else if (req.do === 'remove') {
-    if (req.region === HAND_SLOT) letGoOfHeld(ctx, e);
-    else takeOff(ctx, e, req.region);
+    if (req.region === HAND_SLOT) letGoOfHeld(ctx, body);
+    else takeOff(ctx, body, req.region);
   } else {
     const id = pickFromView(ctx, e, req.entity);
     if (id && itemDef(ctx.content, id)?.armour) putOn(ctx, e, id);
   }
+}
+
+/** A party member within arm's reach of this traveller (their bag and body can be seen to), if `id` is one. */
+export function followerNear(ctx: SimContext, e: Entity, id: number): Entity | undefined {
+  const t = ctx.state.entities.get(id);
+  if (!t || !isFollower(ctx.content, t) || Math.hypot(t.pos.x - e.pos.x, t.pos.y - e.pos.y) > 3.5 || Math.abs(t.z - e.z) > 2.5) return undefined;
+  return t;
 }
 
 /** Takes any item from the pack into the hands (the hand slot); what was held goes into the pack. */
