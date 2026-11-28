@@ -17,4 +17,6 @@ export const TILE_LEDGER: readonly string[] = [
   'hullPlank', 'sailcloth',
   'brickWall', 'ashlar', 'sandstone', 'basalt', 'fieldstone', 'marble', 'halfTimber', 'daub', 'logWall', 'ochrePlaster',
   'rosePlaster', 'shingles', 'copperRoof', 'turfRoof', 'tiledFloor', 'darkPlanks', 'rushFloor', 'setts', 'gravel', 'mud',
+  'cryptWall', 'cryptFloor', 'mineRock', 'oreVein', 'flowstone', 'timberProp', 'stalagmite', 'bookshelf', 'lockedDoor', 'boundDoor',
+  'greatPaving', 'kerb', 'archiveWall',
 ];

@@ -25,6 +25,7 @@ export type { SiteLayoutDef, CompassSide, DistrictDef, Landmark, CityLayout, War
 export type { QuestTemplate, QuestWords, TradeDef, RoleDef, FactionDef, DayPart, Routine, TalkDef } from './defs/social';
 export type { VoiceSpan, VoiceDef, SpeechDef, BarkSet, BarkRules } from './defs/speech';
 export type { SwingFeel, Handling, HandlingDef, HandlingTune } from './defs/handling';
+export type { ScatterDef, UnderRoomDef, UnderBiomeDef } from './defs/under';
 export type { ReactionDef, SwingDef, RulesDef, TouchDef, HudTheme, DayRules } from './defs/rules';
 
 

@@ -32,7 +32,7 @@ export function walkable(ctx: SimContext, cx: number, cy: number, from: number):
   const g = ctx.tiles.ground(x, y);
   const h = Math.max(g, ctx.state.volume.floorBelow(x, y, from + STEP, from - DROP));
   if (h - from > (h === g ? SLOPE : STEP) || from - h > DROP) return NaN;
-  if (ctx.state.volume.solidBetween(x, y, h + 0.6, h + 1.5) && ctx.matter.doorOpen(cx, cy, Math.floor(h + 0.3)) === null) return NaN;
+  if (ctx.state.volume.solidBetween(x, y, h + 0.6, h + 1.5) && (ctx.matter.doorOpen(cx, cy, Math.floor(h + 0.3)) === null || ctx.matter.info(cx, cy, Math.floor(h + 0.3))?.lock !== undefined)) return NaN;
   return ctx.tiles.info(x, y).liquid && g < -0.4 ? NaN : h;
 }
 

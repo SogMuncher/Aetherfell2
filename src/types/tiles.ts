@@ -85,6 +85,8 @@ export interface TileInfo {
   readonly durability?: number;
   /** What it becomes when it breaks (a door becomes a plank floor). */
   readonly breaksInto?: TileKind;
+  /** Locked shut: only the `key` item opens it (used up), turning it into tile `into`. */
+  readonly lock?: { key: string; into: TileKind };
   /** It turns into another tile by itself after a while (ash grows over, a burnt trunk falls). */
   readonly later?: TileLater<TileKind>;
 }

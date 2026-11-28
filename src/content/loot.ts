@@ -110,4 +110,25 @@ export const LOOT: Record<LootId, LootDef> = {
     ],
   },
   bogToad: { entries: [{ item: 'antidote', min: 1, max: 1, chance: 0.35 }, { item: 'coin', min: 0, max: 3, chance: 0.4 }] },
+  // Underworld furnishings (content/thingsUnder.ts).
+  tomb: {
+    entries: [
+      { item: 'coin', min: 4, max: 24, chance: 1 },
+      { item: 'ruinKey', min: 1, max: 1, chance: 0.2 },
+      { item: 'runeShard', min: 1, max: 2, chance: 0.3 },
+      { item: 'rune:grand', min: 1, max: 1, chance: 0.05 },
+      { item: '', gear: { qualities: ['common', 'fine'] }, min: 1, max: 1, chance: 0.3 },
+    ],
+  },
+  bones: { entries: [{ item: 'coin', min: 1, max: 4, chance: 0.4 }, { item: 'ruinKey', min: 1, max: 1, chance: 0.08 }, { item: '', gear: { region: 'hand', qualities: ['crude'] }, min: 1, max: 1, chance: 0.12 }] },
+  rack: { entries: [{ item: '', gear: { region: 'hand', qualities: ['common', 'fine'] }, min: 1, max: 2, chance: 1 }] },
+  lectern: {
+    entries: [
+      { item: 'rune:frost', min: 1, max: 1, chance: 0.2 },
+      { item: 'rune:arc', min: 1, max: 1, chance: 0.2 },
+      { item: 'rune:mend', min: 1, max: 1, chance: 0.2 },
+      { item: 'rune:wide', min: 1, max: 1, chance: 0.15 },
+      { item: 'manaTonic', min: 1, max: 1, chance: 0.3 },
+    ],
+  },
 };

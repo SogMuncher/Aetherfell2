@@ -2,6 +2,7 @@
 import type { ThingDef, ThingId } from '../types';
 import { CREATURES } from './creatures';
 import { AIRSHIP } from './crafts';
+import { UNDER_THINGS } from './thingsUnder';
 
 /**
  * Entity archetypes built from traits. Systems act on the traits, never on the id, so a new
@@ -295,4 +296,5 @@ export const THINGS: Record<ThingId, ThingDef> = {
     despawn: 140,
     sprite: null,
   },
+  ...UNDER_THINGS,
 };

@@ -46,6 +46,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `citySmoke.ts` (157) Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings o
 - `siteKit.ts` (64) Shared helpers for the settlement and city checks: a calm world, stepping, finding a site of a kind, walking i
 - `partySmoke.ts` (96) Party: townsfolk join for a fee, follow and fight with the travellers, and carry and wear what they are given
+- `underSmoke.ts` (133) UNDERWORLD BIOMES: regions dug their own way, rooms, galleries, pits and pools, dark rivers, doors and locks,
 - `barkSmoke.ts` (63) Barks: talkers say a line from their bark set when hurt or when their plan changes, keep quiet a while after,
 
 ## src/audio/
@@ -106,15 +107,15 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `itemDefs.ts` (117) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
 - `helpers.ts` (124) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
-- `index.ts` (94) collects every table into CONTENT, re-exports helpers, runs validation
+- `index.ts` (95) collects every table into CONTENT, re-exports helpers, runs validation
 - `items.ts` (112) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
 - `living.ts` (133) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (175) creature looks as solid parts (D)
-- `loot.ts` (113) Drop tables: each entry rolls on its own.
-- `materials.ts` (29) How stuff reacts physically. Every tile and thing made of a material behaves the same way.
+- `loot.ts` (134) Drop tables: each entry rolls on its own.
+- `materials.ts` (30) How stuff reacts physically. Every tile and thing made of a material behaves the same way.
 - `palettes.ts` (62) Palettes: the colours that fill the colour regions of every picture (creatures, trees, rocks,
 - `props.ts` (232) Props as forms: barrels, crates, chests, urns, torches, campfires and trap plates are put
-- `realms.ts` (67) The spaces the world is made of. A realm is a place with its own ground, light and sky; the whole
+- `realms.ts` (66) The spaces the world is made of. A realm is a place with its own ground, light and sky; the whole
 - `roles.ts` (124) Villager jobs: what they add to a greeting, what they keep on the rack, the trouble they ask
 - `rules.ts` (131) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
@@ -126,11 +127,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (213) building recipes for the 3D layer (D)
-- `surfaces.ts` (246) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
-- `things.ts` (298) entity archetypes by trait (D)
-- `tileCodes.ts` (20) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
-- `tiles.ts` (225) all tile kinds + code assignment from the ledger
-- `validate.ts` (275) validateContent: every reference must point at something that exists
+- `surfaces.ts` (248) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
+- `things.ts` (300) entity archetypes by trait (D)
+- `tileCodes.ts` (22) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
+- `tiles.ts` (229) all tile kinds + code assignment from the ledger
+- `validate.ts` (283) validateContent: every reference must point at something that exists
 - `viewmodel.ts` (36) held-item hand poses (viewmodel thread)
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
 - `artCheck.ts` (41) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
@@ -150,6 +151,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `sitesWards.ts` (107) City districts and megacity wards as data: what each quarter builds, what it is built of, how it is paved and
 - `structuresCivic.ts` (242) Recipes for stone and civic buildings in the 3D layer: towers, ruins, gatehouses, barracks, church, keep, city
 - `surfacesBuild.ts` (179) Building surfaces: brick, dressed stone, timber frame, daub, washes, roofs, floors and street paving (merged i
+- `propsUnder.ts` (103) Underworld prop pictures: sarcophagus, bones, candles, lectern, altar, weapon rack, trap plates (merged into t
+- `surfacesUnder.ts` (88) Underworld surfaces: tomb stone, grave slabs, hewn rock, ore, flowstone, books, iron-bound boards, great pavin
+- `thingsUnder.ts` (90) Underworld things: sarcophagi, bone heaps, candles, mine lamps, lecterns, altars, weapon racks and trap plates
+- `tilesUnder.ts` (26) Underworld tiles: tomb masonry, mine rock and ore, flowstone, timber props, bookshelves, iron-bound doors, pav
+- `underBiomes.ts` (159) Underworld biomes: halls, caves, crypts, mines, archives and drowned grottoes, each with its rooms and what li
 - `barks.ts` (56) Bark lines of townsfolk (and the folk hired into the party), by moment (see BarkSet in types/defs/speech.ts)
 - `barksFoes.ts` (65) Bark lines of raiders and hexers, by moment (see BarkSet in types/defs/speech.ts)
 - `speech.ts` (43) Speaking voices (ranges each person picks from) and how often talkers bark; the lines are in barks*.ts
@@ -297,7 +303,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `travel.ts` (84) Moving the party between realms: travel through a way down or up, and a party wipe carrying them to the surfac
 
 ## src/sim/interaction/
-- `interactionSystem.ts` (266) The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
+- `interactionSystem.ts` (280) The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
 
 ## src/sim/magic/
 - `magicSystem.ts` (188) Casting. The prepared spell is composed from runes (content/spellcraft.ts): a delivery (bolt,
@@ -361,26 +367,30 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `roads.ts` (112) ways per region: waysTouching, wayHit
 - `sites.ts` (298) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
 - `terrain.ts` (223) The shape of the land: continents, rolling hills, ridged mountains, a moisture field for biomes,
-- `underworld.ts` (171) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
-- `underSpot.ts` (132) `underAt`: what the underworld is at a tile (river, deck, cave, ruin street, hall, corridor, way artery, rock), read from the land
+- `underworld.ts` (168) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
+- `underSpot.ts` (188) `underAt`: what the underworld is at a tile (river, deck, cave, ruin street, hall, corridor, way artery, rock), read from the land
 - `underPlan.ts` (112) per-region plan of what the places above ask of the rock: caves, great halls, denser tunnels
 - `volume.ts` (280) VolumeStore: sparse 3D brick store (C)
 - `brickData.ts` (97) a brick as data: run-packing for saves/network, fresh cell-state arrays
 - `water.ts` (224) Rivers and lakes: a pure function of the seed that reads no places (cities and roads read it, never the other way).
 - `wayParts.ts` (137) way types, site neighbours, nets
 - `wayRoute.ts` (213) route cost, bridging, way between two places
-- `worldPopulate.ts` (250) raises buildings, furnishes halls, spawns people
-- `worldSystem.ts` (144) keeps world around the party: places, chunk unloading
+- `worldPopulate.ts` (184) raises buildings, furnishes halls, spawns people
+- `worldSystem.ts` (145) keeps world around the party: places, chunk unloading
 - `worldTiles.ts` (239) The tile world: lazily generated chunks held in SimState, with change tracking.
 - `gateRule.ts` (13) Says which street ends of a walled place roads really use (set by roads.ts, which knows the land). A gate open
 - `volumeFrames.ts` (100) Moving frames of the 3D layer (an airship): world questions asked again in each frame's own cells, turned and
 - `volumeColumns.ts` (79) Standing, head room and solidity down one column of the 3D layer, whole cells and fine half-metre cells alike
 - `volumeFine.ts` (76) Fine cells of the 3D layer: splitting a whole cell into eight half-metre cells and writing one of them
+- `underBiome.ts` (79) Which underworld biome a hall node lies in, and which room its hall is: rolled from the seed, swayed by the la
+- `underFurnish.ts` (119) Furnishes underworld halls, corridors and old roads near the party, once per chunk: realm, biome and room scat
+- `underLevels.ts` (29) Upper levels of underworld halls as cells of the 3D layer: a gallery walkway along two walls and the stair up
+- `underRooms.ts` (146) Underworld halls and corridors on the 16 m grid: which links are open, each hall's size and shape, and what is
 
 ## src/types/
 - `cheats.ts` (71) Debug cheats: shapes only. The list of cheats is data (src/content/cheats.ts), the menu builds
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
-- `defs.ts` (89) Content type + re-exports of defs/*
+- `defs.ts` (90) Content type + re-exports of defs/*
 - `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
 - `entities.ts` (261) Entity and its components
 - `events.ts` (72) Things that happened during a tick. Audio, render effects, UI and the network react to these.
@@ -395,7 +405,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `sky.ts` (96) RGB, 0..255.
 - `state.ts` (138) SimState and queues
 - `structures.ts` (181) StructureDef, planned structures, house geometry
-- `tiles.ts` (217) tile/chunk types, TileInfo, keys
+- `tiles.ts` (219) tile/chunk types, TileInfo, keys
 - `vfx.ts` (86) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
 - `volume.ts` (200) 3D layer brick/volume types
 - `world.ts` (72) A named place in the world. Registered by the world system as players come near.
@@ -411,8 +421,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `rules.ts` (236) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (160) SiteDef, layouts, city, districts
 - `social.ts` (102) quests, trade, roles, factions
-- `things.ts` (216) MaterialDef, ThingDef, RealmDef, light, weapon stats
+- `things.ts` (223) MaterialDef, ThingDef, RealmDef, light, weapon stats
 - `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
+- `under.ts` (64) Underworld data shapes: biomes (regions that change how the rock is dug), their rooms and what lies in them
 - `speech.ts` (52) How people sound and what they blurt out: a voice as ranges each person picks from, and bark lines keyed by mo
 
 ## src/sim/craft/

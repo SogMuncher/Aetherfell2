@@ -36,6 +36,8 @@ Thing traits (systems act on these): `body` `health` `material` `actor` `brain` 
 - Look of a state on stuff (soot, wet, oil, frost, fire): `matterStates.ts` row. A brand-new state also needs its name in
   `SHOWN_STATES` (types/matter.ts) and storage in the chunk and brick (code).
 - Realm: `realms` entry + portals/habitats naming it. Tuning: `rules.ts`.
+- Underworld region or room: an `underBiomes.ts` entry / a `rooms` row (tiles, pillars, lining, gallery, sink, pool, scatter).
+  Its stuff: `tilesUnder.ts`, `surfacesUnder.ts`, things `thingsUnder.ts`, pictures `propsUnder.ts`. Locked door: tile `lock {key, into}`.
 - New reference field: add a line to `validate.ts`. Text that varies: `fillText()` templates.
 
 ## Pictures
