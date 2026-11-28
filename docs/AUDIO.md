@@ -5,7 +5,8 @@
 
 - `engine.ts`: oscillator + filtered noise + envelope, through reverb and limiter. `gameAudio.ts` `GameAudio`: listens to
   events (music hookup; `bodySounds.ts` + `worldSounds.ts` play each event's effect; `craftSounds.ts` = airship hum,
-  rigging wind and creaks by speed, lever notches, `station`/`call`/`answer` events). Aboard, signal `voyage` picks the
+  rigging wind, propeller chop and creaks by speed, gusts and rope thrums aboard, hull bumps on a sudden stop, anchor chain
+  rattle while it winds in and a clank when stowed, lever notches, `station`/`call`/`answer` events). Aboard, signal `voyage` picks the
   `voyage` style (the world theme, easy and warm). `ambience.ts`: the ambient bed + one-shots from `ambientSounds.ts` (data:
   each sound is `where: 'sky'|'deep'`, day/night, needs trees/water/wind/dry…). Sky sounds, wind, rain and thunder only play
   in a realm with `sky`; the deep has cave air, drips, rumbles, moans.

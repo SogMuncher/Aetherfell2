@@ -51,7 +51,8 @@
   standing, bumping, blows, fire, frost and rain work per cell with no craft code. GPU draws each frame by turning the
   eye into its cells (`gpuStructures.draw` views). Frames are set each tick from the craft entity (pos, z, angle).
   Far off (past `GPU_STRUCT.range - fade`) the cells dither out while the craft's own art picture (`airshipFar`, origin
-  = pivot at the keel) dithers in over the same band; `ThingDef.far` keeps that picture drawn out to 1.5 km.
+  = pivot at the keel) dithers in over the same band; `ThingDef.far` keeps that picture drawn out to 1.5 km. Crafts get no random
+  sprite spin, so its view angle follows the real heading.
 - `CraftDef` = hull boxes (`fine: true` = half-metre grid; the airship's curved hull and envelope are swept by
   `content/hullSweep.ts`, which keeps the shell of a solid and shapes each cell by which sides face the air: bilge,
   rounded slope, rounded corner) + fittings (`fill` = a station's starting value, the tank starts with fuel) + what each
@@ -65,7 +66,7 @@
   `Fitting.tie` + `ThingDef.chain` = a chained thing (the anchor, carried and thrown with G): `Entity.tether`,
   `sim/craft/tether.ts` keeps it within the chain, a taut chain to one lying still holds the craft and swings its bow
   round; `CraftDef.weigh` names a channel (the anchor winch lever) that, pushed hard over, hauls it back aboard (`haulIn`, as a
-  horn call does); climbing any hanging chain is `sim/player/climbing.ts` (forward climbs, looking down climbs down, jump lets go,
+  horn call does: `TetherData.reel` shortens the chain at `CraftDef.reel` m/s, dragging it up, then stows it); climbing any hanging chain is `sim/player/climbing.ts` (forward climbs, looking down climbs down, jump lets go,
   forward at the top steps onto a floor). A fixed fitting with a `tie` (the rope ladder) only hangs, never holds the
   craft; `ThingDef.links` = what its line is drawn with (rungs). A horn call hauls loose chained things back aboard
   (`haulIn`). `ThingDef.vane` = a fitting that points downwind (windsock); `spin` = frames turned through with the
@@ -78,7 +79,7 @@
   position, so it is never "far from everyone". Ships cast shadows (`render/gpu/gpuFrameShade.ts`).
   Only a body over the craft's own cells comes aboard (`volume.floorOn`), so the box sweeping past a house takes nothing.
   `CraftDef.low` lets the box start before the keel's corner (the envelope overhangs hull on all sides). Ground is
-  sampled every 2 m under the whole box: below it the craft is lifted out at once, ground rising faster than it can
+  sampled every metre under the whole box, buildings included (`volume.worldTop`, the world's own cells): below it the craft is lifted out at once, ground rising faster than it can
   climb stops it. Within `still` m of its resting height the wind leaves it be (full share at twice that).
   Render: frames, chains (their tie follows the drawn craft) and lights use `poseBetween`; on a guest, what it
   foresees (crafts, fittings, itself) is drawn by its own tick time. Not yet: view does not turn with it.

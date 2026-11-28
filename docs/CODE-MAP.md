@@ -36,11 +36,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `matterKit.ts` (52) Shared helpers for the matter checks: a calm world, flat ground, stepping, PASS/FAIL counting, common cells
 - `handsSmoke.ts` (70) Headless checks: creatures carry a bag (players' own kind), spill all of it when they die, and their brains
 - `musicSmoke.ts` (188) Music checks (no WebAudio needed): cues land on the beat in the key, events pick the right cue, combos climb,
-- `craftSmoke.ts` (238) CRAFTS: the airship is cells of the 3D layer flown as one frame: decks hold you up and carry you, stations, fu
+- `craftSmoke.ts` (253) CRAFTS: the airship is cells of the 3D layer flown as one frame: decks hold you up and carry you, stations, fu
 - `fineSmoke.ts` (64) FINE CELLS: a 3D cell split into 2 x 2 x 2 half-metre cells; the shape palette, splitting, standing, saving, f
 - `doorSmoke.ts` (70) DOORS: one rule for a door tile on the ground and a door leaf in a wall of the 3D layer: open, shut, burn, fre
 - `hullTight.ts` (74) Is a swept hull tight? Fills its fine cells' real shapes at an eighth of a metre and floods the outside air: n
-- `shipSmoke.ts` (295) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
+- `shipSmoke.ts` (298) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
 - `glideSmoke.ts` (77) GLIDERS: each cloth flies its own way (data): burlap only slows your fall, wyvern hide soars, dives and climbs
 - `townSmoke.ts` (127) Townsfolk: they find their way round walls and in through doors (ground and 3D cells), keep routines, and answ
 - `citySmoke.ts` (145) Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings o
@@ -52,7 +52,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `ambience.ts` (187) The ambient bed: wind, rain, fire, water and cave air that follow your surroundings, plus one-shots from ambie
 - `ambientSounds.ts` (77) Ambient one-shots as data: birds, owls, frogs, drips, rumbles… each says where it belongs (under open sky or d
 - `bodySounds.ts` (191) Sounds of bodies and blows: steps, swings, strikes, hits, deaths, voices, spells, traps, frost, breakage, gear
-- `craftSounds.ts` (147) The airship's sounds: a hum, drive rumble and rigging wind that follow its speed, creaks aboard, lever notches
+- `craftSounds.ts` (211) The airship's sounds: a hum, drive rumble and rigging wind that follow its speed, creaks aboard, lever notches
 - `worldSounds.ts` (161) Sounds of things in the world: statuses, doors, throws, impacts, fire, water, jumps, pickups, chests, speech,
 
 ## src/audio/music/
@@ -349,7 +349,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `underworld.ts` (171) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
 - `underSpot.ts` (132) `underAt`: what the underworld is at a tile (river, deck, cave, ruin street, hall, corridor, way artery, rock), read from the land
 - `underPlan.ts` (112) per-region plan of what the places above ask of the rock: caves, great halls, denser tunnels
-- `volume.ts` (276) VolumeStore: sparse 3D brick store (C)
+- `volume.ts` (280) VolumeStore: sparse 3D brick store (C)
 - `brickData.ts` (97) a brick as data: run-packing for saves/network, fresh cell-state arrays
 - `water.ts` (224) Rivers and lakes: a pure function of the seed that reads no places (cities and roads read it, never the other way).
 - `wayParts.ts` (137) way types, site neighbours, nets
@@ -382,11 +382,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `structures.ts` (179) StructureDef, planned structures, house geometry
 - `tiles.ts` (217) tile/chunk types, TileInfo, keys
 - `vfx.ts` (86) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
-- `volume.ts` (198) 3D layer brick/volume types
+- `volume.ts` (200) 3D layer brick/volume types
 - `world.ts` (72) A named place in the world. Registered by the world system as players come near.
 - `worldgen.ts` (204) surface, biome, water and world-generation defs
 - `art.ts` (203) One recipe type for every picture built from parts: creatures, people, trees, rocks, plants, props (one assemb
-- `craft.ts` (116) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
+- `craft.ts` (120) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
 
 ## src/types/defs/
 - `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population
@@ -404,4 +404,4 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `craftMotion.ts` (124) Moves every craft by its own speed and turn, carrying whoever stands on it, and keeps its frame in the 3D laye
 - `craftSystem.ts` (219) Crafts: stations taken and fed, horn calls answered, and flight worked out from the stations' channels, wind a
 - `index.ts` (3) The craft system (airships): stations, calls, flight, and the motion shared with a guest's foresight
-- `tether.ts` (92) Chains from a loose thing to a point aboard a craft (the anchor's): never longer than the chain; lying still o
+- `tether.ts` (109) Chains from a loose thing to a point aboard a craft (the anchor's): never longer than the chain; lying still o

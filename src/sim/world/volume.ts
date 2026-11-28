@@ -200,6 +200,10 @@ export class VolumeStore implements Volume {
     return out;
   }
 
+  worldTop(x: number, y: number): number {
+    return this.rawTop(x, y);
+  }
+
   rawTop(x: number, y: number): number {
     return this.tops.get(columnKey(Math.floor(x), Math.floor(y))) ?? -Infinity;
   }

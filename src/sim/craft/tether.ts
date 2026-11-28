@@ -1,4 +1,4 @@
-// Chains from a loose thing to a point aboard a craft (the anchor's): never longer than the chain; lying still on the ground it holds the craft; a call hauls it in
+// Chains from a loose thing to a point aboard a craft (the anchor's): never longer than the chain; lying still on the ground it holds the craft; a call or winch winds it in
 import type { CraftDef, Entity, SimContext } from '../../types';
 import { thingDef } from '../../content';
 import { aboard } from './craftMotion';
@@ -30,8 +30,16 @@ export function holdChains(ctx: SimContext): void {
     const dy = o.pos.y - top.y;
     const dz = o.z - top.z;
     const d = Math.hypot(dx, dy, dz);
+    if (t.reel) {
+      // Wound in: the chain shortens, dragging and lifting the thing up to its tie; close (or stuck under the hull), it is stowed.
+      t.len = Math.max(0.5, Math.min(t.len, d) - (cd.reel ?? 4) * ctx.dt);
+      if (d < 2 || t.len <= 0.5) {
+        stow(ctx, e, cd, o);
+        continue;
+      }
+    }
     const holder = o.heldBy !== null ? state.entities.get(o.heldBy) : undefined;
-    const lying = !holder && o.vz === 0 && Math.hypot(o.vel.x, o.vel.y) < 0.05;
+    const lying = !t.reel && !holder && o.vz === 0 && Math.hypot(o.vel.x, o.vel.y) < 0.05;
     const h = Math.hypot(dx, dy);
     if (lying && d > t.len - 1 && h > 0.01) {
       // A taut chain swings the bow round toward the anchor, so it leads ahead and not under the hull.
@@ -72,21 +80,30 @@ export function holdChains(ctx: SimContext): void {
   }
 }
 
-/** Hauls every loose chained thing of a craft (the anchor) back aboard to where it was fitted, out of anyone's hands. */
-export function haulIn(ctx: SimContext, e: Entity, cd: CraftDef): void {
+/** Starts winding every loose chained thing of a craft that is off it or in someone's hands (the anchor) back aboard. */
+export function haulIn(ctx: SimContext, e: Entity): void {
   for (const o of ctx.state.entities.values()) {
-    if (o.dead || o.tether?.craft !== e.id || o.ride) continue;
-    const f = cd.fittings.find((g) => g.thing === o.def && g.tie);
-    if (!f) continue;
+    if (o.dead || o.tether?.craft !== e.id || o.ride || o.tether.reel || (o.aboard === e.id && o.heldBy === null)) continue;
     const holder = o.heldBy !== null ? ctx.state.entities.get(o.heldBy) : undefined;
     if (holder?.player?.holding === o.id) holder.player.holding = null;
     o.heldBy = null;
-    const at = aboard(e, cd, f.at[0], f.at[1]);
-    o.pos.x = o.prev.x = at.x;
-    o.pos.y = o.prev.y = at.y;
-    o.z = o.prevZ = e.z + f.at[2];
-    o.vel.x = o.vel.y = o.vz = 0;
-    o.aboard = e.id;
-    o.angle = e.angle + (f.face ?? 0);
+    o.tether.reel = true;
   }
+}
+
+/** Wound all the way in: set back where it was fitted, its chain paid out to full length again. */
+function stow(ctx: SimContext, e: Entity, cd: CraftDef, o: Entity): void {
+  const f = cd.fittings.find((g) => g.thing === o.def && g.tie);
+  if (o.tether) {
+    delete o.tether.reel;
+    o.tether.len = thingDef(ctx.content, o.def).chain ?? 10;
+  }
+  if (!f) return;
+  const at = aboard(e, cd, f.at[0], f.at[1]);
+  o.pos.x = o.prev.x = at.x;
+  o.pos.y = o.prev.y = at.y;
+  o.z = o.prevZ = e.z + f.at[2];
+  o.vel.x = o.vel.y = o.vz = 0;
+  o.aboard = e.id;
+  o.angle = e.angle + (f.face ?? 0);
 }

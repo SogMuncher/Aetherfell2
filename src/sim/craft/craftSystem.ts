@@ -93,8 +93,7 @@ function answer(ctx: SimContext, call: { thing: ThingId; x: number; y: number; b
   if (best?.craft) {
     best.craft.goal = { x: call.x, y: call.y };
     // Called away, it weighs anchor.
-    const cd = thingDef(ctx.content, best.def).craft;
-    if (cd) haulIn(ctx, best, cd);
+    haulIn(ctx, best);
     ctx.emit({ type: 'answer', entity: best.id, x: best.pos.x, y: best.pos.y });
     ctx.emit({ type: 'notice', player: call.by, text: `Far off, the ${thingDef(ctx.content, best.def).name} turns toward the call.` });
   }
@@ -121,7 +120,7 @@ function fly(ctx: SimContext, e: Entity, cd: CraftDef, dt: number): void {
   let thrust = get(cd.thrust.channel);
   let turn = get(cd.turn.channel);
   let climb = get(cd.climb.channel);
-  if (cd.weigh && get(cd.weigh) > 0.95) haulIn(ctx, e, cd);
+  if (cd.weigh && get(cd.weigh) > 0.95) haulIn(ctx, e);
 
   // The highest ground anywhere under it, while anyone is near enough for it to be loaded.
   const near = Object.values(state.players).some((id) => {
@@ -185,17 +184,18 @@ function fly(ctx: SimContext, e: Entity, cd: CraftDef, dt: number): void {
   }
 }
 
-/** The highest ground under the craft's whole box (every 2 m across it), were it at (x, y) turned to `yaw`. */
+/** The highest ground or building under the craft's whole box (every metre across it), were it at (x, y) turned to `yaw`. */
 function groundUnder(ctx: SimContext, e: Entity, cd: CraftDef, x: number, y: number, yaw: number): number {
   const at = { ...e, pos: { x, y }, angle: yaw };
   const [x0, y0] = cd.low ?? [0, 0];
-  const nx = Math.ceil((cd.size[0] - x0) / 2);
-  const ny = Math.ceil((cd.size[1] - y0) / 2);
+  const nx = Math.ceil(cd.size[0] - x0);
+  const ny = Math.ceil(cd.size[1] - y0);
   let g = -Infinity;
   for (let i = 0; i <= nx; i++) {
     for (let j = 0; j <= ny; j++) {
       const p = aboard(at, cd, x0 + ((cd.size[0] - x0) * i) / nx, y0 + ((cd.size[1] - y0) * j) / ny);
-      g = Math.max(g, ctx.tiles.ground(p.x, p.y));
+      // Buildings count as ground: it rests on their roofs and, unable to climb over one in time, stops against it.
+      g = Math.max(g, ctx.tiles.ground(p.x, p.y), ctx.state.volume.worldTop(p.x, p.y));
     }
   }
   return g;
