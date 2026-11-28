@@ -45,6 +45,12 @@ export function stampCards(cards: readonly Solid[], source: CardSource, c: Canva
     // Where its up axis points on the picture (y down); straight at the viewer reads as up.
     let ax = (s.a[1] ?? 0) * R[0] + (s.a[4] ?? 0) * R[1] + (s.a[7] ?? 0) * R[2];
     let ay = -(s.a[4] ?? 0);
+    // How fast the item's depth changes along it, per metre out on the picture: it is a slanted card, not one flat at the
+    // grip, so a blade held out in front stays in front of the body even while the swinging hand passes behind its front.
+    const az = (s.a[1] ?? 0) * F[0] + (s.a[4] ?? 0) * F[1] + (s.a[7] ?? 0) * F[2];
+    const sx = ax;
+    const sy = ay;
+    const s2 = Math.max(0.15, sx * sx + sy * sy);
     const al = Math.hypot(ax, ay);
     if (al < 1e-3) [ax, ay] = [0, -1];
     else [ax, ay] = [ax / al, ay / al];
@@ -67,9 +73,11 @@ export function stampCards(cards: readonly Solid[], source: CardSource, c: Canva
         const col = pic.px[v * pic.n + u] ?? 0;
         if (!col) continue;
         const o = j * w + i;
-        if (c.px[o] && (c.depth[o] ?? Infinity) < d) continue;
+        const along = Math.max(-0.3, Math.min(1.5, ((i + 0.5 - gx) * sx + (j + 0.5 - gy) * sy) / (ppm * s2)));
+        const dd = d + along * az;
+        if (c.px[o] && (c.depth[o] ?? Infinity) < dd) continue;
         c.px[o] = col;
-        c.depth[o] = d;
+        c.depth[o] = dd;
         if (c.regions) c.regions[o] = 0;
       }
     }

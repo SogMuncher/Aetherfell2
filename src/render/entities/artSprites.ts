@@ -46,6 +46,8 @@ interface Tracked {
   /** The side shown last (-1 = none yet): it is kept until the view is clearly past the line to the next side. */
   dir: number;
   last: number;
+  /** The picture shown last (held while frozen). */
+  held?: { sprite: Sprite; scale: number; colours: Uint32Array };
 }
 
 /** How far past the halfway line between two sides (in sides) the view must go before the picture turns, so it never flickers there. */
@@ -123,6 +125,10 @@ export class ArtSprites {
     }
     const dt = Math.min(0.1, Math.max(0, time - tr.last));
     tr.last = time;
+    // Frozen solid (a `still` status): the picture holds exactly as it was.
+    let still = false;
+    for (const id in e.status) if ((e.status[id] ?? 0) > 0 && CONTENT.statuses[id]?.still) still = true;
+    if (still && tr.held) return tr.held;
     const speed = Math.hypot(e.vel.x, e.vel.y);
     const moving = !!def.gait && speed > 0.3;
     if (def.gait) tr.phase += (dt * speed) / def.gait.stride;
@@ -161,6 +167,7 @@ export class ArtSprites {
       this.lastPrune = time;
       for (const [eid, t] of this.tracked) if (time - t.last > 10) this.tracked.delete(eid);
     }
-    return { sprite: bank.sprite(pose, frame, dir), scale: tr.scale, colours: tr.colours };
+    tr.held = { sprite: bank.sprite(pose, frame, dir), scale: tr.scale, colours: tr.colours };
+    return tr.held;
   }
 }

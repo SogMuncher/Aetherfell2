@@ -205,9 +205,11 @@ function layout(seed: number, kind: LocationKind, def: SiteDef, rx: number, ry: 
     const axis = hash2(seed + 10, rx, ry) * Math.PI;
     // Each house gets a few tries at a free spot, so a big village fills up instead of losing houses to overlaps.
     let placed = 0;
+    // Every kind the mix names is raised at least once (a village that lists a smithy has one), then the rest by weight.
+    const owed = Object.keys(mix).filter((k) => (mix[k] ?? 0) > 0);
     for (let t = 0; placed < n && t < n * 6; t++) {
       const salt = seed + 1000 + t * 37;
-      const id = pickBuilding(mix, hash2(salt, rx, ry));
+      const id = owed.length ? (owed[t % owed.length] ?? null) : pickBuilding(mix, hash2(salt, rx, ry));
       if (!id) continue;
       const u = hash2(seed + 7 + t * 5, rx, ry);
       const v = hash2(seed + 8 + t * 3, rx, ry);
@@ -242,6 +244,7 @@ function layout(seed: number, kind: LocationKind, def: SiteDef, rx: number, ry: 
       taken.push(h.bounds);
       plan.push(h.structure);
       placed++;
+      owed.splice(owed.indexOf(id), 1);
       if (sdef.dwelling !== false) houses.push(h);
     }
   }

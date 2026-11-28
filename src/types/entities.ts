@@ -150,6 +150,8 @@ export interface AiData {
   path?: Vec2[];
   /** Where that found way is meant to lead in the end (it may stop short when the way is long). */
   aim?: Vec2;
+  /** Ticks spent pressing on a found way without getting anywhere (caught on a wall corner): past a second and a half the way is found again from here. */
+  stuck?: number;
   /** A spell being gathered (mode 'cast'): when `t` reaches the telegraph time it is let go. */
   cast?: { spell: SpellId; t: number };
 }

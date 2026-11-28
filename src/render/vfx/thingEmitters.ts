@@ -45,11 +45,12 @@ export function emitThings(out: MoteSink, state: SimState, camX: number, camY: n
       const sn = Math.sin(e.angle);
       out.one(fx('torchFlame'), e.pos.x + c * 0.5 - sn * 0.2 + (Math.random() - 0.5) * 0.1, e.pos.y + sn * 0.5 + c * 0.2 + (Math.random() - 0.5) * 0.1, e.z + d.body.height * 0.75, wind.x * 0.05, wind.y * 0.05, 0.8 + Math.random() * 0.6);
     }
-    if ((e.status.burning ?? 0) > 0 && Math.random() < dt * 18) {
-      out.one(fx('burningBody'), e.pos.x + (Math.random() - 0.5) * d.body.radius * 2, e.pos.y + (Math.random() - 0.5) * d.body.radius * 2, e.z + Math.random() * d.body.height, 0, 0, 1.5);
-    }
-    if ((e.status.chilled ?? 0) > 0 && Math.random() < dt * 6) {
-      out.one(fx('chilledBody'), e.pos.x + (Math.random() - 0.5) * d.body.radius * 2, e.pos.y + (Math.random() - 0.5) * d.body.radius * 2, e.z + Math.random() * d.body.height, 0, 0, -0.3);
+    // Whatever its statuses shed (flames, drips, frost glints), from anywhere on the body.
+    for (const id in e.status) {
+      const m = (e.status[id] ?? 0) > 0 ? CONTENT.statuses[id]?.motes : undefined;
+      if (m && Math.random() < dt * m.rate) {
+        out.one(fx(m.fx), e.pos.x + (Math.random() - 0.5) * d.body.radius * 2, e.pos.y + (Math.random() - 0.5) * d.body.radius * 2, e.z + Math.random() * d.body.height, 0, 0, m.rise);
+      }
     }
     if (e.projectile) {
       const sd = spellFor(CONTENT, e.projectile.spell);
