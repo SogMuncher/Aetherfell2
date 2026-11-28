@@ -46,6 +46,8 @@ export interface CraftDef {
   climb: { channel: string; rate: number };
   /** Channel that, worked hard over (a winch lever), hauls its chained things (the anchor) back aboard. */
   weigh?: string;
+  /** How fast (m/s) its chains wind in once hauled (default 4): the anchor rises on its chain, then is stowed. */
+  reel?: number;
   /** Channel holding the fuel (seconds of powered flight). It burns while thrust, turn or climb is used. */
   fuel: string;
   /** Sinks this fast with no fuel. */
@@ -106,6 +108,8 @@ export interface TetherData {
   y: number;
   z: number;
   len: number;
+  /** Being wound in: the chain shortens each tick until the thing is back aboard. */
+  reel?: boolean;
   top?: { x: number; y: number; z: number };
 }
 

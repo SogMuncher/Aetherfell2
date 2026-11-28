@@ -98,6 +98,8 @@ export interface ReadonlyVolume {
   fineMatAt(fx: number, fy: number, fz: number): number;
   /** Top of the highest solid thing in this column (metres), or -Infinity. */
   topAt(x: number, y: number): number;
+  /** The same, of the world's own cells only (buildings, ruins), never a moving frame's. */
+  worldTop(x: number, y: number): number;
   /** Highest solid top at or below `zMax` (and not below `zMin`) at this point, or -Infinity. */
   floorBelow(x: number, y: number, zMax: number, zMin?: number): number;
   /** Lowest solid underside at or above `z` at this point, or Infinity. */

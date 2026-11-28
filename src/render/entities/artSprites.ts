@@ -106,8 +106,8 @@ export class ArtSprites {
         colours: artColours(def, e.id * 31 + 7, dress),
         scale: 1 + (rhash(e.id, 3, 55) - 0.5) * 2 * (def.vary ?? 0),
         phase: rhash(e.id, 4, 55),
-        // Fixed things (stations, furniture) face the way they were set; loose ones lie any which way.
-        spin: def.gait || thingDef(CONTENT, e.def).body.anchored ? 0 : rhash(e.id, 2, 211) * Math.PI * 2,
+        // Fixed things (stations, furniture) and crafts (the far airship picture) face the way they were set; loose ones lie any which way.
+        spin: def.gait || thingDef(CONTENT, e.def).body.anchored || thingDef(CONTENT, e.def).craft ? 0 : rhash(e.id, 2, 211) * Math.PI * 2,
         dir: -1,
         last: time,
       };

@@ -1,4 +1,4 @@
-// The airship's sounds: a hum, drive rumble and rigging wind that follow its speed, creaks aboard, lever notches, stations, horn calls
+// The airship's sounds: hum, drive rumble, rigging wind and propeller chop that follow its speed, creaks, gusts and rope thrums aboard, bumps, the anchor chain, levers, stations, horns
 import type { Entity, SimEvent, SimState } from '../types';
 import { CONTENT, thingDef } from '../content';
 import type { AudioEngine } from './engine';
@@ -15,6 +15,11 @@ const SHIP = {
   creak: { every: [2.5, 7] as const, level: 0.05 },
   lever: { notch: 0.125, level: 0.05 },
   horn: { freq: 174, dur: 1.8, level: 0.09 },
+  chop: { rest: 1.2, perSpeed: 0.35, level: 0.06 },
+  gust: { every: [6, 14] as const, level: 0.05 },
+  thrum: { every: [4, 10] as const, level: 0.025 },
+  bump: { drop: 2.5, level: 0.6 },
+  chain: { level: 0.05, hear: 60 },
   answer: { freq: 87, dur: 1.4, gap: 1.7, level: 0.12, hear: 4000 },
 };
 
@@ -30,6 +35,13 @@ export class CraftSounds {
   private creakIn = 3;
   private notch = new Map<number, number>();
   private state: SimState | null = null;
+  private near = 0;
+  private speed = 0;
+  private chopIn = 0;
+  private gustIn = 8;
+  private thrumIn = 5;
+  private was = new Map<number, number>();
+  private reeling = new Set<number>();
 
   update(a: GameAudio, state: SimState, me: Entity, dt: number): void {
     const e = a.e;
@@ -43,6 +55,24 @@ export class CraftSounds {
         this.creakIn = rnd(SHIP.creak.every[0], SHIP.creak.every[1]);
         creak(e, e.sfx, e.now);
       }
+      // Wind gusting through the rigging, and a stay rope thrumming under the envelope's pull.
+      this.gustIn -= dt;
+      if (this.gustIn <= 0) {
+        this.gustIn = rnd(SHIP.gust.every[0], SHIP.gust.every[1]);
+        e.burst(e.sfx, e.now, rnd(1.2, 2.4), SHIP.gust.level * (0.5 + Math.min(1, this.speed / SHIP.full)), 'bandpass', rnd(500, 800), { attack: 0.6, to: rnd(1200, 1800), q: 1.5 });
+      }
+      this.thrumIn -= dt;
+      if (this.thrumIn <= 0) {
+        this.thrumIn = rnd(SHIP.thrum.every[0], SHIP.thrum.every[1]);
+        e.tone(e.sfx, 'triangle', rnd(55, 90), e.now, rnd(0.8, 1.6), SHIP.thrum.level, { tremolo: 0.5, tremoloRate: rnd(6, 11), attack: 0.05 });
+      }
+    }
+    // The propeller's blades beat the air faster as it speeds up.
+    this.chopIn -= dt;
+    if (this.chopIn <= 0 && this.near > 0.02) {
+      const rate = SHIP.chop.rest + this.speed * SHIP.chop.perSpeed;
+      this.chopIn = 1 / rate;
+      e.burst(e.sfx, e.now, 0.09, SHIP.chop.level * this.near * (0.3 + 0.7 * Math.min(1, this.speed / SHIP.full)), 'lowpass', jit(240, 0.1), { q: 2 });
     }
     this.sample -= dt;
     if (this.sample > 0) return;
@@ -54,9 +84,33 @@ export class CraftSounds {
       if (!c.craft || c.dead) continue;
       const d = Math.hypot(c.pos.x - me.pos.x, c.pos.y - me.pos.y, (c.z ?? 0) - me.z);
       const n = me.aboard === c.id ? 1 : Math.max(0, 1 - d / SHIP.hear);
+      const v = Math.hypot(c.craft.vel.x, c.craft.vel.y, c.craft.vz);
       if (n > near) {
         near = n;
-        speed = Math.hypot(c.craft.vel.x, c.craft.vel.y, c.craft.vz);
+        speed = v;
+      }
+      // Stopped short (against a building, the ground, an anchor's chain): the hull booms and groans.
+      const was = this.was.get(c.id) ?? v;
+      this.was.set(c.id, v);
+      const out = was - v > SHIP.bump.drop ? a.at(c.pos.x, c.pos.y, SHIP.hear) : null;
+      if (out) {
+        strike(e, out, now, 'wood', { strength: SHIP.bump.level * Math.min(1, (was - v) / 6), mass: 4000 });
+        creak(e, out, now + 0.15);
+      }
+    }
+    this.near = near;
+    this.speed = speed;
+    // An anchor being wound in: the chain rattles over the winch; stowed, it lands on deck with a clank.
+    for (const o of state.entities.values()) {
+      const reel = !!o.tether?.reel;
+      if (!reel && !this.reeling.has(o.id)) continue;
+      const out = a.at(o.tether?.top?.x ?? o.pos.x, o.tether?.top?.y ?? o.pos.y, SHIP.chain.hear);
+      if (reel) {
+        this.reeling.add(o.id);
+        if (out) chain(e, out, now);
+      } else {
+        this.reeling.delete(o.id);
+        if (out) strike(e, out, now, 'metal', { strength: 0.7, mass: 150 });
       }
     }
     const go = Math.min(1, speed / SHIP.full);
@@ -138,6 +192,16 @@ function makeLoops(e: AudioEngine): Loops {
 function creak(e: AudioEngine, out: AudioNode, t: number): void {
   const f = rnd(70, 120);
   e.tone(out, 'sawtooth', f, t, rnd(0.3, 0.8), SHIP.creak.level, { to: f * rnd(0.8, 1.2), tremolo: 0.7, tremoloRate: rnd(18, 32), band: { freq: rnd(350, 600), q: 4, to: rnd(220, 400) }, attack: 0.05 });
+}
+
+/** A chain running over a winch: quick iron clinks and the pawl's ratchet, one sample's worth (0.2 s). */
+function chain(e: AudioEngine, out: AudioNode, t: number): void {
+  for (let i = 0; i < 4; i++) {
+    const at = t + i * 0.05 + rnd(0, 0.015);
+    e.burst(out, at, 0.03, SHIP.chain.level, 'bandpass', jit(3200, 0.15), { q: 6 });
+    e.tone(out, 'square', jit(900, 0.1), at, 0.025, SHIP.chain.level * 0.3);
+  }
+  e.burst(out, t, 0.2, SHIP.chain.level * 0.5, 'lowpass', 400, { q: 3 });
 }
 
 /** A horn blast: a reedy tone with its fifth, swelling in and breathing out. */
