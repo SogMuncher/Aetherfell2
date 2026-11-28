@@ -31,7 +31,12 @@ export function validateContent(c: Content): string[] {
     if (!(l.detail >= 1 && l.detail <= 6)) out.push(`${w}: detail runs from 1 to 6`);
   }
   const ai = c.sky.air;
-  if (!(ai.cell > 0 && ai.count >= 16 && ai.count % 8 === 0 && ai.tall >= 8 && ai.tall % 8 === 0 && ai.tall <= 64 && ai.budget > 0 && ai.ext > 0 && ai.change >= 0 && ai.blend > 0 && ai.lod >= 2 && ai.lod <= ai.count * 0.1875)) out.push('sky air: positive cell, ext and budget, count a multiple of 8 (>= 16), tall a multiple of 8 (8..64), lod 2..count × 0.1875 (twice lod must fit in a level that lags the eye)');
+  if (!(ai.cell > 0 && ai.count >= 16 && ai.count % 8 === 0 && ai.tall >= 8 && ai.tall % 8 === 0 && ai.tall <= 64 && ai.ext > 0 && ai.self >= 0 && ai.perFrame >= 1 && ai.refresh > 0 && ai.lod >= 2 && ai.lod <= ai.count * 0.1875)) out.push('sky air: positive cell, ext and refresh, perFrame >= 1, count a multiple of 8 (>= 16), tall a multiple of 8 (8..64), lod 2..count × 0.1875 (twice lod must fit in a level that lags the eye)');
+  const dm = c.sky.damp;
+  const sh = c.sky.shade;
+  const ry = c.sky.rays;
+  if (!(dm.cell > 0 && dm.count >= 16 && dm.reach > 0 && sh.size >= 32 && sh.near > 0 && sh.far > sh.near && sh.ext > 0 && sh.floor >= 0 && sh.floor < 1 && ry.strength >= 0 && ry.samples >= 4 && ry.decay > 0 && ry.decay <= 1 && ry.reach > 0)) out.push('sky damp, shade and rays: positive sizes, far shade beyond near, floor 0..1, at least 4 ray samples, decay 0..1');
+  for (const l of c.sky.layers) if ((l.water ?? 0) < 0 || (l.water ?? 0) > 1) out.push(`sky layer '${l.name}': water is a share between 0 and 1`);
   const sm = c.sky.smoke;
   if (!(sm.cell > 0 && sm.count >= 16 && sm.tall >= 8 && sm.step > 0 && sm.rise >= 0 && sm.spread >= 0 && sm.spread <= 0.2 && sm.fade >= 0 && sm.ext > 0)) out.push('sky smoke: positive cell, step and ext, count >= 16, tall >= 8, spread 0..0.2');
   out.push(...validateShapes());

@@ -10,12 +10,12 @@ import type { TerrainLod } from '../raycaster/terrainLod';
 import type { ReadonlyTiles, ReadonlyVolume, VolumeFrame, WeatherState } from '../../types';
 import type { Billboard } from '../entities/spriteRenderer';
 import type { LightMap } from '../lighting';
-import type { CloudShadow } from '../raycaster/cloudShadow';
 import type { Particle } from '../vfx/particleKinds';
 import type { Surface } from '../vfx/glow';
 import { GpuAir } from './gpuAir';
 import { GpuSpeedLines } from './gpuSpeedLines';
 import { GpuClouds } from './gpuClouds';
+import { GpuGodRays } from './gpuGodRays';
 import { GpuOverlay } from './gpuOverlay';
 import { GpuParticles } from './gpuParticles';
 import { GpuLight, type LightQuality } from './gpuLight';
@@ -61,8 +61,6 @@ export interface GpuFrame {
   motes: readonly Particle[];
   /** Crumbs of dying bodies, already in the motes' vertex layout (vfx/crumble.ts). */
   crumbs?: { readonly data: Float32Array; readonly count: number };
-  shadow: CloudShadow;
-  shadowOn: boolean;
   /** Wind across your view (for the rain slant). */
   windSide: number;
   /** Paints the held item into the overlay buffer. */
@@ -93,6 +91,7 @@ export class GpuRenderer {
   private readonly overlay: GpuOverlay;
   private readonly sky: GpuSky;
   private readonly clouds: GpuClouds;
+  private readonly rays: GpuGodRays;
   private readonly air: GpuAir;
   private readonly speedLines: GpuSpeedLines;
   private readonly post: GpuPost;
@@ -122,6 +121,8 @@ export class GpuRenderer {
     this.overlay = new GpuOverlay(gl);
     this.sky = new GpuSky(gl);
     this.clouds = new GpuClouds(gl);
+    this.farShade.setClouds(this.clouds.shade);
+    this.rays = new GpuGodRays(gl);
     this.air = new GpuAir(gl);
     this.speedLines = new GpuSpeedLines(gl);
     this.post = new GpuPost(gl);
@@ -170,9 +171,10 @@ export class GpuRenderer {
     this.terrain.update(f.eye.x, f.eye.y);
     this.light.upload(f.lightmap.lights, f.eye.x, f.eye.y);
     this.solid.update(f.eye, f.tiles, f.volume, f.frames);
+    // The air and its cloud shadows are built before the light pass reads them.
+    this.clouds.prepare(f.eye, f.env, f.weather, f.time, { tiles: f.tiles, burning: f.burning, volume: f.volume });
     this.post.begin(w, h);
     this.sky.draw(cam, f.eye, f.env, f.time);
-    if (this.frames % 4 === 0) this.farShade.setClouds(f.shadow, f.shadowOn);
     this.post.surfaces(true);
     this.terrain.draw(vp, f.eye, f.env, f.time);
     this.blocks.draw(vp, f.eye, f.env, f.tiles, f.time);
@@ -186,7 +188,8 @@ export class GpuRenderer {
     // Shiny surfaces (wet, ice, polished stuff) mirror the lit scene: from the screen or by a ray through the solid field.
     if (f.light.reflections !== 'off') this.reflect.draw(f.light.reflections === 'traced', cam, vp, f.eye, f.env, s.alb, s.nrm, this.post.depthTexture, this.post.sceneTarget, this.post.litTarget, this.solid, this.casters, w, h, NEAR, FAR);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.post.sceneTarget);
-    this.clouds.draw(cam, f.eye, f.env, f.weather, f.time, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR, { tiles: f.tiles, burning: f.burning, volume: f.volume });
+    this.clouds.draw(cam, f.eye, f.env, f.weather, w, h, this.post.depthTexture, this.post.sceneTarget, NEAR, FAR);
+    this.rays.draw(cam, f.env, w, h, this.post.depthTexture, this.clouds.cover, this.post.sceneTarget);
     gl.viewport(0, 0, w, h);
     if (this.frames % 30 === 1) this.biomeAir = CONTENT.biomes[this.sampler.sample(f.eye.x, f.eye.y, 1).biome]?.air;
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;

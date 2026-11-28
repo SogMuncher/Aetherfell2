@@ -37,6 +37,8 @@ export interface CloudLayerDef {
   billow?: number;
   /** 0..1: how much the land's moisture matters to this layer: more cloud over wet land, less over dry (0 = none). */
   wet?: number;
+  /** 0..1: how much open water close by (rivers, lakes: `SkyDef.damp`) thickens this layer (ground mist over a river). */
+  water?: number;
   /** Rain falls only under this layer (storm cells). */
   rain?: boolean;
   /** Pattern seed, so layers never line up with each other. */
@@ -62,16 +64,27 @@ export interface SkyDef {
   /** How much clearer the air is up at cloud height than the ground haze: clouds fade into the horizon over `haze` × the fog distance. */
   haze: number;
   /**
-   * The air is one grid of cubic cells around the eye that every layer writes its cloud into (render/airCells.ts), so
-   * all clouds and mist draw in one pass, nearest first. `cell`: width of the finest cells (metres); `count`: cells along
-   * each side of a level; `tall`: cells from bottom to top of a level; `lod`: cells along a view before they start to merge into
-   * cells twice as wide (the next level; each level dithers into the next over a whole doubling of distance); `ext`: how much a metre of full-density air hides (per metre); `budget`: cells
-   * filled per frame; `refresh`: seconds before the finest level is refilled for a change of weather (level k waits
-   * (k + 1) times as long), and only when some layer's cover (or the rain) moved by more than `change`; a rebuilt level
-   * dithers in over `blend` seconds (every change of a level: new cells fade in over the coarser level beneath them).
-   * Moving only fills the cells that came into reach; while a level lags the eye it gets `rush` × the budget.
+   * The air is one stack of grids of cubic cells around the eye that every layer writes its cloud into, built on the
+   * graphics card (render/airLevels.ts plans, gpu/gpuAirFill.ts fills), so all clouds and mist draw in one pass, nearest
+   * first. `cell`: width of the finest cells (metres); `count`: cells along each side of a level; `tall`: cells from
+   * bottom to top of a level; `lod`: cells along a view before they blend smoothly into cells twice as wide (the next
+   * level, over the second half of each doubling of distance); `ext`: how much a metre of full-density air hides;
+   * `self`: how much a cell's worth of cloud between it and the sun darkens a cloud (self-shadow); `perFrame`: levels
+   * rebuilt per frame; `refresh`: seconds before level 0 is rebuilt for the weather (level k waits (k + 1) times as long).
    */
-  air: { cell: number; count: number; tall: number; lod: number; ext: number; budget: number; rush: number; refresh: number; change: number; blend: number };
+  air: { cell: number; count: number; tall: number; lod: number; ext: number; self: number; perFrame: number; refresh: number };
+  /**
+   * Damp air over open water: `count` × `count` cells `cell` wide round the eye hold how close a river or lake is (1 on
+   * the water, 0 beyond `reach` metres); a layer's `water` × `shift` moves its edge there, so mist gathers over water.
+   */
+  damp: { cell: number; count: number; reach: number; shift: number };
+  /**
+   * Cloud shadows on the land: sun light walked up through the air cells into two maps round the eye (`size` texels of
+   * `near` and of `far` metres). Each layer casts by its `shadow`; `ext` per metre of shadowing cloud, never darker than `floor`.
+   */
+  shade: { size: number; near: number; far: number; ext: number; floor: number };
+  /** Sun rays (god rays): light streaming past clouds, hills and trees toward the eye. `strength`, `samples` along each ray, `decay` per sample, `reach` (share of the screen a ray spans). */
+  rays: { strength: number; samples: number; decay: number; reach: number };
   /**
    * Smoke: a live level of air cells (`cell` wide, `count` × `count` × `tall`, round the eye) that burning stuff puts
    * smoke into (matter state look `smoke`). Every `step` seconds smoke rises (`rise` m/s), spreads to its sides

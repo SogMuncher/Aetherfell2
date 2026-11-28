@@ -1,3 +1,4 @@
+// Where the clouds are: one pure function of the sky data, the weather and a map spot (rain, shade, sky and fog agree).
 /**
  * Where the clouds are. One pure function of the sky data, the weather (cover, storminess, how far
  * the wind has carried them) and a spot on the map, so the simulation (does it rain here?), the
@@ -5,6 +6,8 @@
  * from a small tileable pattern made once from its seed.
  */
 import type { CloudLayerDef, SkyDef, WeatherState } from '../types';
+import { airMoisture, airWater } from './airWet';
+import { SKY } from './sky';
 
 const N = 256;
 const patterns = new Map<CloudLayerDef, Float32Array>();
@@ -64,46 +67,7 @@ export function cloudPattern(layer: CloudLayerDef): Float32Array {
 }
 
 /** How much a fully wet or dry spot moves a layer's cloud edge (pattern units), at `wet` 1. */
-const MOIST_SHIFT = 0.5;
-/** Size of one cell of the coarse moisture map clouds read (metres). */
-export const MOIST_CELL = 600;
-let moistureFn: ((x: number, y: number) => number) | null = null;
-const moistCells = new Map<number, number>();
-
-/** The world's moisture (0..1 at a point) for clouds and fog to follow; `null` = neutral. Set by whoever owns the world. */
-export function setAirMoisture(fn: ((x: number, y: number) => number) | null): void {
-  moistureFn = fn;
-  moistCells.clear();
-}
-
-/** Moisture of one coarse cell (cached). */
-export function moistCell(ix: number, iy: number): number {
-  if (!moistureFn) return 0.5;
-  const k = ix * 65536 + iy;
-  let v = moistCells.get(k);
-  if (v === undefined) {
-    if (moistCells.size > 30000) moistCells.clear();
-    v = moistureFn((ix + 0.5) * MOIST_CELL, (iy + 0.5) * MOIST_CELL);
-    moistCells.set(k, v);
-  }
-  return v;
-}
-
-/** Smooth moisture of the air over a map spot (0..1; 0.5 where the world gives none). */
-export function airMoisture(x: number, y: number): number {
-  if (!moistureFn) return 0.5;
-  const gx = x / MOIST_CELL - 0.5;
-  const gy = y / MOIST_CELL - 0.5;
-  const ix = Math.floor(gx);
-  const iy = Math.floor(gy);
-  const fx = gx - ix;
-  const fy = gy - iy;
-  const a = moistCell(ix, iy);
-  const b = moistCell(ix + 1, iy);
-  const c = moistCell(ix, iy + 1);
-  const d = moistCell(ix + 1, iy + 1);
-  return a + (b - a) * fx + (c - a + (d - c - b + a) * fx) * fy;
-}
+export const MOIST_SHIFT = 0.5;
 
 /** Share of the sky this layer covers right now (0..1). */
 export function layerCover(layer: CloudLayerDef, w: WeatherState): number {
@@ -117,12 +81,17 @@ export function layerDensity(layer: CloudLayerDef, w: WeatherState, cover: numbe
   return colDens(layer, w, edgeAt(layer, cover, x, y), x, y);
 }
 
-/** Where a layer's cloud edge sits over a spot (pattern units): set by the cover, shifted by the land's moisture for wet-loving layers. */
-function edgeAt(layer: CloudLayerDef, cover: number, x: number, y: number): number {
-  // Threshold from the measured spread of the mixed value, so `cover` really is the share of sky.
+/** Where a layer's cloud edge sits before the land shifts it (pattern units): set by the cover, so `cover` really is the share of sky. */
+export function layerEdge(layer: CloudLayerDef, cover: number): number {
   // Centred on the soft edge: half-thick cloud covers `cover` of the sky.
+  return levelFor(layer, 1 - cover) - Math.max(0.01, layer.softness) / 2;
+}
+
+/** Where a layer's cloud edge sits over a spot: shifted by the land's moisture and by open water close by. */
+function edgeAt(layer: CloudLayerDef, cover: number, x: number, y: number): number {
   const wet = layer.wet ?? 0;
-  return levelFor(layer, 1 - cover) - Math.max(0.01, layer.softness) / 2 - (wet > 0 ? wet * (airMoisture(x, y) - 0.5) * MOIST_SHIFT : 0);
+  const water = layer.water ?? 0;
+  return layerEdge(layer, cover) - (wet > 0 ? wet * (airMoisture(x, y) - 0.5) * MOIST_SHIFT : 0) - (water > 0 ? water * airWater(x, y) * SKY.damp.shift : 0);
 }
 
 /** Column density for a known edge `t`. */
@@ -144,7 +113,7 @@ function mixed(p: Float32Array, u: number, v: number): number {
 const levels = new WeakMap<CloudLayerDef, Float32Array>();
 
 /** The mixed value below which share `q` of the sky lies (q 0..1), measured once per layer. */
-function levelFor(layer: CloudLayerDef, q: number): number {
+export function levelFor(layer: CloudLayerDef, q: number): number {
   let l = levels.get(layer);
   if (!l) {
     const p = cloudPattern(layer);
@@ -197,7 +166,7 @@ export function cloudDensity3(layer: CloudLayerDef, w: WeatherState, cover: numb
 /**
  * The air over a spot as a column of `nz` cells `cell` tall (and `wide` across), the lowest starting at height `z0`: every layer that
  * passes through a cell adds its cloud (cloudDensity3 × opacity × the share of the cell the layer fills), so all layers
- * live in one grid of air cells (render/airCells.ts) and draw in one pass, nearest first. A cell wider than a quarter of
+ * live in one grid of air cells (the air levels) and draw in one pass, nearest first. A cell wider than a quarter of
  * a layer's shapes averages 2 × 2 spots, so far clouds thin out instead of flickering. Writes into `dens` the density
  * (0..1+) and into `lite` the density × brightness (tint, storm bellies). `covers` = layerCover of each layer.
  */
