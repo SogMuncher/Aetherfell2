@@ -30,7 +30,7 @@ Thing traits (systems act on these): `body` `health` `material` `actor` `brain` 
 - Weapon or armour: one entry in `gear.ts` (form with `slot` + `parts` naming art pieces `item.<part>`, material, quality, body part). Enchantment: one
   `gear.enchants` entry (`hit` effects, `resist`, multipliers). Resolve with `itemDef()`, never `items[id]`.
 - Rune: `runes` entry (+ stone item `rune:<id>`, loot). Condition: `statuses`. Material behaviour: `materials`.
-- Tile/building material: `tiles` entry (+ `surfaces`); code uses `tileCode('id')`. Landscape: `biomes` (order matters).
+- Tile/building material: `tiles` entry (+ `surfaces`; town building looks live in `surfacesBuild.ts`); code uses `tileCode('id')`. A district's look: its `materials`/`tiles` in `sitesWards.ts`. Landscape: `biomes` (order matters).
 - Tree/rock/plant: an `art` entry (`forms`/`smallForms`) + a `tiles` entry whose sprite names it. Prop or creature: an `art` entry (`props`/`looks`) named by the thing's `sprite`; give it a `gait` if it walks.
 - Place: `sites` entry (a new layout *shape* needs code, see WORLD.md). Building: `structures` recipe in a site's list.
 - Look of a state on stuff (soot, wet, oil, frost, fire): `matterStates.ts` row. A brand-new state also needs its name in

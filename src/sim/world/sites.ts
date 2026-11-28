@@ -217,11 +217,15 @@ function layout(seed: number, kind: LocationKind, def: SiteDef, rx: number, ry: 
       let fx = cx;
       let fy = cy;
       if (pattern === 'street' || pattern === 'cross') {
-        const a = axis + (pattern === 'cross' && t % 2 === 1 ? Math.PI / 2 : 0);
-        const along = (u * 2 - 1) * rout;
+        const a0 = axis + (pattern === 'cross' && t % 2 === 1 ? Math.PI / 2 : 0);
+        const s = u * 2 - 1;
+        const along = s * rout;
         const side = (t % 4 < 2 ? -1 : 1) * (rin + v * 4);
-        fx = cx + Math.cos(a) * along;
-        fy = cy + Math.sin(a) * along;
+        // A curved lane bows out `curve` of its reach at the middle; houses turn with it.
+        const bow = (style?.curve ?? 0) * rout * (1 - s * s);
+        const a = a0 + Math.atan(-2 * (style?.curve ?? 0) * s);
+        fx = cx + Math.cos(a0) * along - Math.sin(a0) * bow;
+        fy = cy + Math.sin(a0) * along + Math.cos(a0) * bow;
         mx = fx - Math.sin(a) * side;
         my = fy + Math.cos(a) * side;
       } else {

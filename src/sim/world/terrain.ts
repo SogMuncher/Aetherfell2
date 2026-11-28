@@ -192,7 +192,7 @@ export class Terrain implements WorldSampler {
           // A far cell shows the tallest building it touches, in that building's wall.
           for (const p of structuresIn(s, x - detail + 1, y - detail + 1, x, y)) {
             const def = CONTENT.structures[p.id];
-            const id = def?.far ?? def?.materials.wall[0];
+            const id = def?.far ?? p.look?.wall?.[0] ?? def?.materials.wall[0];
             const t = id !== undefined ? CONTENT.tileIds[id] : undefined;
             if (t !== undefined && (built === null || (TILES[t]?.height ?? 2.8) > (TILES[built]?.height ?? 2.8))) built = t;
           }

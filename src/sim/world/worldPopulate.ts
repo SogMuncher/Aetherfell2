@@ -81,8 +81,10 @@ export function raise(ctx: SimContext, loc: Location, site: SiteLayout, ruin = 0
   const perTick = Math.max(BUILDS_PER_TICK, Math.ceil(total / BUILDS_FULL_IN));
   for (let k = 0; k < perTick && n < total; k++, n++) {
     const s = site.plan[n];
-    const plain = s ? ctx.content.structures[s.id] : undefined;
-    if (!s || !plain) continue;
+    const recipe = s ? ctx.content.structures[s.id] : undefined;
+    if (!s || !recipe) continue;
+    // Its district's materials over the recipe's.
+    const plain = s.look ? { ...recipe, materials: { ...recipe.materials, ...s.look } } : recipe;
     // Fallen further where the place says so (the same building, as a ruin under the land).
     const def = ruin > (plain.decay ?? 0) ? { ...plain, decay: ruin } : plain;
     const report = ctx.build(def, { x: s.x, y: s.y, rot: s.rot, size: [s.w, s.d], ground: (x, y) => ctx.tiles.ground(x, y) }, s.seed);

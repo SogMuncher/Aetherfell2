@@ -75,9 +75,21 @@ export function weighted(w: Readonly<Record<string, number>>, roll: number): str
 export const ROT_OUT: Record<CompassSide, number> = { n: 0, e: 1, s: 2, w: 3 };
 export const ROT_IN: Record<CompassSide, number> = { n: 2, e: 3, s: 0, w: 1 };
 
+/** A street line at `c`, `w` wide; a crooked one wanders up to `bend` metres off it (phase `ph`, wavelength from `f`). */
 export interface Line {
   c: number;
   w: number;
+  bend?: number;
+  ph?: number;
+  f?: number;
+}
+
+/** How far a crooked street has wandered off its line at `t` along it (whole metres, so its width never changes). */
+export function wander(q: Line, t: number): number {
+  if (!q.bend) return 0;
+  const f = q.f ?? 0.1;
+  const ph = q.ph ?? 0;
+  return Math.round(q.bend * (0.65 * Math.sin(t * f + ph) + 0.35 * Math.sin(t * f * 2.7 + ph * 1.9)));
 }
 
 /** Front normals: rot0 faces north (-y), rot1 east, rot2 south, rot3 west. */
