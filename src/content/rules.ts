@@ -120,6 +120,7 @@ export const RULES: RulesDef = {
   pickReach: 4.5,
   gravity: 22,
   sites: { fill: 180, keep: 280 },
+  hireFee: 50,
   awake: 200,
   crafts: { dock: { x: -60000, y: -60000, z: 64 }, spacing: 48 },
   coop: { timeout: 20 },

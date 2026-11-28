@@ -83,7 +83,7 @@ export interface ActorData {
 export interface DialogueOption {
   label: string;
   /** What the option does — resolved by the social system. */
-  action: 'rumour' | 'quest' | 'trade' | 'farewell' | 'turnIn' | 'where' | 'about' | 'places' | 'people' | 'place' | 'person' | 'self' | 'back';
+  action: 'rumour' | 'quest' | 'trade' | 'farewell' | 'turnIn' | 'where' | 'about' | 'places' | 'people' | 'place' | 'person' | 'self' | 'back' | 'hire' | 'dismiss' | 'gear';
   /** Which place (a landmark key) or person (an entity id) a 'place'/'person' topic asks about. */
   arg?: string;
 }
@@ -135,7 +135,7 @@ export interface PlayerData {
  * How a creature is moving right now. Behaviours (sim/ai/behaviours.ts) choose one; the steering
  * in sim/ai carries it out. Audio and music read it to tell when something is chasing you.
  */
-export type AiMode = 'idle' | 'wander' | 'graze' | 'chase' | 'flee' | 'goto' | 'attack' | 'cast';
+export type AiMode = 'idle' | 'wander' | 'graze' | 'chase' | 'flee' | 'goto' | 'run' | 'attack' | 'cast';
 
 export interface AiData {
   mode: AiMode;

@@ -180,6 +180,8 @@ export interface RulesDef {
    * away (it must be more than `fill`, or the place empties before you arrive).
    */
   sites: { fill: number; keep: number };
+  /** Silver a townsperson asks to join the party (they then follow and fight with you). */
+  hireFee: number;
   /** Metres from every player beyond which bodies sleep (no physics, so far chunks are not dragged back in). */
   awake: number;
   /** Where crafts keep their cells in the 3D layer (a quiet corner nobody walks to), one box every `spacing` m along x. */

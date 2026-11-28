@@ -89,6 +89,8 @@ export interface TalkDef {
   /** Below this feeling for the party, people will not give directions. */
   refuseBelow: number;
   refuse: readonly string[];
+  /** Hiring folk into the party: option labels ({fee}) and their answers. */
+  party: { hire: string; joined: string; broke: string; gear: string; dismiss: string; left: string };
 }
 
 export interface FactionDef {

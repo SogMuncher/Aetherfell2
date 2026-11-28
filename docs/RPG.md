@@ -22,6 +22,10 @@
 - `social/`: dialogue, trade, quests from `content/roles.ts` templates. `topics.ts`: Daggerfall-style menus "Where is..."
   (places = `Location.landmarks`, people = where `hauntNow` says they are) and "Tell me about..." (rumours, `RoleDef.about`);
   all words in `content/talk.ts`. Folk who dislike the party (`talk.refuseBelow`) refuse directions.
+  `party.ts`: hire townsfolk for `rules.hireFee` (they take the party's faction, `isFollower`), "Let me see your gear" opens
+  their bag in the hold window and their paperdoll (wear/remove `on` their id), dismiss returns them to `factions.folk`.
+  The `follow` behaviour (villager brain) keeps them with the nearest traveller and fights what threatens the party.
+  Not yet: they stay behind when the party changes realm.
 - `interaction/`: the world's own rules (fire spread, drying, rain, traps, doors, containers) over `ctx.matter`.
 - `persistence/`: fflate save; also how the world is sent to joining friends. Version bump refuses old saves (fine in dev).
 - `cheats/`: debug menu entries from `content/cheats.ts`, each names an action the sim knows. "Held item" rows (generated from
@@ -33,4 +37,4 @@
 - Villager job: `roles` entry listed in a site's `villagers`; its day = `routine` place words (building recipe ids work).
 
 ## Checks
-`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`, `handsSmoke.ts`, `townSmoke.ts` (paths, routines, topics).
+`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`, `handsSmoke.ts`, `townSmoke.ts` (paths, routines, topics), `partySmoke.ts` (hire, follow, fight, dress).

@@ -45,6 +45,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `townSmoke.ts` (127) Townsfolk: they find their way round walls and in through doors (ground and 3D cells), keep routines, and answ
 - `citySmoke.ts` (157) Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings o
 - `siteKit.ts` (64) Shared helpers for the settlement and city checks: a calm world, stepping, finding a site of a kind, walking i
+- `partySmoke.ts` (80) Party: townsfolk join for a fee, follow and fight with the travellers, and carry and wear what they are given
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
@@ -101,11 +102,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gearItems.ts` (164) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
 - `gearCheck.ts` (60) gearProblems: the gear tables are sound
 - `itemDefs.ts` (117) itemDef for every id (wear `@N`, durability), held-item weapon stats, break reactions, wear helpers
-- `helpers.ts` (102) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
+- `helpers.ts` (107) content lookups: thingDef, weaponStats, rollLoot, fillText, isDisabled...
 - `hud.ts` (45) Colours of the screen furniture (bars, panels, menus, map marks). The interface turns each into a
 - `index.ts` (90) collects every table into CONTENT, re-exports helpers, runs validation
 - `items.ts` (112) Inventory goods. A new potion, food, throwable or weapon is just a new entry here.
-- `living.ts` (128) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
+- `living.ts` (129) Creature minds. Each brain lists behaviours from the shared library (sim/ai/behaviours.ts) in
 - `looks.ts` (175) creature looks as solid parts (D)
 - `loot.ts` (113) Drop tables: each entry rolls on its own.
 - `materials.ts` (29) How stuff reacts physically. Every tile and thing made of a material behaves the same way.
@@ -113,7 +114,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `props.ts` (232) Props as forms: barrels, crates, chests, urns, torches, campfires and trap plates are put
 - `realms.ts` (67) The spaces the world is made of. A realm is a place with its own ground, light and sky; the whole
 - `roles.ts` (124) Villager jobs: what they add to a greeting, what they keep on the rack, the trouble they ask
-- `rules.ts` (130) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
+- `rules.ts` (131) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
 - `shapes.ts` (268) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
 - `sites.ts` (287) named places: odds, layout, population (D)
@@ -143,7 +144,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `shapeTable.ts` (124) The shape palette of the 3D layer as data: every shape a cell (1 m) or a fine cell (half a metre) can take
 - `hullSweep.ts` (64) Curved hulls as fine cells: every half-metre cell inside a solid is kept where it shows, shaped by which sides
 - `routine.ts` (30) Where a townsperson means to be right now: their role's routine for this part of the day, one place per day.
-- `talk.ts` (15) The words of conversation: topic labels and answer templates for asking townsfolk about places and people.
+- `talk.ts` (23) The words of conversation: topic labels and answer templates for asking townsfolk about places and people.
 - `sitesWards.ts` (107) City districts and megacity wards as data: what each quarter builds, what it is built of, how it is paved and
 - `structuresCivic.ts` (242) Recipes for stone and civic buildings in the 3D layer: towers, ruins, gatehouses, barracks, church, keep, city
 - `surfacesBuild.ts` (179) Building surfaces: brick, dressed stone, timber frame, daub, washes, roofs, floors and street paving (merged i
@@ -159,7 +160,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `settingsLink.ts` (66) Hands the remembered settings to sound, view and controls (on start and on every change), and sizes the view's
 
 ## src/net/
-- `messages.ts` (200) validate and shape every co-op message
+- `messages.ts` (201) validate and shape every co-op message
 - `net.ts` (275) PeerJS transport: host/guest connections, snapshots
 - `prediction.ts` (76) guest-side view and input replay
 
@@ -235,14 +236,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/render/ui/
 - `bag.ts` (289) BagWindow: draggable inventory window (C)
 - `bagParts.ts` (149) bag constants, icon urls, item description, layout store
-- `paperdoll.ts` (254) C key: armour slots and the hand slot, drag to take off
+- `paperdoll.ts` (266) C key: armour slots and the hand slot, drag to take off
 - `paperdollStats.ts` (52) the paperdoll's side panel: health, protection, hands, skills
 - `settingsMenu.ts` (258) Esc/O menu built from settings data + cheat tab
 - `style.ts` (132) HUD CSS from content/hud.ts
-- `ui.ts` (624) GameUI: HUD, dialogue, journal, map, runebook (C)
+- `ui.ts` (626) GameUI: HUD, dialogue, journal, map, runebook (C)
 - `paperdollFigure.ts` (81) The paperdoll's figure: your own body sprite in what you wear and hold, turned with the mouse wheel
 - `prompt.ts` (56) The line under the crosshair: what pressing E (or F, or jumping) would do with what you are looking at
-- `storeWindow.ts` (92) The hold window: what a store keeps (a ship's hold) beside what is in your bag; click a stack to move it acros
+- `storeWindow.ts` (101) The hold window: what a store keeps (a ship's hold) beside what is in your bag; click a stack to move it acros
 - `bagArea.ts` (246) A bag's leather area: one picture per stack lying where you put it, click to name, double-click to use, drag t
 - `movable.ts` (38) Windows you drag by their title bar: kept on screen, told where they ended up so they can remember it
 
@@ -260,8 +261,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `videoSettings.ts` (153) Video settings as data: pixel size, view feel, and each part of the lighting with presets that set them all at
 
 ## src/sim/ai/
-- `aiSystem.ts` (194) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is
-- `behaviours.ts` (139) The shared library of behaviours every creature brain picks from (content/living.ts).
+- `aiSystem.ts` (195) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is
+- `behaviours.ts` (171) The shared library of behaviours every creature brain picks from (content/living.ts).
 - `handling.ts` (51) Brain behaviours for hands: grabbing loose items into the bag and throwing them at enemies (the player's own p
 - `senses.ts` (141) What a creature notices when it stops to think, and the small moves every behaviour shares.
 - `paths.ts` (210) Finds a walkable way between two points (A* over 1 m cells: ground, walls of the 3D layer, doors, deep water)
@@ -311,13 +312,14 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `gliding.ts` (32) Gliding as data: how a glider's cloth turns your heading and look into flight, from a gentle drift down to a s
 
 ## src/sim/rpg/
-- `gearHandling.ts` (67) put on / take off armour, hold anything in the hands
+- `gearHandling.ts` (81) put on / take off armour, hold anything in the hands
 - `throwing.ts` (113) throw from the bag, G throw/drop from the hands, pick up from the view
-- `rpgSystem.ts` (208) Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
+- `rpgSystem.ts` (210) Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
 
 ## src/sim/social/
-- `socialSystem.ts` (228) Conversation: greetings that depend on the hour and on what the party has done, rumours that
+- `socialSystem.ts` (238) Conversation: greetings that depend on the hour and on what the party has done, rumours that
 - `topics.ts` (75) Daggerfall-style topics: the "Where is..." and "Tell me about..." menus, and the answers townsfolk give from w
+- `party.ts` (47) Hiring townsfolk into the party for a fee, seeing to their gear, and letting them go again.
 
 ## src/sim/statuses/
 - `statusSystem.ts` (32) Ticks ongoing conditions: counts them down and queues their repeating effects (burning hurts
@@ -372,7 +374,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
 - `entities.ts` (255) Entity and its components
 - `events.ts` (72) Things that happened during a tick. Audio, render effects, UI and the network react to these.
-- `gear.ts` (199) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
+- `gear.ts` (200) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
 - `index.ts` (21) re-exports all types
 - `input.ts` (96) Letting go of an item from the bag over the view: where the cursor was decides the throw.
 - `items.ts` (48) Inventory helpers shared by every system that touches items.
@@ -392,13 +394,13 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `craft.ts` (120) Crafts (an airship): a box of 3D cells flown as one body, worked from stations by named control channels
 
 ## src/types/defs/
-- `brains.ts` (115) BehaviourDef, BrainDef, loot, habitats, population
+- `brains.ts` (120) BehaviourDef, BrainDef, loot, habitats, population
 - `ids.ts` (23) id string types
 - `items.ts` (116) ItemDef, ItemLook
 - `magic.ts` (194) SpellDef, RuneDef, StatusDef and spell look
-- `rules.ts` (234) RulesDef, SwingDef, DayRules, HudTheme
+- `rules.ts` (236) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (160) SiteDef, layouts, city, districts
-- `social.ts` (100) quests, trade, roles, factions
+- `social.ts` (102) quests, trade, roles, factions
 - `things.ts` (213) MaterialDef, ThingDef, RealmDef, light, weapon stats
 - `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult
 

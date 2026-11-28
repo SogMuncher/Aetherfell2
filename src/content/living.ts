@@ -98,6 +98,7 @@ export const BRAINS: Record<BrainId, BrainDef> = {
       { do: 'panic' },
       { do: 'fleeFire', chance: 0.9, distance: 14 },
       { do: 'retreat', below: 0.3, distance: 16 },
+      { do: 'follow', near: 2.5, far: 6, guard: 14 },
       { do: 'avoid', within: 0.8, distance: 16, trust: 0.1, untilProvoked: true },
       { do: 'defend' },
       { do: 'routine', potter: 4, chance: 0.03 },
