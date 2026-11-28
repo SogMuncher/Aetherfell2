@@ -38,7 +38,8 @@
 - Standing in stuff (`sim/effects/touch.ts`, rows in `rules.touch`): each body reads the 3D cell under its feet, or the
   ground tile when on the ground, the same way (fire, wet, wading depth incl. liquid cells, rain under open sky) and gets
   the row's effects. New "standing in" rule = a data row, never a check in another system.
-- Factions decide who may hurt whom (`friendlyFire`).
+- Factions decide who may hurt whom (`friendlyFire`): a swing skips its own side, and `applyToEntity` drops harmful
+  effects (damage, push, heat, chill, holding/slowing/wounding statuses) a same-side source sends (blasts, bolts, thrown things).
 
 ## Add / change
 - New swing: row in `combat.swings` (+ `SWING_DIRS`). Breakable: tile `durability`/`breaksInto`. Hard material:

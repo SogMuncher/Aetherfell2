@@ -45,7 +45,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `townSmoke.ts` (127) Townsfolk: they find their way round walls and in through doors (ground and 3D cells), keep routines, and answ
 - `citySmoke.ts` (157) Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings o
 - `siteKit.ts` (64) Shared helpers for the settlement and city checks: a calm world, stepping, finding a site of a kind, walking i
-- `partySmoke.ts` (80) Party: townsfolk join for a fee, follow and fight with the travellers, and carry and wear what they are given
+- `partySmoke.ts` (96) Party: townsfolk join for a fee, follow and fight with the travellers, and carry and wear what they are given
 
 ## src/audio/
 - `engine.ts` (268) Sound building blocks. Every sound in the game is made from three things: an oscillator,
@@ -275,7 +275,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 
 ## src/sim/effects/
 - `effectsSystem.ts` (87) effect queue loop
-- `entityEffects.ts` (265) effects on bodies: guard, armour, reactions, death
+- `entityEffects.ts` (278) effects on bodies: guard, armour, reactions, death
 - `spotEffects.ts` (127) effects on tiles/cells: ignite, strike, soak, coat
 - `temperature.ts` (107) temperature of tiles/cells: heat dries then burns, cold freezes wet, spots settle back
 - `touch.ts` (53) What bodies get from what they stand in or on: one data-driven pass over ground tiles and 3D cells alike
@@ -283,10 +283,11 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 ## src/sim/
 - `breakage.ts` (18) ctx.breakItem: an item's onBreak burst + what it breaks into
 - `inputQueue.ts` (142) queueing/folding of guest inputs
-- `simLoop.ts` (424) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
+- `simLoop.ts` (354) Simulation class: step order, commands, realm travel, wipe check, prediction (C)
 - `simState.ts` (96) rng, createState, newPlayer
 - `templates.ts` (67) Builds an entity from its definition. Only instance data lives on the entity.
 - `foresight.ts` (43) A guest's foresight: one tick of its own traveller (and the crafts it may stand on) by the host's rules, touch
+- `travel.ts` (84) Moving the party between realms: travel through a way down or up, and a party wipe carrying them to the surfac
 
 ## src/sim/interaction/
 - `interactionSystem.ts` (266) The world's own rules: fire grows, spreads (faster downwind and through oil), throws sparks on
@@ -347,7 +348,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `decks.ts` (174) Decks over water: bridges where a way crosses a river or lake, piers where a port meets the water. One shape of thing
 - `matter.ts` (258) ctx.matter: stuff at (x,y,z) for tiles and cells
 - `noise.ts` (59) Small, fast, seedable noise helpers. Pure functions of (seed, coords).
-- `realms.ts` (93) Who goes along when the party changes realm: the travellers and what they carry.
+- `realms.ts` (94) Who goes along when the party changes realm: the travellers and what they carry.
 - `roads.ts` (112) ways per region: waysTouching, wayHit
 - `sites.ts` (298) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
 - `terrain.ts` (223) The shape of the land: continents, rolling hills, ridged mountains, a moisture field for biomes,

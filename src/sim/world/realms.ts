@@ -1,12 +1,13 @@
 import type { Entity, RealmId, RealmWorld, SimState, TileAccess } from '../../types';
+import { CONTENT, isFollower } from '../../content';
 import { VolumeStore } from './volume';
 
-/** Who goes along when the party changes realm: the travellers and what they carry. */
+/** Who goes along when the party changes realm: the travellers, whoever they hired, and what any of them carry. */
 function travelling(state: SimState, e: Entity): boolean {
-  if (e.player) return true;
+  if (e.player || isFollower(CONTENT, e)) return true;
   if (e.heldBy === null) return false;
   const holder = state.entities.get(e.heldBy);
-  return holder?.player !== undefined;
+  return holder !== undefined && travelling(state, holder);
 }
 
 function emptyRealm(tick: number): RealmWorld {
