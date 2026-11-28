@@ -71,6 +71,22 @@ for (const raised of [false, true]) {
   check(`a party member fights what threatens the party${where}`, fought, v.ai?.doing);
   s.entities.delete(w.id);
 
+  // No friendly fire: a blast, a bolt of fire or a club from your side leaves a party member (and you) unhurt.
+  const hp = v.hp;
+  const myHp = me.hp;
+  s.queues.effects.push({ target: { kind: 'area', x: v.pos.x, y: v.pos.y, z: v.z, radius: 3 }, effects: [{ type: 'damage', amount: 30, kind: 'fire' }, { type: 'heat', amount: 50 }, { type: 'push', force: 8 }], source: me.id, from: { x: me.pos.x, y: me.pos.y }, exclude: me.id });
+  s.queues.effects.push({ target: { kind: 'entity', id: me.id }, effects: [{ type: 'damage', amount: 20, kind: 'blunt' }, { type: 'status', id: 'staggered', ticks: 20 }], source: v.id, from: { x: v.pos.x, y: v.pos.y } });
+  calm(2);
+  check(`party members cannot hurt each other${where}`, v.hp >= hp && me.hp >= myHp && !v.status.burning && !me.status.staggered, `${v.hp}/${hp} ${me.hp}/${myHp}`);
+
+  // Realms: hired folk go down into the underworld with the party, and come back up with them.
+  for (const to of ['underworld', 'overworld']) {
+    s.queues.travel.push({ to, x: me.pos.x, y: me.pos.y, by: me.id });
+    calm(1);
+    const gap = Math.hypot(v.pos.x - me.pos.x, v.pos.y - me.pos.y);
+    check(`a party member travels with the party to the ${to}${where}`, s.realm === to && s.entities.get(v.id) === v && gap < 5, `${s.realm} ${gap.toFixed(1)} m`);
+  }
+
   me.pos.x = me.prev.x = v.pos.x + 1;
   me.pos.y = me.prev.y = v.pos.y;
   talk('dismiss');

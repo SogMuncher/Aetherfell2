@@ -28,7 +28,8 @@
   `volumeChanged` event per brick. Cheat "Build a building" raises any recipe.
 
 ## Realms (`content/realms.ts`, `sim/world/realms.ts`, `underworld.ts`)
-- `state.realm` is active; the others sit in `state.stash`. Travel = `swapRealm`, run by `simLoop.travel()`.
+- `state.realm` is active; the others sit in `state.stash`. Travel = `swapRealm`, run by `sim/travel.ts`; players,
+  hired followers (`isFollower`) and anything they hold go along and are set down together.
 - `RealmDef.ground`: `'surface'` or `'lattice'` (the underworld, 1:1 under the land, roof = 3D cells).
   Dispatch points: `WorldTiles.chunk()` and `Simulation.regenChunk()`.
 - The underworld is the land read again (`underSpot.ts` `underAt`, data `RealmDef.lattice` + `SiteDef.under`):
