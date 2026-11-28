@@ -191,4 +191,8 @@ export interface StatusDef {
   light?: LightDef;
   /** Tints the sprite. */
   tint?: Color;
+  /** Bits coming off the body while it lasts (render): an effects burst id, how many a second, and how fast they rise (m/s, minus falls). */
+  motes?: { fx: string; rate: number; rise: number };
+  /** Locks the body rigid: its picture stops moving (frozen solid). */
+  still?: boolean;
 }

@@ -19,11 +19,12 @@ export const STATUSES: Record<StatusId, StatusDef> = {
     panic: true,
     light: { r: 1, g: 0.55, b: 0.2, radius: 5, flicker: 0.4 },
     tint: { r: 255, g: 140, b: 40 },
+    motes: { fx: 'burningBody', rate: 18, rise: 1.5 },
   }),
-  wet: status({ name: 'Soaked', tags: ['water'], cancels: ['burning'] }),
-  chilled: status({ name: 'Chilled', tags: ['cold'], cancels: ['burning'], blockedBy: ['warmed'], move: 0.5, tint: { r: 150, g: 200, b: 255 } }),
+  wet: status({ name: 'Soaked', tags: ['water'], cancels: ['burning'], tint: { r: 140, g: 165, b: 215 }, motes: { fx: 'wetDrip', rate: 14, rise: -1 } }),
+  chilled: status({ name: 'Chilled', tags: ['cold'], cancels: ['burning'], blockedBy: ['warmed'], move: 0.5, tint: { r: 150, g: 200, b: 255 }, motes: { fx: 'chilledBody', rate: 6, rise: -0.3 } }),
   /** Wet and chilled: stiff and helpless until it thaws; heat that catches breaks it free. */
-  frozen: status({ name: 'Frozen', tags: ['cold'], cancels: ['wet', 'burning', 'chilled'], blockedBy: ['warmed'], move: 0, disables: true, tint: { r: 190, g: 225, b: 255 } }),
+  frozen: status({ name: 'Frozen', tags: ['cold'], cancels: ['wet', 'burning', 'chilled'], blockedBy: ['warmed'], move: 0, disables: true, still: true, tint: { r: 120, g: 200, b: 255 }, motes: { fx: 'frozenGlint', rate: 8, rise: 0 } }),
   /** Warm right through (a hot drink): cold cannot get a grip, and it shakes off a chill. */
   warmed: status({ name: 'Warmed', tags: ['warm'], cancels: ['chilled'], blockedBy: ['wet'], tint: { r: 255, g: 200, b: 150 } }),
   staggered: status({ name: 'Staggered', tags: ['stun'], move: 0.2, disables: true }),

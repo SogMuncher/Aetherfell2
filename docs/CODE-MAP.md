@@ -14,7 +14,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `fireSmoke.ts` (21) Headless check that a grass/brush fire spreads with wind and stops in rain.
 - `gearSmoke.ts` (269) check: gear (weapons, armour, enchantments), hand slot, wear/break on ground and 3D cell, G throw
 - `matterSmoke.ts` (245) MATTER: ground tiles and cells of the 3D layer obey the same rules. A timber wall burns like brush,
-- `mechanicsSmoke.ts` (520) check: core mechanics (combat, items, fire, traps, statuses) on ground and cells
+- `mechanicsSmoke.ts` (523) check: core mechanics (combat, items, fire, traps, statuses) on ground and cells
 - `realmSmoke.ts` (239) REALMS: the underworld is a second set of tiles, cells and things swapped in for the surface; every
 - `runebookSmoke.ts` (275) Headless checks for the runebook: composing spells from runes, preparing them, learning runes
 - `settlementSmoke.ts` (198) Settlements and cities in the 3D layer: villages raise real buildings with furniture inside,
@@ -42,10 +42,10 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `hullTight.ts` (74) Is a swept hull tight? Fills its fine cells' real shapes at an eighth of a metre and floods the outside air: n
 - `shipSmoke.ts` (298) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
 - `glideSmoke.ts` (77) GLIDERS: each cloth flies its own way (data): burlap only slows your fall, wyvern hide soars, dives and climbs
-- `townSmoke.ts` (127) Townsfolk: they find their way round walls and in through doors (ground and 3D cells), keep routines, and answ
+- `townSmoke.ts` (147) Townsfolk: they find their way round walls and in through doors (ground and 3D cells), keep routines, and answ
 - `citySmoke.ts` (157) Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings o
 - `siteKit.ts` (64) Shared helpers for the settlement and city checks: a calm world, stepping, finding a site of a kind, walking i
-- `partySmoke.ts` (96) Party: townsfolk join for a fee, follow and fight with the travellers, and carry and wear what they are given
+- `partySmoke.ts` (99) Party: townsfolk join for a fee, follow and fight with the travellers, and carry and wear what they are given
 - `underSmoke.ts` (133) UNDERWORLD BIOMES: regions dug their own way, rooms, galleries, pits and pools, dark rivers, doors and locks,
 - `barkSmoke.ts` (63) Barks: talkers say a line from their bark set when hurt or when their plan changes, keep quiet a while after,
 
@@ -99,7 +99,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `biomes.ts` (102) Kinds of landscape. Each point of land takes the first biome (in this order) whose `when` fits
 - `cheats.ts` (72) Every debug cheat, as data. The Debug cheats menu builds one row per entry (in this order, under
 - `day.ts` (41) The one day-and-night clock. Times are a share of the day: 0 is midnight, 0.25 six in the
-- `effects.ts` (40) Bursts of motes for things that happen in the world (not spells: those have their own look in
+- `effects.ts` (42) Bursts of motes for things that happen in the world (not spells: those have their own look in
 - `forms.ts` (187) trees, bushes, rocks, stones, plants as pieces (D)
 - `gear.ts` (63) gear as data: body parts, hand slot, forms (garments + weapons), materials, qualities, enchantments
 - `gearItems.ts` (164) gear ids -> item definitions, random rolls, outfits, which body part a blow lands on
@@ -125,7 +125,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `skyField.ts` (293) Where the clouds are (`airColumn`: every layer into air cells). One pure function of the sky data, the weather (cover, storminess, how far
 - `spellcraft.ts` (286) composes a spell from up to 3 runes; spell descriptions
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
-- `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
+- `statuses.ts` (38) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
 - `structures.ts` (213) building recipes for the 3D layer (D)
 - `surfaces.ts` (248) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
 - `things.ts` (300) entity archetypes by trait (D)
@@ -196,8 +196,8 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `viewModel.ts` (272) held weapon as small 3D scene (being replaced by sprites)
 - `spriteWarp.ts` (168) Flat sprites made to read as 3D motion. A held item is just its item picture (itemArt.ts); a
 - `artGrow.ts` (264) Builds one individual of any art recipe into placed solids: fixed parts at their spots (joints), grown parts b
-- `artSprites.ts` (166) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
-- `assembler.ts` (246) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
+- `artSprites.ts` (173) Picks the picture for any entity drawn from art (creature, person, prop): which individual, pose, frame and si
+- `assembler.ts` (247) The one sprite assembler: builds any art recipe (creature, tree, prop), poses it and paints it from 8 sides, o
 - `itemLook.ts` (93) What an item looks like, worked out from its definition: base shape, colours, size, gear parts (no item ids)
 - `gearArt.ts` (96) Worn armour and the held item laid onto any creature's art recipe: shells over the parts each slot covers, the
 - `viewFx.ts` (109) Motes over the held item: flames at a burning head, sparks, drops and puffs, advanced and painted each frame.
@@ -264,7 +264,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `fireEmitter.ts` (47) Where fire's motes go: the particle system draws them from the palette in the fire rules.
 - `glow.ts` (86) Light painted straight over the frame: glows, lines, specks. Shared by the held item and its sparks.
 - `spellEmitters.ts` (161) Spell motes: the bloom of a bolt bursting, cones, novas, wards, the casting hand and a bolt's trail, all from
-- `thingEmitters.ts` (62) Motes things give off every frame: flames on what burns with firelight, smoke and trails, a held torch, burnin
+- `thingEmitters.ts` (63) Motes things give off every frame: flames on what burns with firelight, smoke and trails, a held torch, burnin
 - `glideTrails.ts` (44) Light trails behind open gliders: a line of glowing motes left hanging in the air from each wingtip (the glide
 - `crumble.ts` (178) Death crumble: a dying body's picture falls apart into its own pixels, which tumble down, blow about, settle a
 
@@ -273,7 +273,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `videoSettings.ts` (153) Video settings as data: pixel size, view feel, and each part of the lighting with presets that set them all at
 
 ## src/sim/ai/
-- `aiSystem.ts` (195) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is
+- `aiSystem.ts` (204) Every creature (animal, monster or villager) thinks the same way: now and then it senses what is
 - `behaviours.ts` (175) The shared library of behaviours every creature brain picks from (content/living.ts).
 - `handling.ts` (51) Brain behaviours for hands: grabbing loose items into the bag and throwing them at enemies (the player's own p
 - `senses.ts` (151) What a creature notices when it stops to think, and the small moves every behaviour shares.
@@ -365,7 +365,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `noise.ts` (59) Small, fast, seedable noise helpers. Pure functions of (seed, coords).
 - `realms.ts` (94) Who goes along when the party changes realm: the travellers and what they carry.
 - `roads.ts` (112) ways per region: waysTouching, wayHit
-- `sites.ts` (298) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
+- `sites.ts` (301) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
 - `terrain.ts` (223) The shape of the land: continents, rolling hills, ridged mountains, a moisture field for biomes,
 - `underworld.ts` (168) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
 - `underSpot.ts` (188) `underAt`: what the underworld is at a tile (river, deck, cave, ruin street, hall, corridor, way artery, rock), read from the land
@@ -375,7 +375,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `water.ts` (224) Rivers and lakes: a pure function of the seed that reads no places (cities and roads read it, never the other way).
 - `wayParts.ts` (137) way types, site neighbours, nets
 - `wayRoute.ts` (213) route cost, bridging, way between two places
-- `worldPopulate.ts` (184) raises buildings, furnishes halls, spawns people
+- `worldPopulate.ts` (192) raises buildings, furnishes halls, spawns people
 - `worldSystem.ts` (145) keeps world around the party: places, chunk unloading
 - `worldTiles.ts` (239) The tile world: lazily generated chunks held in SimState, with change tracking.
 - `gateRule.ts` (13) Says which street ends of a walled place roads really use (set by roads.ts, which knows the land). A gate open
@@ -392,7 +392,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `commands.ts` (10) The only way the outside world (input, network) changes the simulation.
 - `defs.ts` (90) Content type + re-exports of defs/*
 - `effects.ts` (63) Kinds of harm. Materials scale each one (stone shrugs off cuts, wood hates fire).
-- `entities.ts` (261) Entity and its components
+- `entities.ts` (263) Entity and its components
 - `events.ts` (72) Things that happened during a tick. Audio, render effects, UI and the network react to these.
 - `gear.ts` (200) gear types: body parts, HAND_SLOT, forms, materials, qualities, enchantments, rolls, wear requests
 - `index.ts` (21) re-exports all types
@@ -417,7 +417,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `brains.ts` (129) BehaviourDef, BrainDef, loot, habitats, population
 - `ids.ts` (23) id string types
 - `items.ts` (116) ItemDef, ItemLook
-- `magic.ts` (194) SpellDef, RuneDef, StatusDef and spell look
+- `magic.ts` (198) SpellDef, RuneDef, StatusDef and spell look
 - `rules.ts` (236) RulesDef, SwingDef, DayRules, HudTheme
 - `sites.ts` (160) SiteDef, layouts, city, districts
 - `social.ts` (102) quests, trade, roles, factions

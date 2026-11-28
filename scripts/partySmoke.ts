@@ -2,6 +2,7 @@
 import { CUBE, STONE, check, failures, run, world } from './matterKit';
 import { spawner } from './smokeKit';
 import { CONTENT, thingDef } from '../src/content';
+import { tileCode } from '../src/content/tiles';
 import type { Entity } from '../src/types';
 import { addItem, bagOf, countItem } from '../src/types';
 
@@ -72,6 +73,8 @@ for (const raised of [false, true]) {
   s.entities.delete(w.id);
 
   // No friendly fire: a blast, a bolt of fire or a club from your side leaves a party member (and you) unhurt.
+  // Bare earth underfoot: grass the blast sets alight would rightly burn them, and that is not friendly fire.
+  for (let j = -5; j <= 5; j++) for (let i = -5; i <= 5; i++) sim.tiles.setKind(Math.floor(v.pos.x) + i, Math.floor(v.pos.y) + j, tileCode('road'));
   const hp = v.hp;
   const myHp = me.hp;
   s.queues.effects.push({ target: { kind: 'area', x: v.pos.x, y: v.pos.y, z: v.z, radius: 3 }, effects: [{ type: 'damage', amount: 30, kind: 'fire' }, { type: 'heat', amount: 50 }, { type: 'push', force: 8 }], source: me.id, from: { x: me.pos.x, y: me.pos.y }, exclude: me.id });

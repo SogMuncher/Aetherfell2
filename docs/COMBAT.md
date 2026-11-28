@@ -7,6 +7,7 @@
   `chill` `coat` `spawn`. Targets: entity, tile/spot, or an area of tiles, cells and bodies. Requests carry the causer.
 - Files: `effectsSystem.ts` (queue loop), `spotEffects.ts` (tiles/cells: ignite, strike), `entityEffects.ts`
   (bodies: guard, armour, reaction, status, death), `temperature.ts` (heat/cold of matter). Statuses tick in `sim/statuses`.
+  Their look is data on `StatusDef`: `tint`, `light`, `motes` (drips, flames, frost glints shed by the body), `still` (frozen pose).
 - Order for every source: guard/parry -> material reaction (resistances, burning/soaked via `rules.reactions`) ->
   status rules (cancels/blocks) -> death (`onDestroy`, loot, credit).
 - Melee (`sim/melee`): swings, charge, hitstop, knockback, all numbers in `content/rules.ts` `combat`. Ground tiles and
