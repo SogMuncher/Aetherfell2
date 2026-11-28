@@ -25,6 +25,7 @@ export function foresee(base: SimContext, state: SimState, playerId: string, inp
     query,
     rng: makeRng({ ...mini, rng: real.tick }),
     emit: () => {},
+    heard: [],
     spawn: (thing, x, y, init) => makeEntity(CONTENT, -1, thing, x, y, init),
     dropItems: () => {},
     breakItem: () => {},

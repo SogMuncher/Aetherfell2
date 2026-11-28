@@ -3,6 +3,7 @@ import type { BrainDef, HabitatDef, LootDef } from './defs/brains';
 import type { BrainId, FactionId, ItemId, LootId, MaterialId, RealmId, RoleId, RuneId, SiteId, StatusId, ThingId } from './defs/ids';
 import type { BurstDef, ViewmodelDef } from './vfx';
 import type { FactionDef, RoleDef, TalkDef } from './defs/social';
+import type { BarkRules, BarkSet } from './defs/speech';
 import type { GearTables } from './gear';
 import type { HudTheme, RulesDef } from './defs/rules';
 import type { ItemDef } from './defs/items';
@@ -22,6 +23,7 @@ export type { Delivery, SpellSound, SpellDef, MoteLook, SpellLook, EssenceLook, 
 export type { BehaviourDef, BehaviourKind, BrainDef, LootEntry, LootDef, HabitatDef, Placement, PopulationEntry } from './defs/brains';
 export type { SiteLayoutDef, CompassSide, DistrictDef, Landmark, CityLayout, WardDef, SiteDef, StreetStyle, VillageStyle } from './defs/sites';
 export type { QuestTemplate, QuestWords, TradeDef, RoleDef, FactionDef, DayPart, Routine, TalkDef } from './defs/social';
+export type { VoiceSpan, VoiceDef, SpeechDef, BarkSet, BarkRules } from './defs/speech';
 export type { SwingFeel, Handling, HandlingDef, HandlingTune } from './defs/handling';
 export type { ScatterDef, UnderRoomDef, UnderBiomeDef } from './defs/under';
 export type { ReactionDef, SwingDef, RulesDef, TouchDef, HudTheme, DayRules } from './defs/rules';
@@ -60,6 +62,9 @@ export interface Content {
   roles: Readonly<Record<RoleId, RoleDef>>;
   /** The words of conversation (content/talk.ts). */
   talk: TalkDef;
+  /** What people blurt out at moments of their day and of a fight, by bark set (content/barks*.ts), and how often. */
+  barks: Readonly<Record<string, BarkSet>>;
+  barkRules: BarkRules;
   /** Every picture built from parts (creatures, trees, rocks, props), by the sprite id a thing or tile names (types/art.ts). */
   art: Readonly<Record<ArtId, ArtDef>>;
   /** Colour palettes that colour regions are filled from ('@bark', '@fur.grey'), content/palettes.ts. */

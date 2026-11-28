@@ -1,7 +1,7 @@
 // Sounds of things in the world: statuses, doors, throws, impacts, fire, water, jumps, pickups, chests, speech, thunder (split from gameAudio.ts)
 import type { SimEvent, SimState } from '../types';
 import { CONTENT, itemDef, thingDef, spellFor } from '../content';
-import { fatigue, jit, murmur, rnd, runeMotif, statusOn, step, strike, swing } from './sfx';
+import { fatigue, jit, murmur, talk, rnd, runeMotif, statusOn, step, strike, swing } from './sfx';
 
 import type { GameAudio } from './gameAudio';
 
@@ -138,8 +138,10 @@ export function worldSounds(a: GameAudio, ev: SimEvent, state: SimState, localId
       const sp = state.entities.get(ev.speaker);
       if (!sp) break;
       const out = a.at(sp.pos.x, sp.pos.y, 25);
-      const v = a.voiceOf(sp);
-      if (out && v) murmur(e, out, t, v, ev.text, 1);
+      const pv = a.personOf(sp);
+      const v = pv ? null : a.voiceOf(sp);
+      if (out && pv) talk(e, out, t, pv, ev.text, 1);
+      else if (out && v) murmur(e, out, t, v, ev.text, 1);
       break;
     }
     case 'thunder': {

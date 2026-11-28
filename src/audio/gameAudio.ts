@@ -4,7 +4,8 @@ import { AudioEngine } from './engine';
 import { Ambience } from './ambience';
 import { MusicEngine, STYLE_IDS } from './music';
 import type { MusicStatus, StyleId } from './music';
-import { Recent, fatigue, individual, rnd, speak, speciesVoice } from './sfx';
+import { Recent, cry, fatigue, individual, personVoice, rnd, speak, speciesVoice } from './sfx';
+import type { PersonVoice } from './sfx';
 import type { Utterance, VoiceProfile } from './sfx';
 import { bodySounds } from './bodySounds';
 import { worldSounds } from './worldSounds';
@@ -165,15 +166,25 @@ export class GameAudio {
     return v ? individual(v, ent.id) : null;
   }
 
+  /** A person's speaking voice (things with `speech`), or null. */
+  personOf(ent: Entity | undefined): PersonVoice | null {
+    const sp = ent ? thingDef(CONTENT, ent.def).speech : undefined;
+    return ent && sp ? personVoice(sp.voice, ent.id) : null;
+  }
+
+  /** A cry or call in the entity's own voice: a person's speaking voice, else its creature voice. */
   say(ent: Entity | undefined, what: Utterance, level: number, maxD = 60): void {
     const e = this.e;
-    const v = this.voiceOf(ent);
-    if (!e || !ent || !v) return;
+    const pv = this.personOf(ent);
+    const v = pv ? null : this.voiceOf(ent);
+    if (!e || !ent || (!pv && !v)) return;
     const out = this.at(ent.pos.x, ent.pos.y, maxD);
     if (!out) return;
     const n = this.recent.hit(`${what}:${ent.def}`, e.now, 0.8);
     const heat = this.music?.mood.current.combat ?? 0;
-    speak(e, out, e.now + rnd(0, 0.04), v, what, level * fatigue(n), heat);
+    const t = e.now + rnd(0, 0.04);
+    if (pv) cry(e, out, t, pv, what === 'attack' ? 'effort' : what, level * fatigue(n), heat);
+    else if (v) speak(e, out, t, v, what, level * fatigue(n), heat);
   }
 
   /** The weapon an entity strikes with: what it wields, or its natural one. */

@@ -2,7 +2,7 @@
 import type { DamageKind, SimEvent, SimState } from '../types';
 import { TILES } from '../content/tiles';
 import { CONTENT, itemDef, thingDef, spellFor } from '../content';
-import { burstSpell, castSpell, effectBurst, fatigue, individual, jit, rnd, runeMotif, speak, speciesVoice, step, strike, swing } from './sfx';
+import { burstSpell, castSpell, cry, effectBurst, fatigue, individual, jit, personVoice, rnd, runeMotif, speak, speciesVoice, step, strike, swing } from './sfx';
 
 import type { GameAudio } from './gameAudio';
 
@@ -32,6 +32,8 @@ export function bodySounds(a: GameAudio, ev: SimEvent, state: SimState, localId:
       const mine = ent?.player !== undefined;
       // A wound-up blow is a deeper, louder whoosh.
       swing(e, out, t, { reach: (w?.reach ?? 1.4) * (1 + ev.power * 0.5), speed: (w?.speed ?? 1) * (1 - ev.power * 0.35), level: (mine ? 0.14 : 0.08) * (1 + ev.power * 0.8) });
+      // The swinger's own voice: a grunt of effort, a snarl, louder the harder the blow was wound up.
+      if (Math.random() < 0.35 + ev.power * 0.5) a.say(ent, 'attack', (mine ? 0.5 : 0.9) * (0.7 + ev.power * 0.5), 30);
       break;
     }
     case 'charge': {
@@ -96,8 +98,10 @@ export function bodySounds(a: GameAudio, ev: SimEvent, state: SimState, localId:
     case 'death': {
       const out = a.at(ev.x, ev.y);
       if (!out) break;
-      const v = speciesVoice(CONTENT, ev.def, thingDef(CONTENT, ev.def));
-      if (v) speak(e, out, t, individual(v, ev.entity), 'death', 1);
+      const sp = thingDef(CONTENT, ev.def).speech;
+      const v = sp ? null : speciesVoice(CONTENT, ev.def, thingDef(CONTENT, ev.def));
+      if (sp) cry(e, out, t, personVoice(sp.voice, ev.entity), 'death', 1);
+      else if (v) speak(e, out, t, individual(v, ev.entity), 'death', 1);
       if (v) e.burst(out, t + jit(0.05, 0.4), jit(0.3, 0.2), 0.12, 'lowpass', jit(220, 0.15));
       break;
     }

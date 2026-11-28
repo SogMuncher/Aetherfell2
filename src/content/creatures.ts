@@ -1,4 +1,5 @@
 // Creatures and people as thing definitions: bodies, natural weapons, brains, and the outfit (real gear) they are found with
+import { FOLK_VOICE, HEXER_VOICE, RAIDER_VOICE, TRAVELLER_VOICE } from './speech';
 import type { BodyRegionId, ThingDef, ThingId, WeaponStats } from '../types';
 
 /** The body parts that people (and anything else built like them) can wear armour on. */
@@ -23,6 +24,7 @@ export const CREATURES: Record<ThingId, ThingDef> = {
     wears: HUMANOID,
     actor: { speed: 4.2, weapon: FISTS },
     sprite: 'player',
+    speech: { voice: TRAVELLER_VOICE },
     bleeds: true,
   },
   wolf: {
@@ -72,6 +74,7 @@ export const CREATURES: Record<ThingId, ThingDef> = {
     talk: true,
     carries: 'villager',
     sprite: 'villager',
+    speech: { voice: FOLK_VOICE, barks: 'folk' },
     voice: 'grunt',
     bleeds: true,
   },
@@ -101,6 +104,7 @@ export const CREATURES: Record<ThingId, ThingDef> = {
     onDestroy: { loot: 'hexer' },
     despawn: 140,
     sprite: 'hexer',
+    speech: { voice: HEXER_VOICE, barks: 'hexer' },
     voice: 'grunt',
     bleeds: true,
   },
@@ -131,6 +135,7 @@ export const CREATURES: Record<ThingId, ThingDef> = {
     onDestroy: { loot: 'raider' },
     despawn: 140,
     sprite: 'raider',
+    speech: { voice: RAIDER_VOICE, barks: 'raider' },
     voice: 'grunt',
     bleeds: true,
   },

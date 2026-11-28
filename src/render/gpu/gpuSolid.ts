@@ -91,8 +91,11 @@ float rayHit(vec3 o, vec3 d, float len, int steps, bool sprites, int self){
   ivec3 cell = ivec3(floor(o)); vec3 st = sign(d); vec3 ad = max(abs(d), vec3(1e-5));
   vec3 tMax = (st * (vec3(cell) + 0.5 - o) + 0.5) / ad; vec3 tDelta = 1.0 / ad; float t = 0.0; vec3 e = o + d * len;
   bool newCol = true;
+  // Reach a fixed distance, not a fixed count of cells: a ray beside a cell seam crosses one more cell edge than its
+  // neighbours, so a count ran out a cell early in thin lines along every seam (the 1-pixel gaps in roof shadows).
+  float lim = min(len, float(steps - 2) / (ad.x + ad.y + ad.z));
   for (int i = 0; i < steps; i++){
-    if (t >= len) return -1.0;
+    if (t >= lim) return -1.0;
     ivec3 q = cell - uSolid0;
     if (q.x < 0 || q.y < 0 || q.x >= ${S} || q.y >= ${S} || (q.z >= ${H} && d.z >= 0.0)) return -1.0; // left the field: the far land takes over
     float tn = min(min(tMax.x, tMax.y), tMax.z);

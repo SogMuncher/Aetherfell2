@@ -1,3 +1,4 @@
+import type { DrawnBody } from '../vfx/crumble';
 import type { Entity, ReadonlyTiles, SimState, ThingDef } from '../../types';
 import { CONTENT, thingDef } from '../../content';
 import { lerp, poseBetween } from '../lighting';
@@ -76,6 +77,20 @@ export class SpriteRenderer {
     this.list.push(b);
   }
 
+  /** How each creature was last drawn, so a death can crumble that very picture (vfx/crumble.ts). */
+  private drawn = new Map<number, DrawnBody & { at: number }>();
+  private remember(id: number, x: number, y: number, z: number, sprite: Sprite, scale: number, flip: boolean, colours: Uint32Array | null, time: number): void {
+    const b = this.drawn.get(id);
+    if (b) Object.assign(b, { x, y, z, sprite, scale, flip, colours, at: time });
+    else this.drawn.set(id, { x, y, z, sprite, scale, flip, colours, at: time });
+    if (this.drawn.size > 400) for (const [k, o] of this.drawn) if (time - o.at > 2) this.drawn.delete(k);
+  }
+  /** The body as drawn in the last moment it was seen (null if not lately). */
+  lastDrawn(id: number, time: number): DrawnBody | null {
+    const b = this.drawn.get(id);
+    return b && time - b.at < 0.5 ? b : null;
+  }
+
   /** Someone threw an item: their body plays the throw. */
   thrown(id: number): void {
     this.art.thrown(id);
@@ -139,6 +154,7 @@ export class SpriteRenderer {
         else if (st.tint) tint = st.tint;
       }
       this.add(x, y, z - sink, s, p, facing, glow, flash, scale, tint, fade, colours);
+      if (e.actor) this.remember(e.id, x, y, z - sink, s, scale, facing, colours, time);
     }
     // Flora last: when a dense forest passes the GPU's billboard cap, trees drop out, never creatures or items.
     this.flora.each(tiles, p.cam.x, p.cam.y, p.FX, p.FY, p.RX, p.RY, (t, fade, burning) => {

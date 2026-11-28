@@ -24,7 +24,7 @@ import { playerSystem } from './player';
 import { rpgSystem } from './rpg';
 import { craftSystem } from './craft';
 import { foresee } from './foresight';
-import { socialSystem } from './social';
+import { barkSystem, socialSystem } from './social';
 import { statusSystem } from './statuses';
 import { structuresIn } from './world/sites';
 import { weatherSystem } from './weather';
@@ -96,6 +96,7 @@ export class Simulation {
   private buildContext(): SimContext {
     const state = this.state;
     const rng = makeRng(state);
+    const events = (): readonly SimEvent[] => this.events;
     const spawn = (thing: ThingId, x: number, y: number, init?: SpawnInit): Entity => {
       const e = makeEntity(CONTENT, state.nextEntityId++, thing, x, y, init);
       // Stand on the ground from the first tick (senses and path finding look from the feet), unless told a height.
@@ -113,6 +114,9 @@ export class Simulation {
       dt: TICK_DT,
       content: CONTENT,
       emit: (e) => this.events.push(e),
+      get heard(): readonly SimEvent[] {
+        return events();
+      },
       // With a seed the building comes out the same wherever and whenever it is raised.
       build: (def, site, seed) => buildStructure(def, state.volume, site, seed === undefined ? rng : makeRng({ rng: seed | 0 })),
       spawn,
@@ -144,6 +148,7 @@ export class Simulation {
       rpgSystem,
       craftSystem,
       socialSystem,
+      barkSystem,
     ];
   }
 

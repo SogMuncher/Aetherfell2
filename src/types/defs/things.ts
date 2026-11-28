@@ -7,6 +7,7 @@ import type { SwingDir } from '../input';
 import type { AirDef } from '../sky';
 import type { HandlingDef } from './handling';
 import type { CraftDef, StationDef } from '../craft';
+import type { SpeechDef } from './speech';
 
 
 /** Which family of sounds a material makes underfoot and when struck. */
@@ -213,6 +214,8 @@ export interface ThingDef {
   sprite: SpriteId | null;
   /** Drawn out to this many metres (default 160). A craft's picture shows only where its cells fade out, cross-fading. */
   far?: number;
+  /** Talks with a voice (people): how it sounds and which bark lines it reacts with (types/defs/speech.ts). */
+  speech?: SpeechDef;
   /** Creature voice for growls and death cries. */
   voice?: 'howl' | 'bleat' | 'grunt';
   /** Bleeds when hit (blood particles). */
