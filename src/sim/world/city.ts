@@ -2,6 +2,7 @@ import type { CityLayout, CompassSide, DistrictDef, Landmark, PlannedStructure, 
 import type { CityPlan } from './cityParts';
 import type { House, Pt, Rect } from './sites';
 import { hash2 } from './noise';
+import { CONTENT } from '../../content';
 import { raiseWard } from './cityWard';
 import { cityWall } from './cityWall';
 import { weighted } from './cityParts';
@@ -89,7 +90,7 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
         }
       }
       if (!kind) continue;
-      const w: Ward = { cx: ncx, cy: ncy, hx: nhx, hy: nhy, round: kind.round === true, streets: streetFor(q(7)), plaza: kind.plaza, landmarks: kind.landmarks, districts: kind.districts, main: false, linked: new Set() };
+      const w: Ward = { cx: ncx, cy: ncy, hx: nhx, hy: nhy, round: kind.round === true, streets: kind.streets ?? streetFor(q(7)), plaza: kind.plaza, landmarks: kind.landmarks, districts: kind.districts, main: false, linked: new Set() };
       wards.push(w);
       parent.linked.add(side);
       w.linked.add(OPPOSITE[side]);
@@ -190,11 +191,14 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
   const bx1 = Math.max(...wards.map((w) => w.cx + w.hx)) + pad + OUT;
   const by1 = Math.max(...wards.map((w) => w.cy + w.hy)) + pad + OUT;
   const bw = bx1 - bx0 + 1;
+  // Every street tile: the layout's own and any district's paving.
+  const streetTiles = new Set<TileKind>([l.tiles.street, l.tiles.main]);
+  for (const d of [...l.districts, ...(l.sprawl?.kinds ?? []).flatMap((k) => k.districts)]) if (d.tiles?.street) streetTiles.add(CONTENT.tileIds[d.tiles.street] ?? l.tiles.street);
   let linked: Uint8Array | null = null;
   const isStreet = (x: number, y: number): boolean => {
     if (x < bx0 || y < by0 || x > bx1 || y > by1) return false;
     const t = rawPaint(x, y);
-    return t !== null && (t === l.tiles.street || t === l.tiles.main);
+    return t !== null && streetTiles.has(t);
   };
   const link = (): Uint8Array => {
     const seen = new Uint8Array(bw * (by1 - by0 + 1));
@@ -220,7 +224,7 @@ export function cityLayout(seed: number, rx: number, ry: number, cx: number, cy:
   };
   const paint = (x: number, y: number): TileKind | null => {
     const t = rawPaint(x, y);
-    if (t === null || (t !== l.tiles.street && t !== l.tiles.main)) return t;
+    if (t === null || !streetTiles.has(t)) return t;
     linked ??= link();
     return linked[(y - by0) * bw + (x - bx0)] ? t : l.tiles.ground;
   };

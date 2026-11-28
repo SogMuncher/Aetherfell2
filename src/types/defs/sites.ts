@@ -1,6 +1,7 @@
 import type { PopulationEntry } from './brains';
 import type { RoleId } from './ids';
 import type { TileKind } from '../tiles';
+import type { StructureMaterials } from '../structures';
 
 
 /**
@@ -13,9 +14,9 @@ export type SiteLayoutDef =
    * building is one of `buildings` (structure recipes, content/structures.ts), picked by weight and
    * raised in the 3D layer; recipes with `dwelling: false` (barns, towers) get no villager. `ring` is how far from
    * the middle they stand (default [14, 22]; [0, 0] puts a lone building in the middle). `centre`
-   * is a tile id set in the middle of the square (a well).
+   * is a tile id set in the middle of the square (a well). `bend`: paths to the doors curve by up to this share of their length.
    */
-  | { shape: 'village'; houses: [number, number]; square: number; buildings: Readonly<Record<string, number>>; path: TileKind; ground: TileKind; ring?: [number, number]; centre?: string; styles?: VillageStyle[] }
+  | { shape: 'village'; houses: [number, number]; square: number; buildings: Readonly<Record<string, number>>; path: TileKind; ground: TileKind; ring?: [number, number]; centre?: string; styles?: VillageStyle[]; bend?: number }
   /** Concentric crumbling walls (radii in metres) with gaps you can slip through. */
   | { shape: 'rings'; rings: number[]; wall: TileKind; gap: number; floor: TileKind; scatter: { tile: TileKind; chance: number } }
   /** A circle of standing pieces on cleared ground. */
@@ -29,7 +30,8 @@ export type SiteLayoutDef =
  * One way a village can be laid out; each village rolls one of its `styles` by weight. `pattern` places the
  * buildings: 'ring' round the square, 'scatter' anywhere within the outer ring radius, 'street' along one lane
  * with houses facing it from both sides, 'cross' along two lanes. Whatever a style leaves out (`houses`,
- * `ring`: inner and outer reach, `buildings`: the mix) comes from the layout itself.
+ * `ring`: inner and outer reach, `buildings`: the mix) comes from the layout itself. `curve` bows the lanes of
+ * 'street' and 'cross' (0 straight, 0.4 a strong bend), so the houses follow a winding lane.
  */
 export interface VillageStyle {
   weight: number;
@@ -37,6 +39,7 @@ export interface VillageStyle {
   houses?: [number, number];
   ring?: [number, number];
   buildings?: Readonly<Record<string, number>>;
+  curve?: number;
 }
 
 /** Which side of a city: where a district lies, or which way a gate faces. */
@@ -57,6 +60,10 @@ export interface DistrictDef {
   lots: Readonly<Record<string, number>>;
   fill: number;
   block?: { chance: number; buildings: Readonly<Record<string, number>> };
+  /** Its own look: these replace the recipe's materials for every building raised in it (a slot left out keeps the recipe's). */
+  materials?: Partial<StructureMaterials>;
+  /** Its own paving: tile ids for its side streets and the ground between buildings (default: the layout's `tiles`). */
+  tiles?: { street?: string; ground?: string };
 }
 
 /** A building set in the middle of a city, at an offset from its centre, its front towards the middle. */
@@ -67,11 +74,16 @@ export interface Landmark {
   rot?: number;
 }
 
-/** Streets: every `every` metres, `width` wide (odd); main streets from the gates are `main` wide. */
+/**
+ * Streets: every `every` metres, `width` wide (odd); main streets from the gates are `main` wide. Side streets may sit up to
+ * `jitter` metres off the even grid (uneven blocks) and wander up to `bend` metres either side as they run (crooked lanes).
+ */
 export interface StreetStyle {
   every: number;
   width: number;
   main: number;
+  jitter?: number;
+  bend?: number;
 }
 
 export interface CityLayout {
@@ -110,6 +122,8 @@ export interface WardDef {
   plaza: number;
   landmarks: Landmark[];
   districts: DistrictDef[];
+  /** Its own street pattern (left out: one of the layout's `streetStyles`). */
+  streets?: StreetStyle;
 }
 
 export interface SiteDef {

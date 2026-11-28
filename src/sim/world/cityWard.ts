@@ -1,7 +1,7 @@
 import { CONTENT } from '../../content';
 import { type CityLayout, type CompassSide, type DistrictDef, type PlannedStructure, type StructureDef, type TileKind, turnToward } from '../../types';
 import type { House, Rect } from './sites';
-import { type Line, RING_AT, ROT_OUT_FACE, houseFor, planned, weighted } from './cityParts';
+import { type Line, RING_AT, ROT_OUT_FACE, houseFor, planned, wander, weighted } from './cityParts';
 import type { Ward } from './city';
 import { structureSize } from '../../content/structures';
 
@@ -40,13 +40,25 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
   });
 
   // Streets: ring street, main streets from the gates, side streets on a grid.
-  const lineSet = (half: number): Line[] => {
+  // Side streets may sit off the even grid (`jitter`) and wander as they run (`bend`); the ring and main streets stay straight.
+  const { jitter = 0, bend = 0 } = w.streets;
+  const side = (c: number, k: number, ax: number): Line => ({
+    c: c + Math.round((r(400 + k, ax, 1) * 2 - 1) * jitter),
+    w: w.streets.width,
+    bend,
+    ph: r(420 + k, ax, 2) * Math.PI * 2,
+    f: (Math.PI * 2) / (36 + r(440 + k, ax, 3) * 40),
+  });
+  const lineSet = (half: number, ax: number): Line[] => {
     const out: Line[] = [{ c: -(half - RING_AT), w: 3 }, { c: 0, w: w.streets.main }, { c: half - RING_AT, w: 3 }];
-    for (let k = 1; k * w.streets.every <= half - RING_AT - 12; k++) out.push({ c: k * w.streets.every, w: w.streets.width }, { c: -k * w.streets.every, w: w.streets.width });
+    for (let k = 1; k * w.streets.every <= half - RING_AT - 12; k++) out.push(side(k * w.streets.every, k, ax), side(-k * w.streets.every, -k, ax));
     return out.sort((a, b) => a.c - b.c);
   };
-  const vx = lineSet(hx).map((s) => ({ c: s.c + cx, w: s.w }));
-  const hy2 = lineSet(hy).map((s) => ({ c: s.c + cy, w: s.w }));
+  const vx = lineSet(hx, 0).map((s) => ({ ...s, c: s.c + cx }));
+  const hy2 = lineSet(hy, 1).map((s) => ({ ...s, c: s.c + cy }));
+  // Room a block leaves beside a street: half its width, two metres, and however far it wanders.
+  const lo = (q: Line): number => q.c + (q.w - 1) / 2 + 2 + (q.bend ?? 0);
+  const hi = (q: Line): number => q.c - (q.w - 1) / 2 - 2 - (q.bend ?? 0);
 
   // Blocks between the streets, filled by district.
   const hits = (a: Rect, b: Rect): boolean => a.x0 <= b.x1 && a.x1 >= b.x0 && a.y0 <= b.y1 && a.y1 >= b.y0;
@@ -66,7 +78,7 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
       const c = hy2[j];
       const e = hy2[j + 1];
       if (!a || !b || !c || !e) continue;
-      const block: Rect = { x0: a.c + (a.w - 1) / 2 + 2, x1: b.c - (b.w - 1) / 2 - 2, y0: c.c + (c.w - 1) / 2 + 2, y1: e.c - (e.w - 1) / 2 - 2 };
+      const block: Rect = { x0: lo(a), x1: hi(b), y0: lo(c), y1: hi(e) };
       const bw = block.x1 - block.x0 + 1;
       const bh = block.y1 - block.y0 + 1;
       if (bw < 8 || bh < 8) continue;
@@ -80,6 +92,7 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
         const def = id ? CONTENT.structures[id] : undefined;
         if (id && def && !reserved.some((q) => hits(q, block))) {
           const s = fit(id, def, block, 'any', bseed(3), bseed(4), bseed(5), cx, cy);
+          if (s && dist.materials) s.look = dist.materials;
           if (s && push(s)) {
             if (def.dwelling !== false) dwellings.push(houseFor(s));
             continue;
@@ -108,6 +121,7 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
           if (li === nx - 1) edges.push('e');
           const face = edges.length > 0 ? edges[Math.floor(s(3) * edges.length)] ?? 'n' : 'n';
           const placed = fit(id, def, lot, face, s(4), s(5), s(6), cx, cy);
+          if (placed && dist.materials) placed.look = dist.materials;
           if (!placed || !push(placed)) continue;
           if (def.dwelling !== false) dwellings.push(houseFor(placed));
         }
@@ -116,18 +130,27 @@ export function raiseWard(w: Ward, r: (k: number, a?: number, b?: number) => num
   }
 
   const half = (n: number): number => (n - 1) / 2;
-  const onLine = (lines: Line[], v: number): Line | undefined => lines.find((q) => Math.abs(v - q.c) <= half(q.w));
+  const onLine = (lines: Line[], v: number, t: number): Line | undefined => lines.find((q) => Math.abs(v - q.c - wander(q, t)) <= half(q.w));
+  // Each district's own paving, as tile codes.
+  const paving = new Map(w.districts.map((d) => [d, {
+    street: (d.tiles?.street !== undefined ? CONTENT.tileIds[d.tiles.street] : undefined) ?? l.tiles.street,
+    ground: (d.tiles?.ground !== undefined ? CONTENT.tileIds[d.tiles.ground] : undefined) ?? l.tiles.ground,
+  }]));
+  const pave = (x: number, y: number) => {
+    const d = districtAt(x, y);
+    return (d && paving.get(d)) ?? { street: l.tiles.street, ground: l.tiles.ground };
+  };
   return (x: number, y: number): TileKind | null => {
     const ax = Math.abs(x - cx);
     const ay = Math.abs(y - cy);
     if (w.round && (ax / hx) ** 2 + (ay / hy) ** 2 > 1) return null;
     if (ax <= P && ay <= P) return l.tiles.main;
-    const lx = onLine(vx, x);
-    const ly = onLine(hy2, y);
+    const lx = onLine(vx, x, y);
+    const ly = onLine(hy2, y, x);
     // Main streets run right out through the gates; ring and side streets are plain and stay inside the ring.
     if ((lx && lx.w === w.streets.main) || (ly && ly.w === w.streets.main)) return l.tiles.main;
-    if ((lx && ay <= hy - RING_AT + 1) || (ly && ax <= hx - RING_AT + 1)) return l.tiles.street;
-    return l.tiles.ground;
+    if ((lx && ay <= hy - RING_AT + 1) || (ly && ax <= hx - RING_AT + 1)) return pave(x, y).street;
+    return pave(x, y).ground;
   };
 }
 

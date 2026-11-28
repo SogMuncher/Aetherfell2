@@ -156,9 +156,7 @@ function stampSites(sites: SiteLayout[], seed: number, x: number, y: number): Ti
         if (l.centre !== undefined && x === s.cx && y === s.cy) return tileCode(l.centre);
         if (d < l.square) return l.path;
         // Paths from the square out to each door.
-        for (const h of s.houses) {
-          if (distToSegment(x, y, s.cx, s.cy, h.doorX, h.doorY) < 0.9) return l.path;
-        }
+        for (const h of s.houses) if (onPath(x, y, s.cx, s.cy, h.doorX, h.doorY, (l.bend ?? 0) * (hash2(seed + 92, h.doorX, h.doorY) * 2 - 1))) return l.path;
         return d < s.radius ? l.ground : null;
       }
       case 'rings': {
@@ -199,4 +197,23 @@ function distToSegment(px: number, py: number, ax: number, ay: number, bx: numbe
   const len = vx * vx + vy * vy || 1;
   const t = Math.max(0, Math.min(1, ((px - ax) * vx + (py - ay) * vy) / len));
   return Math.hypot(px - (ax + vx * t), py - (ay + vy * t));
+}
+
+/** On a path from (ax, ay) to (bx, by) that bows sideways by `bend` of its length (a curve walked as six straight steps). */
+function onPath(x: number, y: number, ax: number, ay: number, bx: number, by: number, bend: number): boolean {
+  if (bend === 0) return distToSegment(x, y, ax, ay, bx, by) < 0.9;
+  const qx = (ax + bx) / 2 - (by - ay) * bend;
+  const qy = (ay + by) / 2 + (bx - ax) * bend;
+  if (x < Math.min(ax, bx, qx) - 1 || x > Math.max(ax, bx, qx) + 1 || y < Math.min(ay, by, qy) - 1 || y > Math.max(ay, by, qy) + 1) return false;
+  let px = ax;
+  let py = ay;
+  for (let k = 1; k <= 6; k++) {
+    const t = k / 6;
+    const nx = (1 - t) * (1 - t) * ax + 2 * t * (1 - t) * qx + t * t * bx;
+    const ny = (1 - t) * (1 - t) * ay + 2 * t * (1 - t) * qy + t * t * by;
+    if (distToSegment(x, y, px, py, nx, ny) < 0.9) return true;
+    px = nx;
+    py = ny;
+  }
+  return false;
 }

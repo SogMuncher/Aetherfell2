@@ -17,7 +17,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `mechanicsSmoke.ts` (520) check: core mechanics (combat, items, fire, traps, statuses) on ground and cells
 - `realmSmoke.ts` (239) REALMS: the underworld is a second set of tiles, cells and things swapped in for the surface; every
 - `runebookSmoke.ts` (275) Headless checks for the runebook: composing spells from runes, preparing them, learning runes
-- `settlementSmoke.ts` (185) Settlements and cities in the 3D layer: villages raise real buildings with furniture inside,
+- `settlementSmoke.ts` (198) Settlements and cities in the 3D layer: villages raise real buildings with furniture inside,
 - `simSmoke.ts` (26) Headless smoke test: run the sim for a while and report what happened.
 - `bootSmoke.mjs` (46) Boots the bundled game in a real browser (`npm run check:boot`, needs Playwright): no load errors, journey starts, a world swap keeps one view canvas
 - `skySmoke.ts` (301) Sky checks: cloud layers as data, rain only under storm cells, clouds drifting with the wind,
@@ -43,7 +43,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `shipSmoke.ts` (295) THE AIRSHIP'S BUILD: a tight hull and envelope, stations on both decks, a hold among crates, lanterns, windsoc
 - `glideSmoke.ts` (77) GLIDERS: each cloth flies its own way (data): burlap only slows your fall, wyvern hide soars, dives and climbs
 - `townSmoke.ts` (127) Townsfolk: they find their way round walls and in through doors (ground and 3D cells), keep routines, and answ
-- `citySmoke.ts` (145) Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings o
+- `citySmoke.ts` (157) Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings o
 - `siteKit.ts` (64) Shared helpers for the settlement and city checks: a calm world, stepping, finding a site of a kind, walking i
 
 ## src/audio/
@@ -116,18 +116,18 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `rules.ts` (130) World-wide rules that are not one definition: how bodies react to heat, water and cold, how
 - `runes.ts` (254) Runes, the syllables of magic. Up to three make a spell in the runebook:
 - `shapes.ts` (268) The simple shapes every 3D structure is snapped together from. A shape is one or more convex
-- `sites.ts` (364) named places: odds, layout, population (D)
+- `sites.ts` (287) named places: odds, layout, population (D)
 - `sky.ts` (38) The sky and air. Each cloud/mist layer is a sheet of drifting shapes at its own height, size and speed, and
 - `skyField.ts` (293) Where the clouds are (`airColumn`: every layer into air cells). One pure function of the sky data, the weather (cover, storminess, how far
 - `spellcraft.ts` (286) composes a spell from up to 3 runes; spell descriptions
 - `matterStates.ts` (20) How soot, wet, oil, frost and fire look blended over the stuff they are on (never replacing it).
 - `statuses.ts` (37) Ongoing conditions. Each one can cancel or block others, tick effects and change movement.
-- `structures.ts` (470) building recipes for the 3D layer (D)
-- `surfaces.ts` (244) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
+- `structures.ts` (213) building recipes for the 3D layer (D)
+- `surfaces.ts` (246) Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
 - `things.ts` (298) entity archetypes by trait (D)
-- `tileCodes.ts` (18) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
-- `tiles.ts` (204) all tile kinds + code assignment from the ledger
-- `validate.ts` (268) validateContent: every reference must point at something that exists
+- `tileCodes.ts` (20) The tile ledger: the lasting number of each tile kind, which chunks and saves store.
+- `tiles.ts` (225) all tile kinds + code assignment from the ledger
+- `validate.ts` (275) validateContent: every reference must point at something that exists
 - `viewmodel.ts` (36) held-item hand poses (viewmodel thread)
 - `world.ts` (54) World-wide generation choices. The land is the sum of its layers (continents, hills, ridged
 - `artCheck.ts` (41) Checks every art recipe (creatures, trees, props): known colour slots, parents and features, sane gait
@@ -144,6 +144,9 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `hullSweep.ts` (64) Curved hulls as fine cells: every half-metre cell inside a solid is kept where it shows, shaped by which sides
 - `routine.ts` (30) Where a townsperson means to be right now: their role's routine for this part of the day, one place per day.
 - `talk.ts` (15) The words of conversation: topic labels and answer templates for asking townsfolk about places and people.
+- `sitesWards.ts` (107) City districts and megacity wards as data: what each quarter builds, what it is built of, how it is paved and
+- `structuresCivic.ts` (242) Recipes for stone and civic buildings in the 3D layer: towers, ruins, gatehouses, barracks, church, keep, city
+- `surfacesBuild.ts` (179) Building surfaces: brick, dressed stone, timber frame, daub, washes, roofs, floors and street paving (merged i
 
 ## src/input/
 - `input.ts` (185) keyboard+mouse -> InputSnapshot per tick and local UI actions
@@ -333,18 +336,18 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `weatherSystem.ts` (54) One in-game day lasts this many real seconds.
 
 ## src/sim/world/
-- `chunkgen.ts` (202) Builds a chunk from the seed alone. Same seed, same chunk — on every machine.
-- `city.ts` (237) cityLayout: walls, gates, streets, wards
-- `cityParts.ts` (84) city constants, houses
+- `chunkgen.ts` (219) Builds a chunk from the seed alone. Same seed, same chunk — on every machine.
+- `city.ts` (241) cityLayout: walls, gates, streets, wards
+- `cityParts.ts` (96) city constants, houses
 - `cityWall.ts` (153) one wall round the merged outline of rectangles: towers, runs, gates
-- `cityWard.ts` (152) one ward: keep, landmarks, blocks
+- `cityWard.ts` (175) one ward: keep, landmarks, blocks
 - `crossings.ts` (201) Where water meets people. Bridges come with the ways (sim/world/roads.ts routes each way straight across the water it
 - `decks.ts` (174) Decks over water: bridges where a way crosses a river or lake, piers where a port meets the water. One shape of thing
 - `matter.ts` (258) ctx.matter: stuff at (x,y,z) for tiles and cells
 - `noise.ts` (59) Small, fast, seedable noise helpers. Pure functions of (seed, coords).
 - `realms.ts` (93) Who goes along when the party changes realm: the travellers and what they carry.
 - `roads.ts` (112) ways per region: waysTouching, wayHit
-- `sites.ts` (294) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
+- `sites.ts` (298) World is divided into 256 m regions; each may hold one site (kinds and odds in content/sites.ts).
 - `terrain.ts` (223) The shape of the land: continents, rolling hills, ridged mountains, a moisture field for biomes,
 - `underworld.ts` (171) The underworld's chunks: tiles, water and ground from `underAt`, a sealed rock roof as 3D cells, hall spots, far sampler
 - `underSpot.ts` (132) `underAt`: what the underworld is at a tile (river, deck, cave, ruin street, hall, corridor, way artery, rock), read from the land
@@ -354,7 +357,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `water.ts` (224) Rivers and lakes: a pure function of the seed that reads no places (cities and roads read it, never the other way).
 - `wayParts.ts` (137) way types, site neighbours, nets
 - `wayRoute.ts` (213) route cost, bridging, way between two places
-- `worldPopulate.ts` (248) raises buildings, furnishes halls, spawns people
+- `worldPopulate.ts` (250) raises buildings, furnishes halls, spawns people
 - `worldSystem.ts` (144) keeps world around the party: places, chunk unloading
 - `worldTiles.ts` (239) The tile world: lazily generated chunks held in SimState, with change tracking.
 - `gateRule.ts` (13) Says which street ends of a walled place roads really use (set by roads.ts, which knows the land). A gate open
@@ -379,7 +382,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `palettes.ts` (22) Colour as data. Pictures are never painted in fixed colours: every part of a creature, tree,
 - `sky.ts` (96) RGB, 0..255.
 - `state.ts` (136) SimState and queues
-- `structures.ts` (179) StructureDef, planned structures, house geometry
+- `structures.ts` (181) StructureDef, planned structures, house geometry
 - `tiles.ts` (217) tile/chunk types, TileInfo, keys
 - `vfx.ts` (86) World motes that are not spells: fire, smoke, sparks, splashes, blood, dust, frost glitter.
 - `volume.ts` (198) 3D layer brick/volume types
@@ -394,7 +397,7 @@ Grep this (`grep -i <word> docs/CODE-MAP.md`), then open only the file you need.
 - `items.ts` (116) ItemDef, ItemLook
 - `magic.ts` (194) SpellDef, RuneDef, StatusDef and spell look
 - `rules.ts` (234) RulesDef, SwingDef, DayRules, HudTheme
-- `sites.ts` (146) SiteDef, layouts, city, districts
+- `sites.ts` (160) SiteDef, layouts, city, districts
 - `social.ts` (100) quests, trade, roles, factions
 - `things.ts` (213) MaterialDef, ThingDef, RealmDef, light, weapon stats
 - `handling.ts` (51) How a weapon handles: per-angle timing, damage, knockback and stamina, charging, impact and throwing (all mult

@@ -1,4 +1,5 @@
 import type { SurfaceDef } from '../types';
+import { BUILD_SURFACES } from './surfacesBuild';
 
 /**
  * Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
@@ -241,4 +242,5 @@ export const SURFACES: Record<string, SurfaceDef> = {
       { kind: 'patches', salt: 14, cells: 4, above: 0.7, colour: [40, 48, 40], keep: [0.46, 0.7, 0.71] },
     ],
   },
+  ...BUILD_SURFACES,
 };

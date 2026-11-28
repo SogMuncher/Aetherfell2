@@ -1,6 +1,7 @@
 // Walled cities and megacities in the 3D layer: walls, gates, streets, districts and a keep, with no buildings overlapping.
 // Prints PASS/FAIL per check. Set DEBUG=1 for an ASCII map of the first city.
 import { DEBUG, check, failures, find, run, visit, world } from './siteKit';
+import { tileCode } from '../src/content/tiles';
 
 // ---- City ----------------------------------------------------------------------------------
 {
@@ -28,6 +29,12 @@ import { DEBUG, check, failures, find, run, visit, world } from './siteKit';
       }
     }
     check('no two buildings overlap', overlaps === 0, `${overlaps} overlaps`);
+    // Districts look their own: their buildings carry the district's materials, their streets its paving.
+    const looks = new Set(c.plan.flatMap((p) => p.look?.wall ?? []));
+    check('districts give their buildings their own materials', looks.size >= 6, `${looks.size} wall materials across districts`);
+    const paving = new Set<number>();
+    for (let y = c.cy - 110; y <= c.cy + 110; y += 2) for (let x = c.cx - 110; x <= c.cx + 110; x += 2) paving.add(c.paint?.(x, y) ?? -1);
+    check('districts pave their own streets and yards', ['setts', 'cobble', 'trail', 'gravel'].every((t) => paving.has(tileCode(t))), `${paving.size} kinds of ground`);
     if (DEBUG) {
       const rows: string[] = [];
       const hx = 100;
@@ -51,6 +58,11 @@ import { DEBUG, check, failures, find, run, visit, world } from './siteKit';
     }
     const l = loc();
     check('the city goes up over a few seconds, not in one stall', !!l?.populated && ticks > 5 && ticks < 20 * 60, `${ticks} ticks, ${Date.now() - t0} ms, ${sim.state.volume.bricks.size} bricks`);
+    // Raised in the 3D layer, the district materials are really there in the walls.
+    const built = new Set<number>();
+    for (const p of c.plan.filter((q) => q.look).slice(0, 60)) for (let z = 1; z < 8; z++) built.add(sim.state.volume.matAt(p.x, p.y + 1, sim.tiles.ground(p.x, p.y) + z));
+    const fresh = ['brickWall', 'halfTimber', 'ochrePlaster', 'rosePlaster', 'daub', 'logWall', 'fieldstone'].filter((t) => built.has(tileCode(t)));
+    check('new materials stand in the built walls', fresh.length >= 2, fresh.join(', '));
     const folk = [...sim.state.entities.values()].filter((e) => e.npc && e.npc.locationId === l?.id);
     check('its people live in its houses', folk.length > 0 && folk.length <= 30, `${folk.length} residents`);
     // A city full of furniture and people still ticks well inside the 50 ms budget.

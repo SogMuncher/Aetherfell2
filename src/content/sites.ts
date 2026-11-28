@@ -1,5 +1,7 @@
+// Places as data: villages, ruins, camps, farms, cities and megacities, with their layouts (districts and wards: sitesWards.ts).
 import type { SiteDef, SiteId } from '../types';
 import { Tile as T } from '../types';
+import { CITY_DISTRICTS, WARD_KINDS } from './sitesWards';
 
 /**
  * Named places: how common they are, where they may stand, how they are laid out, what lives there
@@ -13,13 +15,17 @@ export const SITES: Record<SiteId, SiteDef> = {
     ground: [2, 55],
     radius: 58,
     name: '{base}',
-    layout: { shape: 'village', houses: [9, 15], square: 9, ring: [13, 48], buildings: { cottage: 5, hall: 2, smithy: 1 }, centre: 'well', path: T.Road, ground: T.Grass,
+    layout: { shape: 'village', houses: [9, 15], square: 9, ring: [13, 48], buildings: { cottage: 5, hall: 2, smithy: 1 }, centre: 'well', path: T.Road, ground: T.Grass, bend: 0.22,
       // Each village rolls one of these: add a row (or change a weight) for a new kind of village.
       styles: [
         { weight: 4, pattern: 'ring' },
         { weight: 2.5, pattern: 'street', ring: [7, 44], houses: [10, 16], buildings: { cottage: 4, workshop: 2, tavern: 1, smithy: 1, hall: 1 } },
         { weight: 1.5, pattern: 'cross', ring: [8, 40], houses: [12, 18], buildings: { cottage: 5, townhouse: 2, workshop: 1, smithy: 1 } },
         { weight: 2, pattern: 'scatter', ring: [10, 46], houses: [8, 12], buildings: { cottage: 4, farmhouse: 3, barn: 2, hovel: 1 } },
+        // A winding lane, a bend in a crossroads, a wide green with farms round it.
+        { weight: 2.5, pattern: 'street', curve: 0.35, ring: [7, 46], houses: [10, 15], buildings: { cottage: 4, hall: 1, workshop: 1, tavern: 1, farmhouse: 1 } },
+        { weight: 1.2, pattern: 'cross', curve: 0.25, ring: [8, 42], houses: [11, 16], buildings: { cottage: 4, townhouse: 1, smithy: 1, hall: 1 } },
+        { weight: 1.5, pattern: 'ring', ring: [22, 50], houses: [9, 13], buildings: { cottage: 3, farmhouse: 2, barn: 2, hall: 1 } },
       ],
     },
     rumour: 'a village called {name}',
@@ -204,19 +210,9 @@ export const SITES: Record<SiteId, SiteDef> = {
         { weight: 3, every: 21, width: 3, main: 5 },
         { weight: 1, every: 17, width: 3, main: 5 },
         { weight: 1, every: 27, width: 5, main: 7 },
+        { weight: 2, every: 19, width: 3, main: 5, jitter: 3, bend: 2 },
       ],
-      districts: [
-        // Round the plaza: the best houses, inns and shops.
-        { name: 'market', from: 0, to: 0.55, lots: { townhouse: 4, workshop: 3, manor: 1 }, fill: 0.9, block: { chance: 0.2, buildings: { tavern: 3, manor: 1 } } },
-        // East and west: makers and sellers.
-        { name: 'craft quarter', from: 0.55, to: 0.85, sides: ['e', 'w'], lots: { workshop: 4, smithy: 2, townhouse: 3, cottage: 2 }, fill: 0.85, block: { chance: 0.15, buildings: { warehouse: 2, tavern: 1 } } },
-        // North: quiet homes.
-        { name: 'residential', from: 0.55, to: 0.85, sides: ['n'], lots: { cottage: 5, townhouse: 3, manor: 1 }, fill: 0.85, block: { chance: 0.08, buildings: { manor: 1 } } },
-        // South, by the road to the world: stores and barracks.
-        { name: 'trade quarter', from: 0.55, to: 0.85, sides: ['s'], lots: { workshop: 3, townhouse: 2, cottage: 2 }, fill: 0.8, block: { chance: 0.25, buildings: { warehouse: 3, barracks: 1 } } },
-        // Along the walls: the poor, and the farms that feed the city.
-        { name: 'outskirts', from: 0.85, to: 2, lots: { hovel: 4, cottage: 3, farmhouse: 1 }, fill: 0.65, block: { chance: 0.1, buildings: { barn: 1, warehouse: 1 } } },
-      ],
+      districts: CITY_DISTRICTS,
       tiles: { main: T.Flagstone, street: T.Road, ground: T.Grass },
       residents: 30,
     },
@@ -263,19 +259,9 @@ export const SITES: Record<SiteId, SiteDef> = {
         { weight: 2, every: 15, width: 3, main: 5 },
         { weight: 2, every: 27, width: 5, main: 7 },
         { weight: 1, every: 33, width: 5, main: 9 },
+        { weight: 2, every: 19, width: 3, main: 5, jitter: 3, bend: 2 },
       ],
-      districts: [
-        // Round the plaza: the best houses, inns and shops.
-        { name: 'market', from: 0, to: 0.55, lots: { townhouse: 4, workshop: 3, manor: 1 }, fill: 0.9, block: { chance: 0.2, buildings: { tavern: 3, manor: 1 } } },
-        // East and west: makers and sellers.
-        { name: 'craft quarter', from: 0.55, to: 0.85, sides: ['e', 'w'], lots: { workshop: 4, smithy: 2, townhouse: 3, cottage: 2 }, fill: 0.85, block: { chance: 0.15, buildings: { warehouse: 2, tavern: 1 } } },
-        // North: quiet homes.
-        { name: 'residential', from: 0.55, to: 0.85, sides: ['n'], lots: { cottage: 5, townhouse: 3, manor: 1 }, fill: 0.85, block: { chance: 0.08, buildings: { manor: 1 } } },
-        // South, by the road to the world: stores and barracks.
-        { name: 'trade quarter', from: 0.55, to: 0.85, sides: ['s'], lots: { workshop: 3, townhouse: 2, cottage: 2 }, fill: 0.8, block: { chance: 0.25, buildings: { warehouse: 3, barracks: 1 } } },
-        // Along the walls: the poor, and the farms that feed the city.
-        { name: 'outskirts', from: 0.85, to: 2, lots: { hovel: 4, cottage: 3, farmhouse: 1 }, fill: 0.65, block: { chance: 0.1, buildings: { barn: 1, warehouse: 1 } } },
-      ],
+      districts: CITY_DISTRICTS,
       tiles: { main: T.Flagstone, street: T.Road, ground: T.Grass },
       residents: 90,
       sprawl: {
@@ -283,70 +269,7 @@ export const SITES: Record<SiteId, SiteDef> = {
         half: [34, 60],
         gap: 14,
         reach: 215,
-        kinds: [
-          {
-            name: 'merchant ward',
-            weight: 3,
-            plaza: 11,
-            landmarks: [{ structure: 'tavern', at: [0, -20] }],
-            districts: [
-              { name: 'bazaar', from: 0, to: 0.62, lots: { workshop: 4, townhouse: 3, tavern: 1 }, fill: 0.9, block: { chance: 0.2, buildings: { warehouse: 2, tavern: 1 } } },
-              { name: 'merchant homes', from: 0.62, to: 2, lots: { townhouse: 4, cottage: 3, workshop: 2 }, fill: 0.8 },
-            ],
-          },
-          {
-            name: 'temple ward',
-            weight: 1.5,
-            plaza: 11,
-            landmarks: [{ structure: 'church', at: [-17, 0] }, { structure: 'belfry', at: [17, 0] }],
-            districts: [{ name: 'cloister', from: 0, to: 2, lots: { townhouse: 3, cottage: 3, manor: 1 }, fill: 0.7 }],
-          },
-          {
-            name: 'garrison ward',
-            weight: 1,
-            plaza: 10,
-            landmarks: [{ structure: 'barracks', at: [0, 18] }],
-            districts: [{ name: 'garrison', from: 0, to: 2, lots: { cottage: 3, smithy: 2, townhouse: 1 }, fill: 0.75, block: { chance: 0.25, buildings: { barracks: 2, warehouse: 1 } } }],
-          },
-          {
-            name: 'craft ward',
-            weight: 3,
-            plaza: 9,
-            landmarks: [],
-            districts: [{ name: 'workshops', from: 0, to: 2, lots: { workshop: 4, smithy: 3, cottage: 2, townhouse: 1 }, fill: 0.88, block: { chance: 0.15, buildings: { warehouse: 3 } } }],
-          },
-          {
-            name: 'noble ward',
-            weight: 1,
-            plaza: 12,
-            landmarks: [],
-            districts: [{ name: 'estates', from: 0, to: 2, lots: { manor: 3, townhouse: 3 }, fill: 0.7, block: { chance: 0.3, buildings: { manor: 1 } } }],
-          },
-          {
-            name: 'old town',
-            weight: 3,
-            round: true,
-            plaza: 8,
-            landmarks: [],
-            districts: [{ name: 'tenements', from: 0, to: 2, lots: { cottage: 4, hovel: 3, workshop: 1, tavern: 1 }, fill: 0.85, block: { chance: 0.1, buildings: { tavern: 1, warehouse: 1 } } }],
-          },
-          {
-            name: 'shanties',
-            weight: 2.5,
-            round: true,
-            plaza: 6,
-            landmarks: [],
-            districts: [{ name: 'shanties', from: 0, to: 2, lots: { hovel: 5, cottage: 1 }, fill: 0.7 }],
-          },
-          {
-            name: 'farms',
-            weight: 1.5,
-            round: true,
-            plaza: 6,
-            landmarks: [],
-            districts: [{ name: 'farmland', from: 0, to: 2, lots: { farmhouse: 2, barn: 2, hovel: 1 }, fill: 0.45 }],
-          },
-        ],
+        kinds: WARD_KINDS,
       },
     },
     rumour: 'the vast city of {name}, a dozen quarters wide, where a stranger can walk a day and not see the same street twice',

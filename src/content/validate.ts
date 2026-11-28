@@ -144,10 +144,17 @@ export function validateContent(c: Content): string[] {
     else if (l.shape === 'city') {
       [l.tiles.main, l.tiles.street, l.tiles.ground].forEach((k) => tile(k, w));
       for (const id of [l.walls.run, l.walls.tower, l.walls.gate, l.centre.keep, ...l.centre.landmarks.map((m) => m.structure)]) need(id in c.structures, w, `structure '${id}'`);
-      for (const d of l.districts) {
-        for (const id of [...Object.keys(d.lots), ...Object.keys(d.block?.buildings ?? {})]) need(id in c.structures, `${w} district '${d.name}'`, `structure '${id}'`);
+      const kinds = l.sprawl?.kinds ?? [];
+      for (const d of [...l.districts, ...kinds.flatMap((k) => k.districts)]) {
+        const dw = `${w} district '${d.name}'`;
+        for (const id of [...Object.keys(d.lots), ...Object.keys(d.block?.buildings ?? {})]) need(id in c.structures, dw, `structure '${id}'`);
+        for (const id of Object.values(d.materials ?? {}).flat()) need(id in c.tileIds, dw, `material '${id}'`);
+        for (const id of [d.tiles?.street, d.tiles?.ground]) if (id !== undefined) need(id in c.tileIds, dw, `tile '${id}'`);
       }
-      for (const st of [l.streets, ...(l.streetStyles ?? [])]) if (st.width % 2 === 0 || st.main % 2 === 0) out.push(`${w}: street widths must be odd`);
+      for (const st of [l.streets, ...(l.streetStyles ?? []), ...kinds.flatMap((k) => (k.streets ? [k.streets] : []))]) {
+        if (st.width % 2 === 0 || st.main % 2 === 0) out.push(`${w}: street widths must be odd`);
+        if ((st.jitter ?? 0) * 3 > st.every || (st.bend ?? 0) > 4) out.push(`${w}: street jitter must be at most a third of 'every', bend at most 4`);
+      }
     } else [l.innerTile, l.floor].forEach((k) => tile(k, w));
     if (s.way) {
       need(s.way.grade in c.world.roads.grades, w, `way grade '${s.way.grade}'`);

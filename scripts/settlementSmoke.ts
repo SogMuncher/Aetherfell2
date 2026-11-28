@@ -20,6 +20,19 @@ check('content validates', validateContent(CONTENT).length === 0, validateConten
   if (v) {
     visit(sim, me, v);
     run(sim, 60);
+    // Paths to the doors curve: some path tiles lie well off the straight line from the square to every door.
+    const pathKind = v.layout.shape === 'village' ? v.layout.path : -1;
+    let off = 0;
+    for (let y = v.cy - 50; y <= v.cy + 50; y++) for (let x = v.cx - 50; x <= v.cx + 50; x++) {
+      if (Math.hypot(x - v.cx, y - v.cy) < 12 || sim.tiles.kind(x, y) !== pathKind) continue;
+      const near = v.houses.some((h) => {
+        const dx = h.doorX - v.cx; const dy = h.doorY - v.cy; const L = Math.hypot(dx, dy) || 1;
+        const t = Math.max(0, Math.min(1, ((x - v.cx) * dx + (y - v.cy) * dy) / (L * L)));
+        return Math.hypot(x - v.cx - dx * t, y - v.cy - dy * t) < 1.5;
+      });
+      if (!near) off++;
+    }
+    check('village paths wind instead of running dead straight', off > 10, `${off} path tiles off the straight lines`);
     const loc = sim.state.locations.find((l) => l.name === v.name);
     check('the buildings go up, then people move in', !!loc && (loc.built ?? 0) >= v.plan.length && loc.populated, `${loc?.built}/${v.plan.length}`);
     check('the 3D layer holds the houses', sim.state.volume.bricks.size > 0);

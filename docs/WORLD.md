@@ -8,7 +8,7 @@
 - Biomes/materials/colours are data: `content/biomes.ts`, `tiles.ts`, `surfaces.ts`, `world.ts`.
 - Matter: `matter.ts` is `ctx.matter`, the one answer to "what is at (x,y,z)" for tiles and 3D cells alike.
 - Places: `sites.ts` (villages roll a layout style by weight: ring/scatter/street/cross, own house count and building mix, `styles` rows in `content/sites.ts`), `city.ts` + `cityParts.ts` + `cityWard.ts` + `cityWall.ts` (cities: wards, each with a street pattern from `streetStyles`; ONE wall round the merged outline of all wards, `walls.margin` out, gates in line with ward main streets, no inner walls, not even round the keep; street tiles not joined to a ward middle or gate road are painted as plain ground, no stray fragments),
-  all pure and seeded. `worldSystem.ts` runs them; `worldPopulate.ts` raises buildings through `ctx.build` a few per
+  all pure and seeded. Districts (`content/sitesWards.ts`) carry their own `materials` (override the recipe's, stored on the plan as `look`) and `tiles` (street/ground paving); street styles may set `jitter` (uneven blocks) and `bend` (crooked lanes, `wander` in cityParts.ts); a ward kind may fix its own `streets`. Village paths to doors bow by `bend`, 'street'/'cross' styles bow their lane by `curve`. `worldSystem.ts` runs them; `worldPopulate.ts` raises buildings through `ctx.build` a few per
   tick (`Location.built` lets saves resume), then spawns furnishings and people. Layout data: `content/sites.ts`.
 - Ways (roads/paths): `roads.ts` (queries `waysTouching`, `wayHit`), `wayParts.ts` (types, site neighbours),
   `wayRoute.ts` (cost, bridging, routing). Pure functions of the seed; grades in `content/world.ts`.

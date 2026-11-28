@@ -147,6 +147,8 @@ export interface PlannedStructure {
   /** Cells it covers on the ground (width and depth swap on odd turns). */
   fx: number;
   fy: number;
+  /** Materials that replace its recipe's (the district it stands in), so one recipe looks different by quarter. */
+  look?: Partial<StructureMaterials>;
 }
 
 /** Where the door, the way in and the home spot of a house fall in the world, worked out before it is built. */
