@@ -70,7 +70,8 @@ const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
 export function poseSolids(asm: Assembled, pose: Pose, frame: number): Solid[] {
   const def = asm.def;
   const g = def.gait;
-  const t = frame / poseFrames(def, pose);
+  // A walk runs its cycle backwards: tilts tip the top forward, so a falling wave is the foot swinging forward (lifted, knee bent).
+  const t = (pose === 'walk' ? -frame : frame) / poseFrames(def, pose);
   const move = isMove(pose) ? CONTENT.moves[pose] : undefined;
   const step = MOVE_STEPS[frame] ?? MOVE_STEPS[0]!;
   const placed: (Xform | undefined)[] = new Array<Xform | undefined>(asm.joints.length);

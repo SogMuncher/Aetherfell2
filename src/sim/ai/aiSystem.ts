@@ -117,6 +117,15 @@ export const aiSystem: SimSystem = (ctx: SimContext) => {
       const onWay = ai.path !== undefined;
       const stop = target ? reach * 0.7 + tr : onWay && ai.path?.length ? 0.6 : 0.4;
       if (onWay) openAhead(ctx, e, dx, dy, d);
+      // Pressing on along a found way but held fast (a wall corner the straight line grazes): find the way again from here.
+      ai.stuck = onWay && d > stop && Math.hypot(e.vel.x, e.vel.y) < speed * 0.2 ? (ai.stuck ?? 0) + 1 : 0;
+      if (ai.stuck > 30) {
+        delete ai.path;
+        delete ai.aim;
+        ai.goal = null;
+        ai.stuck = 0;
+        ai.think = 0;
+      }
       if (d > stop) {
         const dir = steer(ctx, e, Math.atan2(dy, dx), onWay ? d : Infinity);
         e.vel.x += (Math.cos(dir) * speed - e.vel.x) * 0.3;

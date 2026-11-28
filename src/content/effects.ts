@@ -34,6 +34,8 @@ export const EFFECTS: Record<string, BurstDef> = {
   glideTrail: { kind: 'magic', count: 1, speed: 0, colour: 0x3cf0ff, colourTo: 0xc8ffff, glow: true, life: 1.6, size: 0.24 },
   torchFlame: { kind: 'flame', count: 1, speed: 0, colour: 0xff9632, colourTo: 0xffdc32, glow: true, life: 0.35, size: 0.14 },
   burningBody: { kind: 'flame', count: 1, speed: 0, colour: 0xff8c28, glow: true, life: 0.5, size: 0.22 },
+  wetDrip: { kind: 'water', count: 1, speed: 0, colour: 0x9ec4ee, life: 0.45, size: 0.05 },
+  frozenGlint: { kind: 'frost', count: 1, speed: 0, colour: 0xf0faff, glow: true, life: 0.5, size: 0.09 },
   chilledBody: { kind: 'frost', count: 1, speed: 0, colour: 0xd2f0ff, glow: true, life: 0.6, size: 0.06 },
   ember: { kind: 'spark', count: 1, speed: 0, colour: 0xffbe5a, glow: true, life: 0.15, size: 0.07 },
   rainSplash: { kind: 'water', count: 1, speed: 0, colour: 0xbed2f0, life: 0.18, size: 0.05 },

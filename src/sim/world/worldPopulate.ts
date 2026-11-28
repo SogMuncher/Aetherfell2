@@ -1,6 +1,7 @@
 import type { Entity, Location, Placement, SimContext, SpawnInit, StructureReport } from '../../types';
 import type { House, SiteLayout } from './sites';
 import { fillText, thingDef } from '../../content';
+import { houseFor } from './cityParts';
 
 
 /** Buildings a place raises per tick, so a whole city goes up over a few seconds instead of in one stall. */
@@ -137,8 +138,8 @@ export function populate(ctx: SimContext, loc: Location, site: SiteLayout): void
         reward: qt.reward,
       });
     }
-    const start = haunts.square ?? home;
-    const v = place(ctx, 'villager', start.x, start.y, { site: loc.id, npc: { name, role, home, haunts, door, locationId: loc.id, questId, stock } });
+    // They start the day at home and walk out to wherever their routine sends them.
+    const v = place(ctx, 'villager', home.x, home.y, { site: loc.id, npc: { name, role, home, haunts, door, locationId: loc.id, questId, stock } });
     const q = questId === null ? undefined : state.quests.find((qq) => qq.id === questId);
     if (q) q.giver = v.id;
   });
@@ -161,17 +162,24 @@ function hauntSpot(ctx: SimContext, site: SiteLayout, word: string, home: { x: n
   const sy = site.square.y + 0.5;
   if (word === 'home') return home;
   if (word === 'square' || word === 'edge') {
+    // Spread over the whole open square, not bunched at its middle.
+    const around = Math.max(5, site.layout.shape === 'village' ? site.layout.square * 0.7 : 5);
     for (let tries = 0; tries < 16; tries++) {
       const a = rng.range(0, Math.PI * 2);
-      const r = word === 'square' ? rng.range(0, 5) : site.radius + rng.range(2, 8);
+      const r = word === 'square' ? rng.range(0, around) : site.radius + rng.range(2, 8);
       const x = sx + Math.cos(a) * r;
       const y = sy + Math.sin(a) * r;
       if (openAt(ctx, x, y)) return { x, y };
     }
     return word === 'square' ? { x: sx, y: sy } : null;
   }
+  // Any building raised here, not only the ones someone lives in (taverns, barns and halls have no householder).
   let best: House | null = null;
-  for (const h of site.houses) if (h.building === word && (!best || Math.hypot(h.x0 - home.x, h.y0 - home.y) < Math.hypot(best.x0 - home.x, best.y0 - home.y))) best = h;
+  for (const s of site.plan) {
+    if (s.id !== word) continue;
+    const h = houseFor(s);
+    if (!best || Math.hypot(h.x0 - home.x, h.y0 - home.y) < Math.hypot(best.x0 - home.x, best.y0 - home.y)) best = h;
+  }
   if (!best) return null;
   const r = best.geometry.interior;
   for (let tries = 0; tries < 12; tries++) {

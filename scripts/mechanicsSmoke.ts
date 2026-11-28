@@ -261,10 +261,13 @@ function put(me: Entity, sim: Simulation, x: number, y: number): void {
     const q = sim.state.quests.find((qq) => qq.title.includes(vil.name));
     check('villagers take the roles their village lists', roles.length === vil.houses.length && roles[0] === CONTENT.sites.village?.villagers?.[0], roles.join(', '));
     check('the elder offers the quest from their role', !!q && CONTENT.roles.elder?.quest?.kind === 'cull' && q.targetKind === CONTENT.roles.elder.quest.target, q?.title ?? 'none');
-    // Their daily routine is a brain behaviour too: by night they walk home.
+    // Their daily routine is a brain behaviour too: they start at home, go out by day, and by night walk home.
     const folk = [...sim.state.entities.values()].filter((e) => e.npc && e.npc.locationId === loc?.id);
     const awayFromHome = (): number => folk.reduce((t, e) => t + (e.npc ? Math.hypot(e.npc.home.x - e.pos.x, e.npc.home.y - e.pos.y) : 0), 0) / Math.max(1, folk.length);
+    sim.state.weather.time = 0.4;
+    run(sim, 20 * 25);
     const before = awayFromHome();
+    check('by day villagers leave their homes', before > 3, `${before.toFixed(1)} m from home`);
     sim.state.weather.time = 0.9;
     run(sim, 20 * 25);
     const after = awayFromHome();

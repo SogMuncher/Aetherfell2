@@ -18,9 +18,13 @@ me.pos.y = Y + 20;
 const folk = (x: number, y: number, npc: Partial<NpcData>): Entity =>
   spawn('villager', x, y, { npc: { name: 'Tess', role: 'farmer', home: { x, y }, haunts: {}, locationId: 999, questId: null, stock: [], ...npc } });
 /** Steps the world with the night's roaming beasts sent away: this is about finding the way, not about wolves. */
-const calm = (ticks: number): void => {
+/** Closest the watched walker came to its goal in the last `calm` (once there, folk may potter off a few steps). */
+let near = Infinity;
+const calm = (ticks: number, who?: Entity, goal?: { x: number; y: number }): void => {
+  near = Infinity;
   for (let t = 0; t < ticks; t++) {
     run(sim, 1);
+    if (who && goal) near = Math.min(near, Math.hypot(who.pos.x - goal.x, who.pos.y - goal.y));
     if (t % 10 === 0) for (const o of [...s.entities.values()]) if (o.ai && !o.npc && !o.player) s.entities.delete(o.id);
   }
 };
@@ -41,8 +45,8 @@ const at = (e: Entity, p: { x: number; y: number }, r: number): boolean => Math.
   check('a way is found round a wall of tiles', !!path && path.length > 1, `${path?.length ?? 0} waypoints`);
   s.weather.time = 0.9;
   const v = folk(gx + 0.5, gy - 9.5, { home: goal, haunts: { home: goal } });
-  calm(20 * 30);
-  check('a villager walks round the wall to get home', at(v, goal, 1.8), `${Math.hypot(v.pos.x - goal.x, v.pos.y - goal.y).toFixed(1)} m off`);
+  calm(20 * 30, v, goal);
+  check('a villager walks round the wall to get home', near <= 1.8, `came within ${near.toFixed(1)} m`);
 }
 
 // ---- In the 3D layer: home is inside a stone pen open on one side; the walker starts behind it and must go round. ----
@@ -61,8 +65,8 @@ const at = (e: Entity, p: { x: number; y: number }, r: number): boolean => Math.
   check('cells of a wall are not walkable, the pen inside is', Number.isNaN(walkable(ctx, px, py + 3, z)) && !Number.isNaN(walkable(ctx, px, py, z)));
   const v = folk(back.x, back.y, { home, haunts: { home } });
   s.weather.time = 0.9;
-  calm(20 * 30);
-  check('from behind the pen, a villager goes round the 3D walls and in', at(v, home, 1.8), `${Math.hypot(v.pos.x - home.x, v.pos.y - home.y).toFixed(1)} m off`);
+  calm(20 * 30, v, home);
+  check('from behind the pen, a villager goes round the 3D walls and in', near <= 1.8, `came within ${near.toFixed(1)} m`);
   // In the morning they come back out to the place their role names.
   const field = { x: px + 0.5, y: py - 12 };
   if (v.npc) v.npc.haunts['edge'] = v.npc.haunts['square'] = field;
@@ -121,6 +125,22 @@ const at = (e: Entity, p: { x: number; y: number }, r: number): boolean => Math.
   pick('about');
   pick('self');
   check('asked about themselves, they talk about their trade', (me.player?.dialogue?.text ?? '') === CONTENT.roles['smith']?.about, me.player?.dialogue?.text);
+}
+
+// ---- A real village from the game's start: folk begin at home and their routines reach the buildings it has. ----
+{
+  const real = world();
+  const rs = real.sim.state;
+  const town = rs.locations.filter((l) => l.kind === 'village').sort((a, b) => Math.hypot(a.pos.x - real.me.pos.x, a.pos.y - real.me.pos.y) - Math.hypot(b.pos.x - real.me.pos.x, b.pos.y - real.me.pos.y))[0];
+  if (town) {
+    real.me.pos.x = town.pos.x + 3;
+    real.me.pos.y = town.pos.y + 3;
+    run(real.sim, 40);
+    const folk = [...rs.entities.values()].filter((e) => e.npc?.locationId === town.id);
+    check('real village: townsfolk start at their homes, not all in the square', folk.length > 0 && folk.every((e) => Math.hypot(e.pos.x - e.npc!.home.x, e.pos.y - e.npc!.home.y) < 3), `${folk.length} folk`);
+    const smiths = folk.filter((e) => e.npc!.role === 'smith');
+    check('real village: its smith has a smithy to work in (non-dwellings count too)', smiths.length === 0 || smiths.some((e) => 'smithy' in e.npc!.haunts), smiths.map((e) => Object.keys(e.npc!.haunts).join('/')).join(' '));
+  } else check('real village found near the start', false);
 }
 
 console.log(failures() === 0 ? 'townSmoke: all passed' : `townSmoke: ${failures()} failed`);

@@ -16,7 +16,9 @@
   `paths.ts`: A* over 1 m cells (tiles, 3D walls, floors within a step, doors count as open), straightened; `goVia` walks it
   (`ai.path`/`ai.aim`), opening shut doors ahead. Long ways come back partial and are searched again from nearer.
   Townsfolk routines: `RoleDef.routine` (else `rules.routine`) lists place words per day part + `rain`; `hauntNow`
-  (content/routine.ts) picks one per person per day; `npc.haunts` holds each person's spot per word (set in worldPopulate).
+  (content/routine.ts) picks one per person per day; `npc.haunts` holds each person's spot per word (set in worldPopulate;
+  any building in the site plan counts, not only dwellings; every building kind a village lists is raised at least once).
+  Folk start the day at home. A walker held fast on a found way for 1.5 s finds the way again (`ai.stuck`).
   Sensing counts height and needs a clear line eye to eye (`matter.clearLine`: ground, walls, doors, 3D cells); an attacker
   is noticed anyway. Night eyesight and wildlife both ask `isDark` (content/day.ts): the underworld is always dark.
 - `ecology/`: wildlife comes and goes by habitat and time of day; factions remember what the party did.
