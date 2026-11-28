@@ -6,6 +6,8 @@ import { tileCode, TILES } from '../../content/tiles';
 import { hash2 } from './noise';
 import { emptyChunk } from './chunkgen';
 import { hall, hasHall, underAt, underFloor } from './underSpot';
+import { roomOf, biomeOf } from './underBiome';
+import { upperLevels } from './underLevels';
 import type { Spot } from './underSpot';
 import { nodeKey, PITCH, planFor } from './underPlan';
 
@@ -33,19 +35,9 @@ export function latticeTile(seed: number, x: number, y: number): TileKind {
 }
 
 function latticeTileOf(seed: number, x: number, y: number, u: ReturnType<typeof underAt>): TileKind {
-  if (u.spot === 'rock') return tileCode('caveRock');
-  if (u.spot === 'water' || u.spot === 'bridge') return tileCode('water');
+  if (u.spot === 'rock') return u.tile ?? u.wall;
+  if (!Number.isNaN(u.level)) return tileCode('water');
   if (u.tile !== null) return u.tile;
-  if (u.spot === 'hall') {
-    const i = Math.floor(x / PITCH);
-    const j = Math.floor(y / PITCH);
-    const h = hall(seed, i, j);
-    const big = h.hx >= 4 && h.hy >= 4;
-    const dx = x - h.cx;
-    const dy = y - h.cy;
-    // Great halls hold rows of pillars, but never in the way of a doorway at the middle.
-    if (big && Math.abs(dx) % 3 === 0 && Math.abs(dy) % 3 === 0 && Math.abs(dx) >= 3 && Math.abs(dy) >= 3) return tileCode('ruinWall');
-  }
   if (u.spot !== 'shore' && hash2(seed + 4021, x, y) < 0.02) return tileCode('rubble');
   return tileCode(u.spot === 'shore' ? 'sand' : u.spot === 'cavern' ? 'caveFloor' : 'flagstone');
 }
@@ -85,7 +77,6 @@ export function generateLatticeChunk(seed: number, cx: number, cy: number): Chun
 export function roofLatticeChunk(volume: Volume, seed: number, cx: number, cy: number): void {
   const L = CONTENT.realms['underworld']?.lattice;
   const floor = underFloor();
-  const mat = tileCode(L?.tile ?? 'caveRock');
   const solid = shapeByte(CUBE, 0);
   const W = CHUNK_SIZE + 2;
   const ceil = new Int16Array(W * W);
@@ -100,6 +91,8 @@ export function roofLatticeChunk(volume: Volume, seed: number, cx: number, cy: n
       for (const n of [ceil[j * W + i - 1], ceil[j * W + i + 1], ceil[(j - 1) * W + i], ceil[(j + 1) * W + i]]) top = Math.max(top, n ?? 0);
       const x = x0 + i;
       const y = y0 + j;
+      const u = underAt(seed, x, y);
+      const mat = u.wall;
       for (let z = floor + c; z < floor + top + (L?.shell ?? 2); z++) volume.set(x, y, z, solid, mat);
       // Vaulting: under a roof three metres up or more, the rock curves down into a wall beside it (a round arch
       // half springing from the wall: -x, +x, -y, +y walls take turns 0, 2, 1, 3).
@@ -107,8 +100,8 @@ export function roofLatticeChunk(volume: Volume, seed: number, cx: number, cy: n
         const side = [ceil[j * W + i - 1], ceil[j * W + i + 1], ceil[(j - 1) * W + i], ceil[(j + 1) * W + i]].findIndex((n) => (n ?? 0) <= 0);
         if (side >= 0) volume.set(x, y, floor + c - 1, shapeByte(ARCH, [0, 2, 1, 3][side] ?? 0), mat);
       }
-      const u = underAt(seed, x, y);
       if (u.deck !== null) volume.set(x, y, floor - 1, solid, u.deck);
+      if (u.upper >= 0) upperLevels(volume, x, y, floor, u.upper, u.upperTile);
     }
   }
 }
@@ -148,6 +141,9 @@ export interface HallSpot {
   site?: string;
   /** False when it opens into a cave or onto water: nothing hangs on walls that are not there. */
   walled: boolean;
+  /** Its biome (`lattice.biomes` key) and room (index in that biome's rooms). */
+  biome: string;
+  room: number;
 }
 
 /** The halls whose middle lies inside chunk (cx, cy). */
@@ -164,7 +160,8 @@ export function hallsInChunk(seed: number, cx: number, cy: number): HallSpot[] {
       const walled = underAt(seed, h.cx, h.cy).spot === 'hall';
       // A small hall swallowed by a cave or a river is no hall; the great hall under a place keeps its hoard even in a cave.
       if (!walled && site === undefined) continue;
-      out.push({ ...h, roll: hash2(seed + 4031, i, j), walled, ...(site !== undefined ? { site } : {}) });
+      const b = biomeOf(seed, i, j);
+      out.push({ ...h, roll: hash2(seed + 4031, i, j), walled, biome: b.id, room: roomOf(seed, i, j, b.def).index, ...(site !== undefined ? { site } : {}) });
     }
   }
   return out;

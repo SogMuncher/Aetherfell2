@@ -23,6 +23,7 @@ export type { BehaviourDef, BehaviourKind, BrainDef, LootEntry, LootDef, Habitat
 export type { SiteLayoutDef, CompassSide, DistrictDef, Landmark, CityLayout, WardDef, SiteDef, StreetStyle, VillageStyle } from './defs/sites';
 export type { QuestTemplate, QuestWords, TradeDef, RoleDef, FactionDef, DayPart, Routine, TalkDef } from './defs/social';
 export type { SwingFeel, Handling, HandlingDef, HandlingTune } from './defs/handling';
+export type { ScatterDef, UnderRoomDef, UnderBiomeDef } from './defs/under';
 export type { ReactionDef, SwingDef, RulesDef, TouchDef, HudTheme, DayRules } from './defs/rules';
 
 

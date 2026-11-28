@@ -125,6 +125,14 @@ export function validateContent(c: Content): string[] {
     if (r.wipe !== undefined) need(r.wipe in c.realms, w, `wipe realm '${r.wipe}'`);
     if (r.lattice !== undefined) need(r.lattice.tile in c.tileIds, w, `lattice tile '${r.lattice.tile}'`);
     for (const sc of r.scatter ?? []) for (const u of sc.under ?? []) need(u in c.sites, w, `scatter site '${u}'`);
+    for (const [bid, b] of Object.entries(r.lattice?.biomes ?? {})) {
+      const bw = `${w} biome '${bid}'`;
+      const tiles = [b.wall, b.floor, b.corridorFloor, b.vein?.tile, b.rubble?.tile, b.doors?.tile, b.doors?.lockedTile];
+      for (const room of b.rooms) tiles.push(room.floor, room.pillars?.tile, room.lining?.tile, room.gallery);
+      for (const t of tiles) if (t !== undefined) need(t in c.tileIds, bw, `tile '${t}'`);
+      for (const sc of [...(b.scatter ?? []), ...b.rooms.flatMap((room) => room.scatter ?? [])]) need(sc.thing in c.things, bw, `thing '${sc.thing}'`);
+    }
+    for (const sc of r.scatter ?? []) need(sc.thing in c.things, w, `scatter thing '${sc.thing}'`);
   }
   for (const [id, t] of Object.entries(c.things)) if (t.portal !== undefined) need(t.portal.to in c.realms, `thing '${id}'`, `realm '${t.portal.to}'`);
   const tile = (k: number, where: string): void => need(k in c.tiles, where, `tile ${k}`);
