@@ -227,6 +227,20 @@ export const interactionSystem: SimSystem = (ctx: SimContext) => {
     const uz = u.z ?? GROUND_Z;
     const open = ctx.matter.doorOpen(u.tileX, u.tileY, uz);
     if (open === null) continue;
+    // A locked door: its key opens it for good (and is used up); or break it down, or burn it.
+    const lock = open ? undefined : ctx.matter.info(u.tileX, u.tileY, uz)?.lock;
+    if (lock) {
+      const inv = pl?.actor?.inventory;
+      if (!inv || countItem(inv, lock.key) === 0) {
+        ctx.emit({ type: 'locked', entity: u.player, x: u.tileX + 0.5, y: u.tileY + 0.5 });
+        const keyName = content.items[lock.key]?.name.toLowerCase() ?? 'key';
+        ctx.emit({ type: 'notice', player: u.player, text: `It's locked. You need a ${keyName}, or break it down, or burn it.` });
+        continue;
+      }
+      removeItem(inv, lock.key, 1);
+      for (const z of ctx.matter.leaf(u.tileX, u.tileY, uz)) ctx.matter.setKind(u.tileX, u.tileY, z, lock.into);
+      ctx.emit({ type: 'unlocked', entity: u.player, x: u.tileX + 0.5, y: u.tileY + 0.5 });
+    }
     if (open) {
       const blocker = ctx.query.near(u.tileX + 0.5, u.tileY + 0.5, 1.2).find((o) => {
         const od = thingDef(content, o.def);

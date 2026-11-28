@@ -1,5 +1,6 @@
 import type { RGB, TileInfo, TileKind, TileLater, TileShape, TextureId } from '../types';
 import { TILE_LEDGER } from './tileCodes';
+import { UNDER_TILES } from './tilesUnder';
 
 /** One tile as written in content: other tiles are named by string id. */
 export interface TileEntry {
@@ -27,6 +28,8 @@ export interface TileEntry {
   leafy?: number;
   /** Damage it takes from blows before it breaks (none = blows cannot break it). */
   durability?: number;
+  /** Locked shut: only the `key` item opens it (used up), and it becomes tile `into`. */
+  lock?: { key: string; into: string };
   /** Tile id it becomes when it breaks. */
   breaksInto?: string;
   /** It turns into another tile (by id) by itself after some minutes. */
@@ -124,7 +127,7 @@ const BASE: Record<string, TileEntry> = {
   peat: { name: 'peat bog', floor: 'peat', material: 'peat', flammability: 0.2, fuel: 255 },
 };
 
-const ALL = BASE;
+const ALL: Record<string, TileEntry> = { ...BASE, ...UNDER_TILES };
 
 /** What a tile with an unknown code (say, from a retired tile in an old save) behaves like. */
 const DEFAULT_BURNT = 'ash';
@@ -181,6 +184,7 @@ function build(): { byCode: Record<TileKind, TileInfo>; ids: Record<string, Tile
       ...(e.leafy !== undefined ? { leafy: e.leafy } : {}),
       ...(e.durability !== undefined ? { durability: e.durability } : {}),
       ...(e.breaksInto !== undefined ? { breaksInto: ref(e.breaksInto) } : {}),
+      ...(e.lock ? { lock: { key: e.lock.key, into: ref(e.lock.into) ?? 0 } } : {}),
       ...(e.later ? { later: { ...e.later, into: ref(e.later.into) ?? 0 } } : {}),
     };
     byCode[info.code] = info;
@@ -207,7 +211,7 @@ export function tileTableProblems(): string[] {
   const codes = Object.values(built.ids);
   if (codes.some((c) => c > 255)) out.push('tiles: more than 256 kinds of tile (chunks store one byte per tile)');
   for (const [id, e] of Object.entries(ALL)) {
-    for (const [field, ref] of [['burnsInto', e.burnsInto], ['freezesInto', e.freezesInto], ['meltsInto', e.meltsInto], ['breaksInto', e.breaksInto], ['later', e.later?.into]] as const) {
+    for (const [field, ref] of [['burnsInto', e.burnsInto], ['freezesInto', e.freezesInto], ['meltsInto', e.meltsInto], ['breaksInto', e.breaksInto], ['later', e.later?.into], ['lock', e.lock?.into]] as const) {
       if (ref !== undefined && !(ref in ALL)) out.push(`tile '${id}': ${field} names unknown tile '${ref}'`);
     }
   }

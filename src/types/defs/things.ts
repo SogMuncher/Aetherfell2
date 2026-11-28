@@ -1,5 +1,6 @@
+import type { ScatterDef, UnderBiomeDef } from './under';
 import type { BodyRegionId, OutfitEntry } from '../gear';
-import type { BrainId, FactionId, ItemId, LootId, MaterialId, RealmId, SiteId, SpriteId, ThingId } from './ids';
+import type { BrainId, FactionId, ItemId, LootId, MaterialId, RealmId, SpriteId, ThingId } from './ids';
 import type { Color } from '../math';
 import type { DamageKind, Effect } from '../effects';
 import type { SwingDir } from '../input';
@@ -96,7 +97,7 @@ export interface RealmDef {
   /** Motes floating in the air here (dust in the halls); used when the realm has no sky biome of its own. */
   air?: AirDef;
   /** What lies in the halls of a lattice realm: for each hall, each entry is placed with this chance (at its middle, in a corner, or along a wall). */
-  scatter?: { thing: ThingId; chance: number; at: 'middle' | 'corner' | 'wall'; under?: SiteId[] }[];
+  scatter?: ScatterDef[];
   /** A lamp every traveller carries here, so the dark can be explored (colour, reach in metres, flicker). */
   glow?: { r: number; g: number; b: number; radius: number; flicker: number };
   /**
@@ -110,8 +111,14 @@ export interface RealmDef {
     shell: number;
     corridor: number;
     hall: number;
-    way: { widen: number; height: readonly number[] };
+    /** Under ways: paving by rank, a kerb along both sides, and a lamp on the wall about every `lamp.every` metres. */
+    way: { widen: number; height: readonly number[]; floor?: readonly string[]; kerb?: string; lamp?: { thing: ThingId; every: number } };
     water: { bank: number; height: number; rise: number; max: number; sink: number; depth: number };
+    /** Regions dug each their own way (content/underBiomes.ts), about `zone` metres across. */
+    biomes?: Readonly<Record<string, UnderBiomeDef>>;
+    zone?: number;
+    /** Rivers of the dark alone, winding where noise of this `scale` crosses its middle, `width` wide, where `share` of the land allows. */
+    streams?: { scale: number; width: number; share: number };
   };
   /** The land's places that have a cavern beneath them are places here too, named by this pattern (`{name}` = the place above). */
   places?: { name: string };

@@ -12,6 +12,7 @@ export const MATERIALS: Record<MaterialId, MaterialDef> = {
   ironWood: mat({ name: 'iron-bound wood', sound: 'metal', hardness: 0.65, debris: { kind: 'dust', colour: 0x6a5a48, amount: 5, size: 0.06 }, flammability: 0.3, burnTicks: 120, resist: { cut: 0.3, pierce: 0.2, blunt: 1.2, fire: 0.8, poison: 0, cold: 0.2 } }),
   stone: mat({ name: 'stone', sound: 'stone', hardness: 0.85, debris: { kind: 'dust', colour: 0x8c8a84, amount: 9, size: 0.06 }, resist: { cut: 0.15, pierce: 0.1, blunt: 0.8, fire: 0, poison: 0, cold: 0 } }),
   metal: mat({ name: 'metal', sound: 'metal', hardness: 0.95, resist: { cut: 0.2, pierce: 0.2, fire: 0.1, poison: 0, cold: 0.1 } }),
+  bone: mat({ name: 'bone', sound: 'wood', hardness: 0.5, debris: { kind: 'dust', colour: 0xd8d0bc, amount: 6, size: 0.05 }, resist: { blunt: 1.6, fire: 0.3, poison: 0, cold: 0 } }),
   clay: mat({ name: 'fired clay', sound: 'glass', hardness: 0.45, debris: { kind: 'dust', colour: 0xa05c38, amount: 8, size: 0.06 }, resist: { cut: 0.6, blunt: 2, fire: 0, poison: 0 } }),
   glass: mat({ name: 'glass', sound: 'glass', hardness: 0.6, resist: { blunt: 2, fire: 0, poison: 0 } }),
   cloth: mat({ name: 'cloth', sound: 'soft', hardness: 0.05, flammability: 1, burnTicks: 60, floats: true }),

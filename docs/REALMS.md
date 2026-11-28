@@ -35,14 +35,23 @@
 - The underworld is the land read again (`underSpot.ts` `underAt`, data `RealmDef.lattice` + `SiteDef.under`):
   rivers/lakes run on below with shores (a way crossing them = a deck of its bridge tile); places with `under.cavern`
   get a big open cave (`under.ruin` > 0: the place's own buildings stand in it, decayed); every road/path/trail is an
-  artery on its exact line, taller for greater ways; the rest is tight halls + corridors on a 16 m grid (`underPlan.ts`).
+  artery on its exact line, taller for greater ways, paved by rank with kerbs and wall lamps (`lattice.way`); the rest is
+  halls + corridors on a 16 m grid (`underPlan.ts`, `underRooms.ts`), dug by **biomes** (`content/underBiomes.ts`,
+  `underBiome.ts`): regions ~`lattice.zone` m across (halls, caves, crypts, mines, archives, grottoes), likelier under
+  the land biomes they `favours`. A biome sets rock/vein tiles, floors, 'rooms' or 'caves' shape, hall sizes, heights,
+  link chance, rubble, doors (share locked) and scatter; its weighted **rooms** add pillars, wall `lining` (shelves),
+  a `gallery` (slab walkway on two walls + fine stair, `underLevels.ts`), `sink` (ramped pit), `pool` (flooded pit) and
+  scatter. `lattice.streams` = rivers of the dark alone (noise band; bridged where corridors/ways cross).
+  Furnishing (`underFurnish.ts`): realm + biome + room scatter per hall; `at` middle/corner/wall/any/path (path = out in
+  a corridor: traps); mounted things are felt onto a real wall face (`onWall`), never doorways or air.
+  Locked doors: a tile with `lock {key, into}` (`lockedDoor`); the key (used up) turns it into `into`; ground and cells alike.
   Improve the land and the underworld follows. Roof: every open tile is capped from its ceiling to its tallest
   neighbour's + `shell`, so there is no gap to climb through (realmSmoke floods it to prove it).
   `RealmDef.places.name` names the caves on the compass ("the depths beneath {name}").
 - `sky:false` = no sun/stars/clouds/rain; `ambient`, `fog`, `glow` (lamp carried), `mood` (music).
 - Ways: `ThingDef.portal` (`descent` / `ascent`). Whole party must be within `RealmDef.gather` m. On return the
   surface catches up (<= 200 interaction passes). `RealmDef.wipe` = where a downed party wakes.
-- `RealmDef.scatter` lines what lies in each hall (`under` limits it to halls under given places); `habitats[].realm`
+- `RealmDef.scatter` lines what lies in every hall (`under` limits it to halls under given places); `habitats[].realm`
   says where a creature lives. There is one dungeon: every way down reaches the same network.
 
 ## Crafts: the airship (`sim/craft`, `content/crafts.ts`, `types/craft.ts`)
@@ -94,4 +103,4 @@ Ruins are settlements gone to ruin: `village` layout in `content/sites.ts` with 
 - New building: `structures` recipe. New shape: append to `shapeTable.ts` (never renumber). New door kind: a tile with `shape: 'door'` named in `materials.door`.
 
 ## Checks
-`scripts/volumeSmoke.ts`, `fineSmoke.ts`, `doorSmoke.ts`, `realmSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`, `shipSmoke.ts`.
+`scripts/volumeSmoke.ts`, `fineSmoke.ts`, `doorSmoke.ts`, `realmSmoke.ts`, `underSmoke.ts`, `matterSmoke.ts`, `matterFireSmoke.ts`, `craftSmoke.ts`, `shipSmoke.ts`.
