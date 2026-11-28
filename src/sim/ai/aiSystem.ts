@@ -135,7 +135,7 @@ export const aiSystem: SimSystem = (ctx: SimContext) => {
           }
         }
       }
-      if (target && (ai.mode === 'chase' || ai.mode === 'attack') && d < reach + tr && !a.swing && !a.charge) {
+      if (target && (ai.mode === 'chase' || ai.mode === 'attack') && d < reach + tr && !a.swing && !a.charge && a.holding === null) {
         const wp = weaponStats(ctx.content, def, a.weapon);
         const dirs = wp?.swings && wp.swings.length ? wp.swings : SWING_DIRS;
         // Far reach favours the thrust, close quarters the sweeps; now and then an overhead chop.

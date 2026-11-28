@@ -13,7 +13,7 @@ export function foresee(base: SimContext, state: SimState, playerId: string, inp
   const e = id !== undefined ? real.entities.get(id) : undefined;
   if (!e?.player) return;
   const own = new Map<number, Entity>([[e.id, e]]);
-  const held = e.player.holding !== null ? real.entities.get(e.player.holding) : undefined;
+  const held = e.actor?.holding != null ? real.entities.get(e.actor.holding) : undefined;
   if (held) own.set(held.id, held);
   // Crafts and what is fixed aboard them fly on in foresight too, so standing on a deck keeps up with it.
   for (const o of real.entities.values()) if (o.craft || o.ride) own.set(o.id, o);

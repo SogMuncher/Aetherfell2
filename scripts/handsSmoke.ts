@@ -62,8 +62,34 @@ for (const raised of [false, true]) {
     thrown = !t.actor?.inventory.length;
   }
   check(`a creature's brain throws from its bag at an enemy${where}`, thrown, JSON.stringify(t.actor?.inventory));
+
+  // Lift: a raider with nothing to fight takes a barrel up in both hands (the player's own lift).
+  const l = spawner(sim).spawn('raider', me.pos.x - 8, me.pos.y - 8, { ...at, worn: {}, faction: me.faction });
+  const crate = spawner(sim).spawn('barrel', l.pos.x + 3, l.pos.y, at);
+  for (let i = 0; i < 400 && l.actor?.holding !== crate.id; i++) sim.step();
+  check(`a creature's brain lifts a barrel in both hands${where}`, l.actor?.holding === crate.id && crate.heldBy === l.id, `holding ${l.actor?.holding}`);
+
+  // Heave: a raider carrying a crate throws it at the traveller.
+  const h = spawner(sim).spawn('raider', me.pos.x + 5, me.pos.y - 3, { ...at, worn: {} });
+  if (h.actor) h.actor.inventory = [];
+  const pot = spawner(sim).spawn('crate', h.pos.x, h.pos.y, at);
+  if (h.actor) h.actor.holding = pot.id;
+  pot.heldBy = h.id;
+  for (let i = 0; i < 200 && h.actor?.holding === pot.id; i++) {
+    h.pos.x = h.prev.x = me.pos.x + 5;
+    sim.step();
+    me.hp = Math.max(me.hp, 50);
+  }
+  check(`a creature's brain heaves what it carries at an enemy${where}`, h.actor?.holding === null && pot.thrownBy === h.id, `holding ${h.actor?.holding}`);
+
+  // Smash: a raider breaks a crate open for its loot.
+  const sm = spawner(sim).spawn('raider', me.pos.x + 8, me.pos.y + 8, { ...at, worn: {}, faction: me.faction });
+  const box = spawner(sim).spawn('crate', sm.pos.x + 2.5, sm.pos.y, at);
+  for (let i = 0; i < 600 && !box.dead; i++) sim.step();
+  check(`a creature's brain smashes a crate open${where}`, box.dead, `hp ${box.hp}`);
 }
 
+check('lift, heave and smash are brain behaviours any creature can list', ['lift', 'heave', 'smash'].every((k) => brain('raider').behaviours.some((b) => b.do === k)));
 check('grab and throw are brain behaviours any creature can list', brain('raider').behaviours.some((b) => b.do === 'grab') && brain('raider').behaviours.some((b) => b.do === 'throw'));
 
 if (failures()) throw new Error(`${failures()} hands check(s) failed`);

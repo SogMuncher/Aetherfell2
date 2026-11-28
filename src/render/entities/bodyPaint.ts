@@ -193,7 +193,8 @@ export function surfaceK(surface: Surface, lit: number, ux: number, uy: number, 
  * with its head to the viewer's right). `hand` is +1 or -1 to match the world's screen handedness.
  */
 export function paintSolids(solids: readonly Solid[], ppm: number, psi: number, hand: number, radius: number, top: number, cards?: CardSource): Sprite {
-  const w = Math.max(2, Math.ceil(radius * 2 * ppm) + 2);
+  // Always even, so the foot sits on the same pixel grid however far a held item reaches (the body never shifts).
+  const w = 2 * (Math.ceil(radius * ppm) + 1);
   const h = Math.max(2, Math.ceil(top * ppm) + 1);
   // View axes in the creature's [forward, up, side] space.
   const R: [number, number, number] = [Math.cos(psi), 0, Math.sin(psi)];

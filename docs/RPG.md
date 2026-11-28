@@ -10,7 +10,8 @@
 - `rpg/rpgSystem.ts`: skills grow by doing, pick up/use/drop/wear items, shared party quest log. Bag layout is UI-only.
   The bag is `actor.inventory` (players and creatures alike, `bagOf(e)`); a thing's `carries` loot fills it at spawn and
   all of it drops on death (plus `onDestroy.loot`). Creatures ask for the player's pick-up/throw via `actor.wantPick/wantThrow`.
-- `ai/` : one thinking loop for every creature. `senses.ts` gathers what it notices; `handling.ts` = `grab`/`throw` behaviours. `behaviours.ts` is the library (`BehaviourDef` in `types/defs/brains.ts`);
+  Big things (crates, pots, barrels) are lifted and heaved by everyone through `actor.holding` + `wantLift/wantHeave` (`rpg/carrying.ts`); the player's F key asks the same way.
+- `ai/` : one thinking loop for every creature. `senses.ts` gathers what it notices; `handling.ts` = `grab`/`throw` behaviours; `carrying.ts` = `lift`/`heave`/`smash` (senses gather `props` for them). `behaviours.ts` is the library (`BehaviourDef` in `types/defs/brains.ts`);
   a creature's brain is an ordered data list in `content/living.ts`. Villagers are creatures with a brain + role.
   `paths.ts`: A* over 1 m cells (tiles, 3D walls, floors within a step, doors count as open), straightened; `goVia` walks it
   (`ai.path`/`ai.aim`), opening shut doors ahead. Long ways come back partial and are searched again from nearer.

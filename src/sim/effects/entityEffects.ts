@@ -246,10 +246,10 @@ export function destroy(ctx: SimContext, e: Entity, src: Entity | null): void {
     e.hp = 0;
     e.player.downed = DOWNED_TICKS;
     e.player.gliding = false;
-    if (e.player.holding !== null) {
-      const held = state.entities.get(e.player.holding);
+    if (e.actor && e.actor.holding !== null) {
+      const held = state.entities.get(e.actor.holding);
       if (held) held.heldBy = null;
-      e.player.holding = null;
+      e.actor.holding = null;
     }
     ctx.emit({ type: 'notice', player: e.id, text: 'You are down! A friend can revive you (E), or you will wake at the road.' });
     ctx.emit({ type: 'journal', text: `${e.player.name} was struck down.` });

@@ -57,7 +57,16 @@ export type BehaviourDef =
    * player makes: things made to be thrown first, and with `anything` whatever else it carries.
    * `chance` is how readily it throws when it stops to think.
    */
-  | { do: 'throw'; range: [number, number]; chance: number; anything?: boolean };
+  | { do: 'throw'; range: [number, number]; chance: number; anything?: boolean }
+  /**
+   * Walks over to a big thing it can lift (crate, pot, barrel) within `within` metres and takes it up in
+   * both hands, the same lift a player makes. Carrying one, it sets it down again now and then (`setDown`).
+   */
+  | { do: 'lift'; within: number; chance: number; setDown: number }
+  /** Heaves what it carries at an enemy `range` metres away with a clear line, the player's own heave. */
+  | { do: 'heave'; range: [number, number]; chance: number }
+  /** Goes to a thing within `within` metres that spills loot when broken (crates, urns) and hits it until it breaks. */
+  | { do: 'smash'; within: number; chance: number };
 
 /** Every behaviour name in the library. */
 export type BehaviourKind = BehaviourDef['do'];

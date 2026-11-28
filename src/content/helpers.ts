@@ -105,3 +105,20 @@ export function stackWeight(items: readonly ItemStack[]): number {
 export function throwSpeed(def: ItemDef, might: number): number {
   return (def.thrown?.speed ?? Math.max(5, 13 - def.weight * 1.2)) * (1 + might * 0.03);
 }
+
+/** Whether a body can be lifted in both hands (crates, pots, barrels): marked `carry`, light enough, not already carried. */
+export function liftable(c: Content, o: Entity): boolean {
+  const d = thingDef(c, o.def);
+  return !!d.carry && d.body.mass <= 60 && o.heldBy === null && !o.dead;
+}
+
+/** How fast a carried body leaves the hands at a full heave: heavy things fly short, strong arms throw further. */
+export function heaveSpeed(mass: number, might: number): number {
+  return Math.max(4, 15 - mass * 0.18) * (1 + might * 0.04);
+}
+
+/** Whether breaking a thing spills loot (crates, urns): it has health, drops loot when destroyed, and is not a creature. */
+export function holdsLoot(c: Content, o: Entity): boolean {
+  const d = thingDef(c, o.def);
+  return !o.actor && !o.dead && o.heldBy === null && !!d.health && !!d.onDestroy?.loot;
+}

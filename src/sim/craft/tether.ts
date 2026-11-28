@@ -85,7 +85,7 @@ export function haulIn(ctx: SimContext, e: Entity): void {
   for (const o of ctx.state.entities.values()) {
     if (o.dead || o.tether?.craft !== e.id || o.ride || o.tether.reel || (o.aboard === e.id && o.heldBy === null)) continue;
     const holder = o.heldBy !== null ? ctx.state.entities.get(o.heldBy) : undefined;
-    if (holder?.player?.holding === o.id) holder.player.holding = null;
+    if (holder?.actor?.holding === o.id) holder.actor.holding = null;
     o.heldBy = null;
     o.tether.reel = true;
   }
