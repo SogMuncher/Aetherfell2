@@ -1,4 +1,5 @@
 import type { RealmDef, RealmId } from '../types';
+import { UNDER_BIOMES } from './underBiomes';
 
 /**
  * The spaces the world is made of. A realm is a place with its own ground, light and sky; the whole
@@ -31,16 +32,11 @@ export const REALMS: Record<RealmId, RealmDef> = {
     fog: [5, 4, 8],
     fogDist: 46,
     air: { count: 180, colour: [150, 140, 120], alpha: 0.5, drift: [0.05, 0.03, -0.04], box: 14, size: 1 },
+    // In every hall; each biome (content/underBiomes.ts) and each room adds its own.
     scatter: [
-      { thing: 'chest', chance: 0.35, at: 'middle' },
-      { thing: 'urn', chance: 0.5, at: 'wall' },
-      { thing: 'urn', chance: 0.3, at: 'wall' },
-      { thing: 'torch', chance: 0.3, at: 'corner' },
-      { thing: 'wallTorch', chance: 0.7, at: 'wall' },
-      { thing: 'wallTorch', chance: 0.5, at: 'wall' },
-      { thing: 'wallTorch', chance: 0.35, at: 'wall' },
-      { thing: 'oilBarrel', chance: 0.25, at: 'corner' },
-      { thing: 'crate', chance: 0.3, at: 'wall' },
+      { thing: 'chest', chance: 0.25, at: 'middle' },
+      { thing: 'oilBarrel', chance: 0.15, at: 'corner' },
+      { thing: 'crate', chance: 0.2, at: 'wall' },
       // Under the places above: the greater halls hold more, and are guarded. Risk and reward.
       { thing: 'chest', chance: 0.8, at: 'middle', under: ['ruin', 'stones', 'city', 'hamlet'] },
       { thing: 'urn', chance: 0.7, at: 'wall', under: ['village', 'farmstead', 'hamlet', 'city'] },
@@ -55,8 +51,11 @@ export const REALMS: Record<RealmId, RealmDef> = {
       shell: 2,
       corridor: 4,
       hall: 7,
-      way: { widen: 1, height: [4, 6, 9] },
+      way: { widen: 1, height: [4, 6, 9], floor: ['gravel', 'setts', 'greatPaving'], kerb: 'kerb', lamp: { thing: 'wallTorch', every: 14 } },
       water: { bank: 3, height: 6, rise: 0.4, max: 18, sink: 0.35, depth: 2.4 },
+      biomes: UNDER_BIOMES,
+      zone: 112,
+      streams: { scale: 150, width: 0.012, share: 0.45 },
     },
     places: { name: 'the depths beneath {name}' },
     arrival: { thing: 'ascent' },

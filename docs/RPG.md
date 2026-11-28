@@ -27,6 +27,11 @@
   their bag in the hold window and their paperdoll (wear/remove `on` their id), dismiss returns them to `factions.folk`.
   The `follow` behaviour (villager brain) keeps them with the nearest traveller and fights what threatens the party.
   Not yet: they stay behind when the party changes realm.
+- Barks (`social/barks.ts`, one system, last in the tick, reads `ctx.heard` = this tick's events): a thing with `speech.barks`
+  says a line (a 'say': bubble + its voice) for moments: events (hurt, kill, allyDied, fire, rain, thunder, magic, statuses as
+  `status.<id>`), its brain turning to a behaviour (`do.<kind>`), its routine sending it somewhere (`go.<place word>`, else
+  `go.work`), hired/dismissed, loot near, greeting a traveller, idle chatter. Lines: `content/barks.ts` + `barksFoes.ts` by set;
+  odds and quiet time: `content/speech.ts` `BARK_RULES`. Only talkers within earshot of a traveller bark. Check: `barkSmoke`.
 - `interaction/`: the world's own rules (fire spread, drying, rain, traps, doors, containers) over `ctx.matter`.
 - `persistence/`: fflate save; also how the world is sent to joining friends. Version bump refuses old saves (fine in dev).
 - `cheats/`: debug menu entries from `content/cheats.ts`, each names an action the sim knows. "Held item" rows (generated from

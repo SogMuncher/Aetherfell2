@@ -21,7 +21,7 @@ import { clamp, hashString, jit, rint, rnd, stable } from './vary';
  */
 export type Gesture = 'howl' | 'bleat' | 'grunt';
 
-export type Utterance = 'call' | 'growl' | 'hurt' | 'death';
+export type Utterance = 'call' | 'growl' | 'hurt' | 'death' | 'attack';
 
 export interface VoiceProfile {
   gesture: Gesture;
@@ -168,6 +168,13 @@ export function speak(e: AudioEngine, out: AudioNode, t: number, v: VoiceProfile
     if (v.breath > 0.02) e.burst(out, t, dur, l * v.breath * 1.6, 'bandpass', from, { q: 1.4, to, attack: Math.min(0.08, dur * 0.2) });
   };
 
+  if (what === 'attack') {
+    // A snap or snarl as it strikes: short, sharp, up from deep in the chest.
+    const dur = jit(0.16, 0.3) * Math.sqrt(v.length / 0.3 + 0.4);
+    e.tone(out, v.wave === 'sine' ? 'sawtooth' : v.wave, p * rnd(0.55, 0.75), t, dur, lv * 0.09, { from: p * rnd(0.9, 1.1), glide: dur * 0.3, tremolo: 0.4 + rough * 0.5, tremoloRate: rnd(20, 35), band: { freq: v.mouth * 0.8, q: 2 }, attack: 0.01 });
+    breathAt(dur, lv * 0.07, v.mouth * 1.3, v.mouth * 0.7);
+    return;
+  }
   if (what === 'growl') {
     // Low and rolling, deep in the chest: every voice can growl.
     const dur = jit(0.55, 0.25) * Math.sqrt(v.length / 0.4 + 0.5);

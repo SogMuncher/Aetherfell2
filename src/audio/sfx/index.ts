@@ -4,3 +4,5 @@ export { castSpell, burstSpell, runeMotif, statusOn, elementsOf, effectBurst } f
 export type { Element } from './spells';
 export { strike, step, swing } from './materials';
 export { Recent, fatigue, hashString, jit, rnd, rint, clamp } from './vary';
+export { personVoice, talk, cry } from './speech';
+export type { PersonVoice, Cry } from './speech';
