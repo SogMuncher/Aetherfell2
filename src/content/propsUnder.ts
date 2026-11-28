@@ -52,11 +52,11 @@ export const UNDER_PROPS: Record<ArtId, ArtDef> = {
     variants: 3,
     colors: { iron: ['@iron'], wax: ['#e8dcc0', '#d8c8a0'], flame: ['@ember'] },
     parts: [
-      { shape: 'drum', align: true, size: [0.14, 0.03, 0], color: 'iron', surface: 'metal' },
-      { shape: 'drum', align: true, size: [0.02, 0.85, 0], color: 'iron', surface: 'metal' },
-      { shape: 'box', align: true, size: [0.2, 0.015, 0.02], raise: 0.86, color: 'iron', surface: 'metal' },
-      { shape: 'drum', align: true, count: 3, spread: 0.36, size: [0.025, [0.08, 0.14], 0], raise: 0.88, color: 'wax', surface: 'smooth' },
-      { shape: 'ball', align: true, count: 3, spread: 0.36, size: [0.018, 0.03, 0], raise: 1.0, color: 'flame', surface: 'glow' },
+      { shape: 'drum', align: true, size: [0.18, 0.05, 0], color: 'iron', surface: 'metal' },
+      { shape: 'drum', align: true, size: [0.04, 0.85, 0], color: 'iron', surface: 'metal' },
+      { shape: 'box', align: true, size: [0.24, 0.03, 0.04], raise: 0.86, color: 'iron', surface: 'metal' },
+      { shape: 'drum', align: true, count: 3, spread: 0.4, size: [0.045, [0.12, 0.18], 0], raise: 0.9, color: 'wax', surface: 'smooth' },
+      { shape: 'ball', align: true, count: 3, spread: 0.4, size: [0.03, 0.05, 0], raise: 1.06, color: 'flame', surface: 'glow' },
     ],
   },
   lectern: {
