@@ -44,6 +44,11 @@ export function isCreature(e: Entity): e is Creature {
   return e.actor !== undefined && e.ai !== undefined;
 }
 
+/** A creature on the travellers' side (someone hired into the party): it follows them and they can see to its gear. */
+export function isFollower(c: Content, e: Entity): e is Creature {
+  return !e.player && !e.dead && isCreature(e) && e.faction === c.rules.factions.player;
+}
+
 /**
  * Whether others see this thing as dangerous: a traveller, or a creature whose brain hunts.
  * Skittish creatures keep their distance from these.
@@ -99,4 +104,21 @@ export function stackWeight(items: readonly ItemStack[]): number {
 /** How fast an item leaves the hands at a full throw: light things fly further, things made to be thrown at their own speed. */
 export function throwSpeed(def: ItemDef, might: number): number {
   return (def.thrown?.speed ?? Math.max(5, 13 - def.weight * 1.2)) * (1 + might * 0.03);
+}
+
+/** Whether a body can be lifted in both hands (crates, pots, barrels): marked `carry`, light enough, not already carried. */
+export function liftable(c: Content, o: Entity): boolean {
+  const d = thingDef(c, o.def);
+  return !!d.carry && d.body.mass <= 60 && o.heldBy === null && !o.dead;
+}
+
+/** How fast a carried body leaves the hands at a full heave: heavy things fly short, strong arms throw further. */
+export function heaveSpeed(mass: number, might: number): number {
+  return Math.max(4, 15 - mass * 0.18) * (1 + might * 0.04);
+}
+
+/** Whether breaking a thing spills loot (crates, urns): it has health, drops loot when destroyed, and is not a creature. */
+export function holdsLoot(c: Content, o: Entity): boolean {
+  const d = thingDef(c, o.def);
+  return !o.actor && !o.dead && o.heldBy === null && !!d.health && !!d.onDestroy?.loot;
 }

@@ -10,7 +10,8 @@
 - `rpg/rpgSystem.ts`: skills grow by doing, pick up/use/drop/wear items, shared party quest log. Bag layout is UI-only.
   The bag is `actor.inventory` (players and creatures alike, `bagOf(e)`); a thing's `carries` loot fills it at spawn and
   all of it drops on death (plus `onDestroy.loot`). Creatures ask for the player's pick-up/throw via `actor.wantPick/wantThrow`.
-- `ai/` : one thinking loop for every creature. `senses.ts` gathers what it notices; `handling.ts` = `grab`/`throw` behaviours. `behaviours.ts` is the library (`BehaviourDef` in `types/defs/brains.ts`);
+  Big things (crates, pots, barrels) are lifted and heaved by everyone through `actor.holding` + `wantLift/wantHeave` (`rpg/carrying.ts`); the player's F key asks the same way.
+- `ai/` : one thinking loop for every creature. `senses.ts` gathers what it notices; `handling.ts` = `grab`/`throw` behaviours; `carrying.ts` = `lift`/`heave`/`smash` (senses gather `props` for them). `behaviours.ts` is the library (`BehaviourDef` in `types/defs/brains.ts`);
   a creature's brain is an ordered data list in `content/living.ts`. Villagers are creatures with a brain + role.
   `paths.ts`: A* over 1 m cells (tiles, 3D walls, floors within a step, doors count as open), straightened; `goVia` walks it
   (`ai.path`/`ai.aim`), opening shut doors ahead. Long ways come back partial and are searched again from nearer.
@@ -24,6 +25,15 @@
 - `social/`: dialogue, trade, quests from `content/roles.ts` templates. `topics.ts`: Daggerfall-style menus "Where is..."
   (places = `Location.landmarks`, people = where `hauntNow` says they are) and "Tell me about..." (rumours, `RoleDef.about`);
   all words in `content/talk.ts`. Folk who dislike the party (`talk.refuseBelow`) refuse directions.
+  `party.ts`: hire townsfolk for `rules.hireFee` (they take the party's faction, `isFollower`), "Let me see your gear" opens
+  their bag in the hold window and their paperdoll (wear/remove `on` their id), dismiss returns them to `factions.folk`.
+  The `follow` behaviour (villager brain) keeps them with the nearest traveller and fights what threatens the party.
+  Not yet: they stay behind when the party changes realm.
+- Barks (`social/barks.ts`, one system, last in the tick, reads `ctx.heard` = this tick's events): a thing with `speech.barks`
+  says a line (a 'say': bubble + its voice) for moments: events (hurt, kill, allyDied, fire, rain, thunder, magic, statuses as
+  `status.<id>`), its brain turning to a behaviour (`do.<kind>`), its routine sending it somewhere (`go.<place word>`, else
+  `go.work`), hired/dismissed, loot near, greeting a traveller, idle chatter. Lines: `content/barks.ts` + `barksFoes.ts` by set;
+  odds and quiet time: `content/speech.ts` `BARK_RULES`. Only talkers within earshot of a traveller bark. Check: `barkSmoke`.
 - `interaction/`: the world's own rules (fire spread, drying, rain, traps, doors, containers) over `ctx.matter`.
 - `persistence/`: fflate save; also how the world is sent to joining friends. Version bump refuses old saves (fine in dev).
 - `cheats/`: debug menu entries from `content/cheats.ts`, each names an action the sim knows. "Held item" rows (generated from
@@ -35,4 +45,4 @@
 - Villager job: `roles` entry listed in a site's `villagers`; its day = `routine` place words (building recipe ids work).
 
 ## Checks
-`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`, `handsSmoke.ts`, `townSmoke.ts` (paths, routines, topics).
+`scripts/mechanicsSmoke.ts`, `simSmoke.ts`, `cheatsSmoke.ts`, `dataSmoke.ts`, `gearSmoke.ts`, `senseSmoke.ts`, `handsSmoke.ts`, `townSmoke.ts` (paths, routines, topics), `partySmoke.ts` (hire, follow, fight, dress).

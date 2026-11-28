@@ -1,5 +1,6 @@
 import type { SurfaceDef } from '../types';
 import { BUILD_SURFACES } from './surfacesBuild';
+import { UNDER_SURFACES } from './surfacesUnder';
 
 /**
  * Procedural surfaces: every ground, wall and floor look, as a base colour plus layers of noise,
@@ -243,4 +244,5 @@ export const SURFACES: Record<string, SurfaceDef> = {
     ],
   },
   ...BUILD_SURFACES,
+  ...UNDER_SURFACES,
 };

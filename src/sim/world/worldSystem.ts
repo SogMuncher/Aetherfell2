@@ -2,7 +2,8 @@ import { CHUNK_SIZE, type Entity, type Location, type SimContext, type SimState,
 import { REGION_SIZE, type SiteLayout, siteInRegion } from './sites';
 import type { Terrain } from './terrain';
 import type { WorldTiles } from './worldTiles';
-import { furnishHalls, populate, raise } from './worldPopulate';
+import { populate, raise } from './worldPopulate';
+import { furnishHalls } from './underFurnish';
 
 
 /**

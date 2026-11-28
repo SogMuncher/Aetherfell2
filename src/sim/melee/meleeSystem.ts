@@ -42,7 +42,7 @@ export const meleeSystem: SimSystem = (ctx: SimContext) => {
       held = p.input.attack;
       pressed = held && !p.prevAttack;
       p.prevAttack = held;
-      guard = p.input.block && p.holding === null;
+      guard = p.input.block && a.holding === null;
       aim = allowed(rules.swings, weapon, p.input.swingDir);
     } else {
       want = a.wantSwing;
@@ -70,7 +70,7 @@ export const meleeSystem: SimSystem = (ctx: SimContext) => {
     // Begin winding a blow up.
     if (!a.swing && !a.charge && !disabled) {
       if (p) {
-        if (pressed && p.holding === null && !guard && (p.stamina >= ch.begin || p.cheats?.endless)) {
+        if (pressed && a.holding === null && !guard && (p.stamina >= ch.begin || p.cheats?.endless)) {
           a.charge = { dir: aim, t: 0, hold: 0, full: false };
           ctx.emit({ type: 'charge', entity: e.id, stage: 'start', x: e.pos.x, y: e.pos.y });
         }

@@ -1,8 +1,9 @@
 import type { Entity, ItemId, PlayerData, SimContext, SimSystem, SkillId } from '../../types';
 import { bagOf, addItem, countItem, removeItem } from '../../types';
 import { itemDef, pluralName, skillXp, thingDef } from '../../content';
-import { changeClothes, hold, putOn } from './gearHandling';
+import { changeClothes, followerNear, hold, putOn } from './gearHandling';
 import { pickFromView, throwFromBag, throwHeld } from './throwing';
+import { heave, lift } from './carrying';
 
 /**
  * Progression: skills that grow by doing (blade, evocation, athletics, speech), picking things up,
@@ -20,6 +21,17 @@ export const rpgSystem: SimSystem = (ctx: SimContext) => {
     addItem(bagOf(pl), it.item.id, it.item.count);
     it.dead = true;
     ctx.emit({ type: 'pickup', player: pl.id, item: it.item.id, count: it.item.count });
+  }
+
+  // Everyone lifts and heaves big things the same way (players' keys and creatures' brains ask alike).
+  for (const e of state.entities.values()) {
+    const a = e.actor;
+    if (!a || e.dead) continue;
+    if (a.holding !== null && ctx.state.entities.get(a.holding)?.dead !== false) a.holding = null;
+    if (a.wantHeave) heave(ctx, e, a.wantHeave);
+    else if (a.wantLift != null) lift(ctx, e, a.wantLift);
+    a.wantHeave = null;
+    a.wantLift = null;
   }
 
   // Creatures pick up and throw with the same hands players use (their brain asks via wantPick / wantThrow).
@@ -143,7 +155,7 @@ function useItem(ctx: SimContext, e: Entity, p: PlayerData, wanted: ItemId): voi
     return;
   }
   if (def.thrown) {
-    if (p.holding !== null) return;
+    if (e.actor?.holding != null) return;
     removeItem(bagOf(e), id, 1);
     const pitch = p.input.pitch * 0.9;
     const sp = def.thrown.speed * (1 + p.stats.might * 0.03);
@@ -190,16 +202,18 @@ function learnRunes(ctx: SimContext, e: Entity, p: PlayerData): void {
   }
 }
 
-/** Moves one stack between the bag and a store within reach (a ship's hold): in while there is room, or back out. */
+/** Moves one stack between the bag and a store within reach (a ship's hold, or a party member's bag): in while there is room, or back out. */
 function stow(ctx: SimContext, e: Entity, s: { entity: number; item: ItemId; put: boolean }): void {
-  const t = ctx.state.entities.get(s.entity);
-  const room = t ? thingDef(ctx.content, t.def).store : undefined;
-  if (!t?.stored || !room || t.dead || Math.hypot(t.pos.x - e.pos.x, t.pos.y - e.pos.y) > 3.5 || Math.abs(t.z - e.z) > 2.5) return;
-  const from = s.put ? bagOf(e) : t.stored;
-  const to = s.put ? t.stored : bagOf(e);
+  const mate = followerNear(ctx, e, s.entity);
+  const t = mate ?? ctx.state.entities.get(s.entity);
+  const room = t && !mate ? thingDef(ctx.content, t.def).store : undefined;
+  const kept = mate ? bagOf(mate) : t?.stored;
+  if (!t || !kept || (!mate && !room) || t.dead || Math.hypot(t.pos.x - e.pos.x, t.pos.y - e.pos.y) > 3.5 || Math.abs(t.z - e.z) > 2.5) return;
+  const from = s.put ? bagOf(e) : kept;
+  const to = s.put ? kept : bagOf(e);
   const n = countItem(from, s.item);
   if (n === 0) return;
-  if (s.put && !to.some((x) => x.id === s.item) && to.length >= room.slots) {
+  if (room && s.put && !to.some((x) => x.id === s.item) && to.length >= room.slots) {
     ctx.emit({ type: 'notice', player: e.id, text: 'The hold is full.' });
     return;
   }

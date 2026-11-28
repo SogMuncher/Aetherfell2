@@ -180,15 +180,15 @@ export function applyCheat(ctx: SimContext, e: Entity, def: CheatDef, value: Che
 
 /** Puts a traveller down safely somewhere else (whatever they carried stays behind). */
 function moveTo(ctx: SimContext, e: Entity, x: number, y: number): void {
-  const p = e.player;
-  if (p?.holding != null) {
-    const held = ctx.state.entities.get(p.holding);
+  const a = e.actor;
+  if (a?.holding != null) {
+    const held = ctx.state.entities.get(a.holding);
     if (held) held.heldBy = null;
-    p.holding = null;
+    a.holding = null;
   }
   e.pos.x = e.prev.x = x;
   e.pos.y = e.prev.y = y;
-  e.z = e.prevZ = Math.max(0, ctx.tiles.ground(x, y)) + (p?.cheats?.fly ? 3 : 0.5);
+  e.z = e.prevZ = Math.max(0, ctx.tiles.ground(x, y)) + (e.player?.cheats?.fly ? 3 : 0.5);
   e.vel.x = e.vel.y = e.vz = 0;
 }
 

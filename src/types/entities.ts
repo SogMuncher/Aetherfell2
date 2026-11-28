@@ -78,12 +78,18 @@ export interface ActorData {
   wantThrow?: ThrowAim | null;
   /** Set by a controller (AI) to pick up this loose item into the bag, the same pick-up a player makes. */
   wantPick?: number | null;
+  /** The big thing (crate, pot, barrel) carried in both hands, if any. Players and creatures alike. */
+  holding: number | null;
+  /** Set by a controller to lift this thing in both hands (sim/rpg/carrying.ts). */
+  wantLift?: number | null;
+  /** Set by a controller to heave what it carries (`power` 0 sets it down at its feet). */
+  wantHeave?: { yaw: number; lift: number; power: number } | null;
 }
 
 export interface DialogueOption {
   label: string;
   /** What the option does — resolved by the social system. */
-  action: 'rumour' | 'quest' | 'trade' | 'farewell' | 'turnIn' | 'where' | 'about' | 'places' | 'people' | 'place' | 'person' | 'self' | 'back';
+  action: 'rumour' | 'quest' | 'trade' | 'farewell' | 'turnIn' | 'where' | 'about' | 'places' | 'people' | 'place' | 'person' | 'self' | 'back' | 'hire' | 'dismiss' | 'gear';
   /** Which place (a landmark key) or person (an entity id) a 'place'/'person' topic asks about. */
   arg?: string;
 }
@@ -109,8 +115,6 @@ export interface PlayerData {
   runes: RuneId[];
   /** The runes of the spell readied for casting (empty = none). */
   prepared: RuneId[];
-  /** Entity being carried, if any. */
-  holding: number | null;
   stats: Stats;
   skills: Record<SkillId, Skill>;
   dialogue: DialogueView | null;
@@ -135,7 +139,7 @@ export interface PlayerData {
  * How a creature is moving right now. Behaviours (sim/ai/behaviours.ts) choose one; the steering
  * in sim/ai carries it out. Audio and music read it to tell when something is chasing you.
  */
-export type AiMode = 'idle' | 'wander' | 'graze' | 'chase' | 'flee' | 'goto' | 'attack' | 'cast';
+export type AiMode = 'idle' | 'wander' | 'graze' | 'chase' | 'flee' | 'goto' | 'run' | 'attack' | 'cast';
 
 export interface AiData {
   mode: AiMode;
@@ -154,6 +158,8 @@ export interface AiData {
   stuck?: number;
   /** A spell being gathered (mode 'cast'): when `t` reaches the telegraph time it is let go. */
   cast?: { spell: SpellId; t: number };
+  /** What a talker last barked about (sim/social/barks.ts): the tick, the behaviour and place it was on, if it followed the party, the loot it remarked on, when it last greeted. */
+  bark?: { at: number; doing: string; place: string; follower: boolean; loot: number; greet: number };
 }
 
 /**

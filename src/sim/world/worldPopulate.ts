@@ -1,74 +1,8 @@
-import { CHUNK_SIZE, type Entity, type Location, type Placement, type SimContext, type SpawnInit, type StructureReport, packKey } from '../../types';
+import type { Entity, Location, Placement, SimContext, SpawnInit, StructureReport } from '../../types';
 import type { House, SiteLayout } from './sites';
 import { fillText, thingDef } from '../../content';
-import { hallsInChunk } from './underworld';
 import { houseFor } from './cityParts';
 
-
-/**
- * Fills the halls of a lattice realm (content/realms.ts `scatter`) near the party, once per chunk. The chunk
- * keys already done live in `state.regions`, which belongs to the realm, so saves and returning remember them.
- */
-export function furnishHalls(ctx: SimContext, players: Entity[]): void {
-  const { state } = ctx;
-  const scatter = ctx.content.realms[state.realm]?.scatter;
-  if (!scatter) return;
-  for (const p of players) {
-    const pcx = Math.floor(p.pos.x / CHUNK_SIZE);
-    const pcy = Math.floor(p.pos.y / CHUNK_SIZE);
-    for (let j = -2; j <= 2; j++) {
-      for (let i = -2; i <= 2; i++) {
-        const key = packKey(pcx + i, pcy + j);
-        if (state.regions.has(key)) continue;
-        state.regions.add(key);
-        for (const h of hallsInChunk(state.seed, pcx + i, pcy + j)) {
-          scatter.forEach((s, n) => {
-            if (s.under && !(h.site !== undefined && s.under.includes(h.site))) return;
-            if (s.at === 'wall' && !h.walled) return;
-            const roll = (h.roll * 9973 + n * 0.6180339) % 1;
-            if (!(roll < s.chance)) return;
-            let x = h.cx + 0.5;
-            let y = h.cy + 0.5;
-            if (s.at === 'corner') {
-              const sx = n % 2 === 0 ? -1 : 1;
-              const sy = n % 4 < 2 ? -1 : 1;
-              x += sx * (h.hx - 1);
-              y += sy * (h.hy - 1);
-            } else if (s.at === 'wall') {
-              const side = (n * 7 + Math.floor(h.roll * 8)) % 4;
-              if (side < 2) {
-                x += (side === 0 ? -1 : 1) * (h.hx - 0.2);
-                y += ((h.roll * 31 + n) % 1 - 0.5) * h.hy;
-              } else {
-                y += (side === 2 ? -1 : 1) * (h.hy - 0.2);
-                x += ((h.roll * 17 + n) % 1 - 0.5) * h.hx;
-              }
-              x = Math.min(h.cx + h.hx - 0.2, Math.max(h.cx - h.hx + 0.2, x));
-              y = Math.min(h.cy + h.hy - 0.2, Math.max(h.cy - h.hy + 0.2, y));
-            }
-            if (ctx.tiles.blocked(x, y)) return;
-            const m = thingDef(ctx.content, s.thing).mount;
-            if (m && s.at === 'wall') {
-              // On the wall face: nearer the wall than the 0.2 m the spot was picked at, looking back into the hall.
-              const ax = Math.abs(x - h.cx - 0.5) / Math.max(0.001, h.hx);
-              const ay = Math.abs(y - h.cy - 0.5) / Math.max(0.001, h.hy);
-              const near = Math.max(0, 0.2 - m.flush);
-              const along = ax >= ay ? 'x' : 'y';
-              const sign = along === 'x' ? Math.sign(x - h.cx - 0.5) : Math.sign(y - h.cy - 0.5);
-              const mx = along === 'x' ? x + sign * near : x;
-              const my = along === 'y' ? y + sign * near : y;
-              const ang = along === 'x' ? (sign > 0 ? Math.PI : 0) : sign > 0 ? -Math.PI / 2 : Math.PI / 2;
-              const z = ctx.tiles.ground(x, y) + m.height;
-              ctx.spawn(s.thing, mx, my, { z, prevZ: z, angle: ang });
-              return;
-            }
-            place(ctx, s.thing, x, y);
-          });
-        }
-      }
-    }
-  }
-}
 
 /** Buildings a place raises per tick, so a whole city goes up over a few seconds instead of in one stall. */
 export const BUILDS_PER_TICK = 3;

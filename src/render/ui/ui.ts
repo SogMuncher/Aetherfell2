@@ -21,11 +21,11 @@ export interface UiCallbacks {
   /** The bag: a loose item in the view was dragged into it (entity id). */
   pickUp(entity: number): void;
   /** The paperdoll: put this piece of armour from the bag on (or, with a slot of the hands, hold anything). */
-  wear(id: ItemId, slot?: string): void;
+  wear(id: ItemId, slot?: string, on?: number): void;
   /** The paperdoll: put on a piece of armour lying in the view (entity id). */
   wearFrom(entity: number): void;
   /** The paperdoll: take what is worn on this part of the body off. */
-  remove(region: BodyRegionId): void;
+  remove(region: BodyRegionId, on?: number): void;
   choose(i: number): void;
   /** The hold window: move a stack into (put) or out of a store. */
   stow(entity: number, item: ItemId, put: boolean): void;
@@ -142,10 +142,10 @@ export class GameUI {
       use: (id) => this.cb.use(id),
       throwItem: (aim) => this.cb.throwItem(aim),
       pickUp: (id) => this.cb.pickUp(id),
-      wear: (id, slot) => this.cb.wear(id, slot),
+      wear: (id, slot) => this.cb.wear(id, slot, this.doll.who),
       wearFrom: (id) => this.cb.wearFrom(id),
     });
-    this.doll = new PaperdollWindow(host, { remove: (r) => this.cb.remove(r) });
+    this.doll = new PaperdollWindow(host, { remove: (r) => this.cb.remove(r, this.doll.who) });
     this.store = new StoreWindow(host, (id, item, put) => this.cb.stow(id, item, put), this.bag);
     this.bag.dollAt = (x, y) => this.doll.contains(x, y);
     this.bag.dollSlotAt = (x, y) => this.doll.slotAt(x, y);
@@ -286,7 +286,9 @@ export class GameUI {
   onEvent(e: SimEvent, localId: number | null, state: SimState): void {
     switch (e.type) {
       case 'storeOpened':
-        if (e.player === localId) this.store.toggle(e.entity);
+        if (e.player !== localId) break;
+        this.store.toggle(e.entity);
+        if (!state.entities.get(e.entity)?.stored) this.doll.toggle(true);
         break;
       case 'discovered':
         this.toast(e.name, 'discovered');
@@ -356,7 +358,7 @@ export class GameUI {
       this.updateSide(f.state, e);
       this.bag.update(e, f.proj, f.state);
       this.store.update(f.state, e);
-      this.doll.update(e);
+      this.doll.update(this.store.mate(f.state) ?? e);
       if (this.mapOpen) this.updateMap(f.state, e);
     }
     const w = f.state.weather;

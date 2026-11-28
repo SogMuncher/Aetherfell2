@@ -18,12 +18,13 @@ import { magicSystem } from './magic';
 import { dress, makeEntity, startKit } from './templates';
 import { makeRng, newPlayer } from './simState';
 import { meleeSystem } from './melee';
-import { openFloorNear, swapRealm } from './world/realms';
+import { swapRealm } from './world/realms';
+import { checkWipe, travel } from './travel';
 import { playerSystem } from './player';
 import { rpgSystem } from './rpg';
 import { craftSystem } from './craft';
 import { foresee } from './foresight';
-import { socialSystem } from './social';
+import { barkSystem, socialSystem } from './social';
 import { statusSystem } from './statuses';
 import { structuresIn } from './world/sites';
 import { weatherSystem } from './weather';
@@ -95,6 +96,7 @@ export class Simulation {
   private buildContext(): SimContext {
     const state = this.state;
     const rng = makeRng(state);
+    const events = (): readonly SimEvent[] => this.events;
     const spawn = (thing: ThingId, x: number, y: number, init?: SpawnInit): Entity => {
       const e = makeEntity(CONTENT, state.nextEntityId++, thing, x, y, init);
       // Stand on the ground from the first tick (senses and path finding look from the feet), unless told a height.
@@ -112,6 +114,9 @@ export class Simulation {
       dt: TICK_DT,
       content: CONTENT,
       emit: (e) => this.events.push(e),
+      get heard(): readonly SimEvent[] {
+        return events();
+      },
       // With a seed the building comes out the same wherever and whenever it is raised.
       build: (def, site, seed) => buildStructure(def, state.volume, site, seed === undefined ? rng : makeRng({ rng: seed | 0 })),
       spawn,
@@ -143,6 +148,7 @@ export class Simulation {
       rpgSystem,
       craftSystem,
       socialSystem,
+      barkSystem,
     ];
   }
 
@@ -164,8 +170,8 @@ export class Simulation {
     this.playInputs();
     this.query.rebuild(state.entities.values());
     for (const sys of this.systems) sys(this.ctx);
-    this.checkWipe();
-    this.travel();
+    checkWipe(this.ctx);
+    travel(this.ctx, this.tiles, this.query);
 
     // End of tick: clear shared one-tick queues, remove the dead, publish tile changes.
     state.queues.use = [];
@@ -188,77 +194,6 @@ export class Simulation {
     const out = this.events;
     this.events = [];
     return out;
-  }
-
-  /** A party wipe where the realm says so (the underworld) sends the survivors to the surface instead of waking them one by one. */
-  private checkWipe(): void {
-    const { state } = this;
-    const to = CONTENT.realms[state.realm]?.wipe;
-    if (to === undefined) return;
-    const party = Object.values(state.players).map((id) => state.entities.get(id)).filter((e): e is Entity => !!e && !!e.player);
-    if (party.length === 0 || !party.every((e) => (e.player?.downed ?? 0) > 0)) return;
-    let x = 0;
-    let y = 0;
-    for (const e of party) {
-      x += e.pos.x / party.length;
-      y += e.pos.y / party.length;
-    }
-    state.queues.travel.push({ to, x, y, by: party[0]?.id ?? 0 });
-    for (const e of party) {
-      if (!e.player) continue;
-      e.player.downed = 0;
-      e.hp = Math.round(e.maxHp * 0.5);
-      e.status = {};
-      this.events.push({ type: 'notice', player: e.id, text: 'Darkness takes you… and you wake on the surface, battered but alive.' });
-    }
-    state.journal.push({ tick: state.tick, day: state.weather.day, text: 'The party was lost in the underworld and carried back to the surface.' });
-  }
-
-  /** Takes the whole party into another realm: the world around them is swapped, they are set down together at the same spot. */
-  private travel(): void {
-    const { state } = this;
-    const t = state.queues.travel[0];
-    state.queues.travel = [];
-    if (!t || t.to === state.realm || !CONTENT.realms[t.to]) return;
-    state.queues.use = [];
-    const elapsed = swapRealm(state, t.to);
-    this.tiles.resetCache();
-    const def = CONTENT.realms[t.to];
-    const base = openFloorNear(this.tiles, t.x, t.y);
-    const z0 = this.tiles.ground(base.x, base.y);
-    // The way back stands where they arrive.
-    const marker = def?.arrival?.thing;
-    if (marker !== undefined) {
-      let have = false;
-      for (const e of state.entities.values()) if (e.def === marker && Math.hypot(e.pos.x - base.x, e.pos.y - base.y) < 3) have = true;
-      if (!have) this.ctx.spawn(marker, base.x, base.y, { z: z0, prevZ: z0 });
-    }
-    const party = Object.values(state.players).map((id) => state.entities.get(id)).filter((e): e is Entity => !!e);
-    party.forEach((e, k) => {
-      const a = (k / Math.max(1, party.length)) * Math.PI * 2 + 0.6;
-      const r = k === 0 ? 1.4 : 1.8;
-      const at = openFloorNear(this.tiles, base.x + Math.cos(a) * r, base.y + Math.sin(a) * r, 6);
-      const z = this.tiles.ground(at.x, at.y);
-      e.pos.x = at.x;
-      e.pos.y = at.y;
-      e.prev.x = at.x;
-      e.prev.y = at.y;
-      e.z = z;
-      e.prevZ = z;
-      e.vel.x = 0;
-      e.vel.y = 0;
-      e.vz = 0;
-      if (e.player) e.player.gliding = false;
-    });
-    // Time went on where they were not: fire kept burning and rain kept drying, within limits.
-    if (elapsed > 0) {
-      const passes = Math.min(elapsed, 200);
-      this.query.rebuild(state.entities.values());
-      for (let i = 0; i < passes; i++) interactionSystem(this.ctx);
-      state.queues.use = [];
-    }
-    this.query.rebuild(state.entities.values());
-    this.events.push({ type: 'realmChanged', realm: t.to, x: base.x, y: base.y });
   }
 
   /** A guest's copy follows the host into another realm (the host announces it with `realmChanged`). */
@@ -303,13 +238,13 @@ export class Simulation {
           const id = state.players[c.playerId];
           if (id !== undefined) {
             const e = state.entities.get(id);
-            if (e?.player?.holding != null) {
-              const held = state.entities.get(e.player.holding);
+            if (e?.actor?.holding != null) {
+              const held = state.entities.get(e.actor.holding);
               if (held) held.heldBy = null;
             }
             if (e) {
               if (e.player) {
-                e.player.holding = null;
+                if (e.actor) e.actor.holding = null;
                 e.player.dialogue = null;
                 e.player.input = emptyInput(0, e.player.input.yaw);
               }
@@ -359,7 +294,7 @@ export class Simulation {
     for (const [pid, id] of Object.entries(state.players)) {
       const e = state.entities.get(id);
       if (e?.player) {
-        e.player.holding = null;
+        if (e.actor) e.actor.holding = null;
         e.player.dialogue = null;
         e.player.input = emptyInput(0, e.player.input.yaw);
         state.absent[pid] = e;

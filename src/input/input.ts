@@ -101,8 +101,8 @@ export class InputSystem {
     this.pickUp = entity;
   }
   /** The paperdoll and the bag: put a piece from the bag on. */
-  queueWear(item: ItemId, slot?: string): void {
-    this.wear = slot ? { do: 'wear', item, slot } : { do: 'wear', item };
+  queueWear(item: ItemId, slot?: string, on?: number): void {
+    this.wear = { do: 'wear', item, ...(slot ? { slot } : {}), ...(on !== undefined ? { on } : {}) };
   }
   /** A piece of armour lying in the view was dragged onto the paperdoll. */
   /** The hold window: move a stack into (put) or out of a store. */
@@ -114,8 +114,8 @@ export class InputSystem {
     this.wear = { do: 'wearFrom', entity };
   }
   /** Take what is worn on this part of the body off. */
-  queueRemove(region: BodyRegionId): void {
-    this.wear = { do: 'remove', region };
+  queueRemove(region: BodyRegionId, on?: number): void {
+    this.wear = { do: 'remove', region, ...(on !== undefined ? { on } : {}) };
   }
   queueChoice(i: number): void {
     this.choice = i;

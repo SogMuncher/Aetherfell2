@@ -9,6 +9,19 @@ export const PHYSICAL = new Set(['cut', 'blunt', 'pierce', 'fall']);
 // ---------------------------------------------------------------------------------------------
 // Bodies
 
+/** Two bodies on one side (the party and those they hired, a village…) whose faction does not hurt its own. */
+function friendly(ctx: SimContext, src: Entity | undefined, e: Entity): boolean {
+  return !!src && src !== e && src.faction === e.faction && !ctx.content.factions[e.faction]?.friendlyFire;
+}
+
+/** The effects that would hurt a friend: harm, shoves, fire and frost, and statuses that hold, slow or wound. */
+function harms(ctx: SimContext, f: Effect): boolean {
+  if (f.type === 'damage' || f.type === 'push' || f.type === 'heat' || f.type === 'chill') return true;
+  if (f.type !== 'status') return false;
+  const s = ctx.content.statuses[f.id];
+  return !!s && (s.disables || s.panic || s.move < 1 || s.every.some((t) => t.effects.some((x) => x.type === 'damage')));
+}
+
 export function applyToEntity(ctx: SimContext, e: Entity, r: EffectRequest): void {
   if (e.dead || r.exclude === e.id) return;
   if (r.spare !== undefined && e.faction === r.spare) return;
@@ -62,7 +75,7 @@ export function applyToEntity(ctx: SimContext, e: Entity, r: EffectRequest): voi
   // 2 + 3. Material reactions and statuses.
   let dmg = 0;
   let hurt = false;
-  for (const eff of r.effects) {
+  for (const eff of friendly(ctx, src, e) ? r.effects.filter((f) => !harms(ctx, f)) : r.effects) {
     if (parried) break;
     switch (eff.type) {
       case 'damage': {
@@ -233,10 +246,10 @@ export function destroy(ctx: SimContext, e: Entity, src: Entity | null): void {
     e.hp = 0;
     e.player.downed = DOWNED_TICKS;
     e.player.gliding = false;
-    if (e.player.holding !== null) {
-      const held = state.entities.get(e.player.holding);
+    if (e.actor && e.actor.holding !== null) {
+      const held = state.entities.get(e.actor.holding);
       if (held) held.heldBy = null;
-      e.player.holding = null;
+      e.actor.holding = null;
     }
     ctx.emit({ type: 'notice', player: e.id, text: 'You are down! A friend can revive you (E), or you will wake at the road.' });
     ctx.emit({ type: 'journal', text: `${e.player.name} was struck down.` });

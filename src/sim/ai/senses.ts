@@ -28,6 +28,8 @@ export interface Senses {
   seen: Seen[];
   /** Loose items lying in view, nearest first (only gathered for brains that `grab`). */
   items: { e: Entity; d: number }[];
+  /** Other things in view that are not creatures or items (crates, pots), nearest first (for brains that `lift` or `smash`). */
+  props: { e: Entity; d: number }[];
 }
 
 export function sense(ctx: SimContext, me: Creature, brain: BrainDef, night: boolean): Senses {
@@ -57,12 +59,19 @@ export function sense(ctx: SimContext, me: Creature, brain: BrainDef, night: boo
   const feels: Readonly<Record<FactionId, number>> = state.factions[me.faction] ?? {};
   const seen: Seen[] = [];
   const items: { e: Entity; d: number }[] = [];
+  const props: { e: Entity; d: number }[] = [];
   const looks = brain.behaviours.some((b) => b.do === 'grab');
+  const handles = brain.behaviours.some((b) => b.do === 'lift' || b.do === 'smash');
   const eye = me.z + thingDef(ctx.content, me.def).body.height * 0.85;
   for (const o of ctx.query.near(me.pos.x, me.pos.y, range)) {
     if (looks && o.item && !o.dead && o.heldBy === null) {
       const d = Math.hypot(o.pos.x - me.pos.x, o.pos.y - me.pos.y, o.z - me.z);
       if (d <= range && ctx.matter.clearLine(me.pos.x, me.pos.y, eye, o.pos.x, o.pos.y, o.z + 0.1)) items.push({ e: o, d });
+      continue;
+    }
+    if (handles && o !== me && !o.actor && !o.item && !o.dead && o.heldBy === null) {
+      const d = Math.hypot(o.pos.x - me.pos.x, o.pos.y - me.pos.y, o.z - me.z);
+      if (d <= range && ctx.matter.clearLine(me.pos.x, me.pos.y, eye, o.pos.x, o.pos.y, o.z + 0.3)) props.push({ e: o, d });
       continue;
     }
     if (o === me || o.dead || !o.actor) continue;
@@ -78,7 +87,8 @@ export function sense(ctx: SimContext, me: Creature, brain: BrainDef, night: boo
   }
   seen.sort((a, b) => a.d - b.d);
   items.sort((a, b) => a.d - b.d);
-  return { ctx, me, brain, night, range, fire, seen, items };
+  props.sort((a, b) => a.d - b.d);
+  return { ctx, me, brain, night, range, fire, seen, items, props };
 }
 
 /** Sets how the creature moves and where to. Anything but a chase drops its target. */

@@ -13,7 +13,7 @@ const STRIDE = 12;
 
 const VS = `#version 300 es
 uniform mat4 uVP; uniform float uFpx, uAmb, uFogDist, uFrame; uniform vec3 uFog;
-in vec4 aPos; in vec4 aCol; in vec4 aLife; // aCol: colour now + glow; aLife: life left (1..0), soft, palette mote, -
+in vec4 aPos; in vec4 aCol; in vec4 aLife; // aCol: colour now + glow; aLife: life left (1..0), soft, palette mote, solid (1: fully covers, a crumb)
 flat out vec4 fCover; flat out vec4 fAdd; flat out vec4 fFlags;
 void main(){
   gl_Position = uVP * vec4(aPos.xyz, 1.0);
@@ -21,7 +21,7 @@ void main(){
   float t = aLife.x, soft = aLife.y; bool pal = aLife.z > 0.5;
   float fog = min(0.95, 1.0 - exp(-max(0.0, gl_Position.w) / uFogDist));
   float k = (pal ? 1.0 : t) * (1.0 - fog) * aCol.w;
-  fCover = vec4(mix(aCol.rgb * uAmb, uFog, fog), max(0.0, (1.0 - aCol.w) * (0.85 + (t * 0.5 - 0.85) * soft)));
+  fCover = vec4(mix(aCol.rgb * uAmb, uFog, fog), aLife.w > 0.5 ? 1.0 : max(0.0, (1.0 - aCol.w) * (0.85 + (t * 0.5 - 0.85) * soft)));
   fAdd = vec4(aCol.rgb * k, soft);
   fFlags = vec4(pal && t < 0.3 ? 1.0 : 0.0, uFrame, pal ? 1.0 : 0.0, 0.0);
 }`;
@@ -79,10 +79,11 @@ export class GpuParticles {
   }
 
   /** Motes: the CPU gives each its colour of the moment; the shader does the fade, sky light and fog. */
-  drawMotes(vp: Float32Array, cam: CamBasis, env: Env, list: readonly Particle[], time: number, height: number): void {
+  drawMotes(vp: Float32Array, cam: CamBasis, env: Env, list: readonly Particle[], time: number, height: number, crumbs?: { readonly data: Float32Array; readonly count: number }): void {
     const n = Math.min(GPU_FX.maxMotes, list.length);
-    if (n === 0) return;
-    if (this.data.length < n * STRIDE) this.data = new Float32Array(n * STRIDE * 2);
+    const extra = crumbs?.count ?? 0;
+    if (n + extra === 0) return;
+    if (this.data.length < (n + extra) * STRIDE) this.data = new Float32Array((n + extra) * STRIDE * 2);
     const d = this.data;
     let count = 0;
     for (let i = 0; i < n; i++) {
@@ -114,6 +115,11 @@ export class GpuParticles {
       d[o + 10] = pal && pal.length > 0 ? 1 : 0;
       d[o + 11] = 0;
       count++;
+    }
+    // Crumbs of dying bodies come already laid out (vfx/crumble.ts): solid square pixels.
+    if (crumbs && extra > 0) {
+      d.set(crumbs.data.subarray(0, extra * STRIDE), count * STRIDE);
+      count += extra;
     }
     if (count === 0) return;
     const gl = this.gl;

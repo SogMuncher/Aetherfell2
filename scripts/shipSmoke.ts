@@ -213,7 +213,7 @@ me.pos.y = ladder.pos.y - 0.4;
 me.z = sim.tiles.ground(me.pos.x, me.pos.y);
 me.vz = 0;
 me.vel = { x: 0, y: 0 };
-if (me.player) me.player.holding = null;
+if (me.actor) me.actor.holding = null;
 anchor.heldBy = null;
 run(3, () => ({ yaw: Math.PI / 2 }));
 for (let i = 0; i < 400 && !(me.aboard === ship.id && me.actor?.onGround && me.z > ship.z + 4); i++) run(1, () => ({ forward: 1, yaw: Math.PI / 2, pitch: 0.3 }));

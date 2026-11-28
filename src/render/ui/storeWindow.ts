@@ -1,6 +1,7 @@
-// The hold window: a store (a ship's hold) shown as a bag of its own; drag things between it and your bag
-import type { Entity, ItemId, SimState } from '../../types';
-import { CONTENT, thingDef } from '../../content';
+// The hold window: a store (a ship's hold, a party member's bag) shown as a bag of its own; drag things between it and your bag
+import type { Entity, ItemId, ItemStack, SimState } from '../../types';
+import { bagOf } from '../../types';
+import { CONTENT, isFollower, thingDef } from '../../content';
 import type { Spot } from './bagParts';
 import { BagArea } from './bagArea';
 import type { BagWindow } from './bag';
@@ -77,16 +78,24 @@ export class StoreWindow {
     this.el.classList.toggle('hidden', entity === null);
   }
 
+  /** The party member whose bag is open (their paperdoll shows beside it), if it is one. */
+  mate(state: SimState): Entity | undefined {
+    const t = this.entity === null ? undefined : state.entities.get(this.entity);
+    return t && isFollower(CONTENT, t) ? t : undefined;
+  }
+
   /** Keeps the pictures in step with what the store holds; closes when you walk away from it. */
   update(state: SimState, me: Entity): void {
     if (this.entity === null) return;
     const t = state.entities.get(this.entity);
-    if (!t?.stored || t.dead || Math.hypot(t.pos.x - me.pos.x, t.pos.y - me.pos.y) > 3.5 || Math.abs(t.z - me.z) > 2.5) {
+    const mate = this.mate(state);
+    const kept: ItemStack[] | undefined = mate ? bagOf(mate) : t?.stored;
+    if (!t || !kept || t.dead || Math.hypot(t.pos.x - me.pos.x, t.pos.y - me.pos.y) > 3.5 || Math.abs(t.z - me.z) > 2.5) {
       this.toggle(null);
       return;
     }
-    const name = `The ${thingDef(CONTENT, t.def).name}`;
+    const name = mate?.npc ? `${mate.npc.name}'s bag` : `The ${thingDef(CONTENT, t.def).name}`;
     if (this.title.textContent !== name) this.title.textContent = name;
-    this.area.sync(t.stored);
+    this.area.sync(kept);
   }
 }

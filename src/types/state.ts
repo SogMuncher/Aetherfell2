@@ -116,6 +116,8 @@ export interface SimContext {
   query: SpatialQuery;
   rng: Rng;
   emit(e: SimEvent): void;
+  /** Everything emitted so far this tick: a system late in the order reacts to what the others did (barks). */
+  readonly heard: readonly SimEvent[];
   /** Creates an entity from a thing definition. */
   spawn(thing: ThingId, x: number, y: number, init?: SpawnInit): Entity;
   /** Tumbles items out into the world as loose objects. */

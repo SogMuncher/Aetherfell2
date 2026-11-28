@@ -6,8 +6,8 @@ import { esc } from './bagParts';
 export function promptText(state: SimState, e: Entity): string {
   const p = e.player;
   if (!p) return '';
-  if (p.holding !== null) {
-    const h = state.entities.get(p.holding);
+  if (e.actor?.holding != null) {
+    const h = state.entities.get(e.actor.holding);
     return `Carrying ${esc(h ? thingName(h) : 'something')} — <kbd>F</kbd> throw (look up to throw far)`;
   }
   if (p.station != null) {

@@ -11,6 +11,7 @@ import { ViewModel, type ViewFrame } from './entities/viewModel';
 import type { Surface } from './vfx/glow';
 import { ViewGlider } from './entities/viewGlider';
 import { Particles } from './vfx/particles';
+import { Crumble } from './vfx/crumble';
 import { GpuRenderer } from './gpu/gpuRenderer';
 import { LIGHT_DEFAULT, type LightQuality } from './gpu/gpuLight';
 
@@ -44,6 +45,9 @@ export class Renderer {
   private realm = 'overworld';
   private sprites = new SpriteRenderer();
   readonly particles = new Particles();
+  /** Dying bodies falling apart into their pixels. */
+  private readonly crumble = new Crumble();
+  private readonly world: ReadonlyTiles;
   private lightmap = new LightMap();
   private viewModel = new ViewModel();
   private viewGlider = new ViewGlider();
@@ -68,6 +72,7 @@ export class Renderer {
   constructor(canvas: HTMLCanvasElement, sampler: WorldSampler, tiles: ReadonlyTiles) {
     this.viewport = new Viewport(canvas, 200);
     this.lod = new TerrainLod(sampler, tiles);
+    this.world = tiles;
     this.sampler = sampler;
   }
 
@@ -79,6 +84,10 @@ export class Renderer {
 
   onEvent(e: SimEvent, state: SimState, localId: number | null): void {
     this.particles.onEvent(e, state);
+    if (e.type === 'death' && this.lastProjection) {
+      const b = this.sprites.lastDrawn(e.entity, this.time);
+      if (b) this.crumble.spawn(b, this.lastProjection.cam.x, this.lastProjection.cam.y, this.world, state.volume);
+    }
     this.viewModel.onEvent(e, state, localId);
     if (e.type === 'thunder') this.flash = 1;
     const by = e.type === 'thrown' ? state.entities.get(e.entity)?.thrownBy : null;
@@ -171,7 +180,7 @@ export class Renderer {
     this.lod.beginFrame(4, cx, cy);
     // What a guest foresees itself (its own traveller, crafts and what is fixed aboard them) moves every tick, so it is drawn
     // by the time since that tick, like the view; the rest by the time since the host's last update. One on the host.
-    const alphaOf = (e: Entity): number => (e.id === f.localId || e.craft || e.ride || (me?.player?.holding ?? null) === e.id ? (f.selfAlpha ?? f.alpha) : f.alpha);
+    const alphaOf = (e: Entity): number => (e.id === f.localId || e.craft || e.ride || (me?.actor?.holding ?? null) === e.id ? (f.selfAlpha ?? f.alpha) : f.alpha);
     this.lightmap.build(state, tiles, cx, cy, this.time, alphaOf);
     const billboards = this.sprites.collect(p, state, tiles, f.localId, alphaOf, this.time, this.hitFlash);
     const wl = tiles.waterLevel(cx, cy);
@@ -180,9 +189,10 @@ export class Renderer {
     this.particles.emit(state, tiles, cx, cy, f.dt, env);
     this.particles.update(f.dt);
     const wind = state.weather.wind;
+    this.crumble.update(f.dt, wind, tiles, state.volume);
     this.gpu.draw({
       eye: { x: cam.x, y: cam.y, z: cam.z }, yaw: cam.yaw, pitch: cam.pitch, roll: cam.roll, fovDegrees: this.options.fovDegrees,
-      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, light: this.options.light, tiles, burning: state.burning, billboards, motes: this.particles.motes, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.paintView(s, me, env, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time, wind }) : null, realm: state.realm, time: this.time,
+      env, weather: state.weather, volume: state.volume, frames: framesBetween(state, alphaOf), lightmap: this.lightmap, light: this.options.light, tiles, burning: state.burning, billboards, motes: this.particles.motes, crumbs: this.crumble, shadow: this.shadow, shadowOn: this.shadow.active && env.open, windSide: wind.x * p.RX + wind.y * p.RY, paintHand: me ? (s) => this.paintView(s, me, env, { yaw: f.yaw, pitch: f.pitch, bob: this.bob, alpha: f.selfAlpha ?? f.alpha, dt: f.dt, time: this.time, wind }) : null, realm: state.realm, time: this.time,
       post: { hurt: this.hurt, underwater, downed: me?.player && me.player.downed > 0 ? 0.8 : 0, levels: this.options.colourLevels },
     });
     return true;

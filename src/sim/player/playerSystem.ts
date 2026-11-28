@@ -1,6 +1,6 @@
 import type { Entity, SimContext, SimSystem } from '../../types';
 import { GROUND_Z, bagOf, unpackSpot } from '../../types';
-import { composeSpell, isDisabled, moveFactor, stackWeight, thingDef, wornGlider, wornWeight } from '../../content';
+import { composeSpell, isDisabled, moveFactor, liftable, stackWeight, thingDef, wornGlider, wornWeight } from '../../content';
 import { climbChain } from './climbing';
 import { glideStep } from './gliding';
 
@@ -63,7 +63,7 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
       my /= len;
     }
 
-    const held = p.holding !== null ? state.entities.get(p.holding) : undefined;
+    const held = a.holding !== null ? state.entities.get(a.holding) : undefined;
     const heldDef = held ? thingDef(content, held.def) : null;
     const surf = tiles.waterLevel(e.pos.x, e.pos.y);
     const swimming = tiles.ground(e.pos.x, e.pos.y) < surf - 0.6 && e.z < surf;
@@ -130,27 +130,10 @@ export const playerSystem: SimSystem = (ctx: SimContext) => {
     // Grab / throw anything you can carry.
     if (input.grab && p.cooldown === 0) {
       p.cooldown = 4;
-      if (held && heldDef) {
-        const power = Math.max(4, 15 - heldDef.body.mass * 0.18) * (1 + p.stats.might * 0.04);
-        held.heldBy = null;
-        held.thrownBy = e.id;
-        held.vel.x = cos * power * Math.cos(input.pitch * 0.9) + e.vel.x;
-        held.vel.y = sin * power * Math.cos(input.pitch * 0.9) + e.vel.y;
-        held.vz = 2.5 + Math.sin(input.pitch * 0.9) * power;
-        p.holding = null;
-        ctx.emit({ type: 'thrown', entity: held.id, x: held.pos.x, y: held.pos.y });
-      } else {
-        const target = pickInFront(ctx, e, 2.2, (o) => {
-          const od = thingDef(content, o.def);
-          return !!od.carry && od.body.mass <= 60 && o.heldBy === null;
-        });
-        if (target) {
-          target.heldBy = e.id;
-          p.holding = target.id;
-        }
-      }
+      // The same lift and heave creatures use (sim/rpg/carrying.ts).
+      if (held) a.wantHeave = { yaw: e.angle, lift: input.pitch * 0.9, power: 1 };
+      else a.wantLift = pickInFront(ctx, e, 2.2, (o) => liftable(content, o))?.id ?? null;
     }
-    if (held && held.dead) p.holding = null;
 
     if (input.interact && p.cooldown === 0) {
       p.cooldown = 4;

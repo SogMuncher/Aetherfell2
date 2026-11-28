@@ -59,6 +59,8 @@ export interface GpuFrame {
   burning: ReadonlySet<number>;
   billboards: readonly Billboard[];
   motes: readonly Particle[];
+  /** Crumbs of dying bodies, already in the motes' vertex layout (vfx/crumble.ts). */
+  crumbs?: { readonly data: Float32Array; readonly count: number };
   shadow: CloudShadow;
   shadowOn: boolean;
   /** Wind across your view (for the rain slant). */
@@ -190,7 +192,7 @@ export class GpuRenderer {
     const air = CONTENT.realms[f.realm]?.air ?? this.biomeAir;
     this.air.draw(vp, f.eye, air, f.time, 0.35 + 0.65 * f.env.day, f.env.open ? f.weather.wind : STILL);
     this.speedLines.draw(vp, f.eye, f.time, 0.35 + 0.65 * f.env.day);
-    this.fx.drawMotes(vp, cam, f.env, f.motes, f.time, h);
+    this.fx.drawMotes(vp, cam, f.env, f.motes, f.time, h, f.crumbs);
     this.fx.drawRain(f.env, w, h, f.windSide, f.time);
     const hand = this.overlay.begin(w, h);
     if (f.paintHand) {
